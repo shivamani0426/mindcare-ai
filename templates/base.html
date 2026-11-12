@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   <script src="{{ url_for('static', filename='voice.js') }}" defer></script>
+  {% if me %}<script src="{{ url_for('static', filename='calls.js') }}" defer></script>{% endif %}
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
@@ -49,6 +50,13 @@
     </main>
     <footer class="site-footer"><div class="footer-inner"><div><span class="footer-brand">✦ mindcare.ai</span><p>Moments of connection, one day at a time.</p></div><p>Support tool only, not a dementia diagnosis or medical treatment. In an emergency, contact local medical services.</p><span>Built with care for the North Eastern Region of India</span></div></footer>
   </div>
+  {% if me %}<aside class="incoming-call" id="incoming-call" role="alert" aria-live="assertive" hidden>
+    <div class="incoming-call-icon" aria-hidden="true">📹</div>
+    <div class="incoming-call-detail"><strong>Someone you love is calling</strong>
+      <p><span id="incoming-caller">Your family member</span> wants a video call.</p>
+      <div class="incoming-call-actions"><a id="incoming-answer" class="button button-primary" href="{{ url_for('dashboard') }}">Answer video call</a><button id="incoming-decline" type="button" class="button button-outline">Not now</button></div>
+    </div>
+  </aside>{% endif %}
   {% if me and me.role == 'patient' %}<div id="voice-toast" class="voice-toast" role="status" aria-live="polite" hidden></div>{% endif %}
   {% block scripts %}{% endblock %}
 </body>

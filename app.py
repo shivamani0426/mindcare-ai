@@ -9,6 +9,7 @@ import os
 import random
 import re
 import secrets
+import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
@@ -18,7 +19,7 @@ from statistics import mean
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
                    request, send_file, session, url_for)
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import UniqueConstraint, func, or_
+from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
@@ -100,6 +101,26 @@ class FamilyMember(db.Model):
     mime_type = db.Column(db.String(24), nullable=False)
 
 
+class VideoCall(db.Model):
+    """Short-lived private WebRTC signaling session. No audio/video is stored."""
+    id = db.Column(db.String(64), primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    caregiver_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    initiator_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    status = db.Column(db.String(14), nullable=False, default="ringing")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
+class VideoSignal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    call_id = db.Column(db.String(64), db.ForeignKey("video_call.id"), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    kind = db.Column(db.String(12), nullable=False)
+    payload = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 GAMES = {
     "cards": ("Memory card matching", "Match pairs of familiar symbols", "🃏"),
     "words": ("Word recall", "Remember a few friendly words", "💬"),
@@ -174,12 +195,11 @@ def selected_patient():
     return patients[0] if patients else None
 
 
-# Gentle, independent progression for each game.  No health inferences.
-# Two consecutive excellent sessions at the *same* difficulty unlock exactly one
-# step; two difficult sessions lower it again.  Older sessions from a previous
-# difficulty must not cause an immediate second promotion or demotion.
+# Per-game adaptive support, never a medical or diagnostic conclusion.
+# Use only the current uninterrupted level streak, so a demotion cannot
+# immediately re-promote the patient using stale results from another level.
 STRONG_SCORE = 85
-STRUGGLING_SCORE = 45
+STRUGGLING_SCORE = 60
 MIN_CONSECUTIVE_SESSIONS = 2
 
 
@@ -189,18 +209,22 @@ def difficulty_for(patient_id, game):
     if not latest:
         return 1
     level = max(1, min(3, latest[0].difficulty))
-    # Only consider the uninterrupted streak played at the current level.
     at_level = []
     for result in latest:
         if result.difficulty != level:
             break
         at_level.append(result)
+    # A very difficult round at a higher level should feel reassuring,
+    # not force a distressed patient to repeat the same challenge.
+    if level > 1 and at_level[0].score <= 25 and at_level[0].mistakes >= 3:
+        return level - 1
     if len(at_level) < MIN_CONSECUTIVE_SESSIONS:
         return level
     last_two = at_level[:2]
     if all(r.score >= STRONG_SCORE and r.mistakes <= 3 for r in last_two):
         return min(3, level + 1)
-    if all(r.score <= STRUGGLING_SCORE for r in last_two):
+    if all((r.score <= STRUGGLING_SCORE or
+            (r.score <= 72 and r.mistakes >= 4)) for r in last_two):
         return max(1, level - 1)
     return level
 
@@ -265,9 +289,10 @@ def security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
     response.headers["Content-Security-Policy"] = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
-                                                   "script-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+                                                   "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
+                                                   "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
     return response
@@ -586,6 +611,11 @@ def caregiver_revoke(link_id):
     link = db.session.get(CareLink, link_id)
     if not link or link.patient_id != current_user().id:
         abort(404)
+    active_calls = VideoCall.query.filter_by(patient_id=link.patient_id, caregiver_id=link.caregiver_id).filter(
+        VideoCall.status.in_(["ringing", "accepted"])).all()
+    for call in active_calls:
+        call.status = "ended"
+        VideoSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
     db.session.delete(link)
     db.session.commit()
     flash("Caregiver access removed.", "success")
@@ -600,6 +630,196 @@ def caregiver_detail(patient_id):
     results = GameResult.query.filter_by(patient_id=patient_id).order_by(GameResult.id.desc()).limit(20).all()
     return render_template("patient_detail.html", patient=p, stats=stats, results=results,
                            reminders=reminders_for(patient_id))
+
+
+
+# One-tap caregiver video calls: browser-to-browser WebRTC media. This server
+# carries only short-lived offer/answer/ICE signaling; it cannot record calls.
+# Both participants must be signed in AND retain an approved care link.
+CALL_RING_SECONDS = 180
+CALL_MAX_MINUTES = 45
+
+
+def call_expired(call):
+    expiry = call.expires_at
+    if expiry.tzinfo is None:  # SQLite returns naive DateTime even with timezone=True.
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    return now_utc() >= expiry
+
+
+def call_approved(call):
+    return CareLink.query.filter_by(patient_id=call.patient_id,
+                                    caregiver_id=call.caregiver_id,
+                                    status="approved").first() is not None
+
+
+def call_or_404(token):
+    call = db.session.get(VideoCall, token)
+    if (not call or current_user().id not in (call.patient_id, call.caregiver_id)
+            or not call_approved(call)):
+        abort(404)
+    if call.status in ("ringing", "accepted") and call_expired(call):
+        call.status = "expired"
+        VideoSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
+        db.session.commit()
+    return call
+
+
+def peer_name(call):
+    peer_id = call.caregiver_id if current_user().id == call.patient_id else call.patient_id
+    user = db.session.get(User, peer_id)
+    return user.name if user else "your loved one"
+
+
+@app.route("/calls/start", methods=["POST"])
+@require_login()
+def start_video_call():
+    u = current_user()
+    raw = request.form.get("contact_id", "")
+    if not raw.isdecimal():
+        abort(400, "Choose a connected family member to call.")
+    contact_id = int(raw)
+    if contact_id == u.id:
+        abort(400)
+    if u.role == "patient":
+        patient_id, caregiver_id = u.id, contact_id
+    else:
+        patient_id, caregiver_id = contact_id, u.id
+    link = CareLink.query.filter_by(patient_id=patient_id,
+                                    caregiver_id=caregiver_id,
+                                    status="approved").first()
+    if not link:
+        abort(403)
+    # Opportunistically clear old signaling offers, candidates and call tokens.
+    # This avoids indefinite SDP/IP-metadata retention without a paid cron worker.
+    stale = VideoCall.query.filter(VideoCall.expires_at < now_utc()-timedelta(hours=1)).limit(100).all()
+    for old in stale:
+        VideoSignal.query.filter_by(call_id=old.id).delete(synchronize_session=False)
+        db.session.delete(old)
+    # Reuse the pair's ongoing session; never create a surprise parallel call.
+    live = (VideoCall.query.filter_by(patient_id=patient_id, caregiver_id=caregiver_id)
+            .filter(VideoCall.status.in_(["ringing", "accepted"]))
+            .order_by(VideoCall.created_at.desc()).limit(5).all())
+    for call in live:
+        if not call_expired(call):
+            db.session.commit()  # Retain expired-call cleanup performed above.
+            return redirect(url_for("video_call_page", token=call.id))
+        call.status = "expired"
+    call = VideoCall(id=secrets.token_urlsafe(24), patient_id=patient_id,
+                     caregiver_id=caregiver_id, initiator_id=u.id,
+                     status="ringing", expires_at=now_utc()+timedelta(seconds=CALL_RING_SECONDS))
+    db.session.add(call)
+    db.session.commit()
+    return redirect(url_for("video_call_page", token=call.id))
+
+
+@app.route("/video-call/<token>")
+@require_login()
+def video_call_page(token):
+    call = call_or_404(token)
+    return render_template("video_call.html", call=call, peer_name=peer_name(call),
+                           caller=call.initiator_id == current_user().id,
+                           turn_url=os.getenv("TURN_URL", ""),
+                           turn_user=os.getenv("TURN_USERNAME", ""),
+                           turn_password=os.getenv("TURN_PASSWORD", ""))
+
+
+@app.route("/api/calls/incoming")
+@require_login()
+def incoming_calls():
+    u = current_user()
+    pairs = (VideoCall.query
+             .filter(or_(VideoCall.patient_id == u.id, VideoCall.caregiver_id == u.id))
+             .filter(VideoCall.initiator_id != u.id, VideoCall.status == "ringing",
+                     VideoCall.expires_at > now_utc())
+             .order_by(VideoCall.created_at.desc()).limit(5).all())
+    return jsonify(calls=[{"id": c.id, "from": peer_name(c),
+                           "url": url_for("video_call_page", token=c.id)}
+                          for c in pairs if call_approved(c)])
+
+
+@app.route("/api/calls/<token>/accept", methods=["POST"])
+@require_login()
+def accept_video_call(token):
+    call = call_or_404(token)
+    if call.initiator_id == current_user().id or call.status not in ("ringing", "accepted"):
+        return jsonify(error="This incoming call is no longer available"), 409
+    call.status = "accepted"
+    call.expires_at = now_utc()+timedelta(minutes=CALL_MAX_MINUTES)
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route("/api/calls/<token>/decline", methods=["POST"])
+@require_login()
+def decline_video_call(token):
+    call = call_or_404(token)
+    if call.initiator_id == current_user().id or call.status != "ringing":
+        return jsonify(error="This incoming call is no longer available"), 409
+    call.status = "declined"
+    VideoSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route("/api/calls/<token>/end", methods=["POST"])
+@require_login()
+def end_video_call(token):
+    call = call_or_404(token)
+    if call.status in ("ringing", "accepted"):
+        call.status = "ended"
+        VideoSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
+        db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route("/api/calls/<token>/events")
+@require_login()
+def call_events(token):
+    call = call_or_404(token)
+    raw = request.args.get("after", "0")
+    if not raw.isdecimal():
+        return jsonify(error="Invalid cursor"), 400
+    after = max(0, min(int(raw), 2**31-1))
+    rows = (VideoSignal.query.filter_by(call_id=call.id)
+            .filter(VideoSignal.id > after, VideoSignal.sender_id != current_user().id)
+            .order_by(VideoSignal.id).limit(80).all())
+    return jsonify(status=call.status, events=[{"id": row.id, "kind": row.kind,
+                                                 "payload": json.loads(row.payload)} for row in rows])
+
+
+@app.route("/api/calls/<token>/signal", methods=["POST"])
+@require_login()
+def signal_video_call(token):
+    call = call_or_404(token)
+    if call.status not in ("ringing", "accepted"):
+        return jsonify(error="Call is no longer active"), 409
+    body = request.get_json(silent=True) or {}
+    kind, payload = body.get("kind"), body.get("payload")
+    if kind not in ("offer", "answer", "candidate") or not isinstance(payload, dict):
+        return jsonify(error="Invalid signal"), 400
+    is_caller = current_user().id == call.initiator_id
+    if kind == "offer" and not is_caller:
+        return jsonify(error="Only the caller can send an offer"), 403
+    if kind == "answer" and (is_caller or call.status != "accepted"):
+        return jsonify(error="Only an answered call can send an answer"), 403
+    if kind == "candidate" and not is_caller and call.status != "accepted":
+        return jsonify(error="Answer the call before connecting"), 403
+    if kind in ("offer", "answer") and (payload.get("type") != kind or
+           not isinstance(payload.get("sdp"), str) or len(payload["sdp"]) > 20000):
+        return jsonify(error="Invalid session description"), 400
+    if kind == "candidate" and (not isinstance(payload.get("candidate"), str) or
+           len(payload["candidate"]) > 6000):
+        return jsonify(error="Invalid connection candidate"), 400
+    value = json.dumps(payload, separators=(",", ":"))
+    if len(value) > 24000:
+        return jsonify(error="Signal is too large"), 413
+    if VideoSignal.query.filter_by(call_id=call.id).count() >= 150:
+        return jsonify(error="Too many connection messages"), 429
+    db.session.add(VideoSignal(call_id=call.id, sender_id=current_user().id,
+                               kind=kind, payload=value))
+    db.session.commit()
+    return jsonify(ok=True)
 
 
 @app.errorhandler(403)

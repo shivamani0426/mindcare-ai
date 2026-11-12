@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Video call with {{ peer_name }}{% endblock %}
+{% block content %}
+<section class="call-page" id="video-call-room" data-call-id="{{ call.id }}"
+         data-caller="{{ '1' if caller else '0' }}"
+         data-call-status="{{ call.status }}"
+         data-turn-url="{{ turn_url }}" data-turn-user="{{ turn_user }}" data-turn-password="{{ turn_password }}">
+  <div class="call-heading">
+    <a class="back-link" href="{{ url_for('dashboard') }}">← Back to my dashboard</a>
+    <span class="eyebrow">A MOMENT TO CONNECT</span>
+    <h1>Video call with {{ peer_name }}</h1>
+    <p>Just you and your loved one. MindCare does not record your calls.</p>
+  </div>
+  <div class="call-status" id="call-status" role="status" aria-live="polite">
+    <span class="call-status-dot" aria-hidden="true"></span>
+    <span id="call-status-text">Preparing a safe, private call…</span>
+  </div>
+  <div class="call-video-grid">
+    <div class="call-video-frame remote-frame">
+      <video id="remote-video" autoplay playsinline aria-label="Video of {{ peer_name }}"></video>
+      <div class="video-placeholder" id="remote-placeholder"><span aria-hidden="true">💛</span><p>Waiting for {{ peer_name }} to join</p></div>
+      <span class="video-name">{{ peer_name }}</span>
+    </div>
+    <div class="call-video-frame local-frame">
+      <video id="local-video" autoplay muted playsinline aria-label="Your video preview"></video>
+      <div class="video-placeholder" id="local-placeholder"><span aria-hidden="true">📷</span><p>Your camera preview</p></div>
+      <span class="video-name">You</span>
+    </div>
+  </div>
+  <div class="call-actions">
+    <button id="call-mic" class="button button-outline button-lg" type="button" disabled aria-pressed="false">🎙️ Microphone on</button>
+    <button id="call-camera" class="button button-outline button-lg" type="button" disabled aria-pressed="false">📷 Camera on</button>
+    <button id="call-retry" class="button button-primary button-lg" type="button" hidden>Allow camera and microphone</button>
+    <button id="call-hangup" class="button button-danger button-lg" type="button">☎ End call</button>
+  </div>
+  <p class="clinical-note call-help">Your browser will ask for camera and microphone permission. The other person must be signed in and accept the call. Video is sent directly between browsers when the network permits it; some networks need an additional TURN relay for reliable connections. An active browser tab is required to receive incoming calls.</p>
+</section>
+{% endblock %}

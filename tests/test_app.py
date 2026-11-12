@@ -5,7 +5,7 @@ os.environ["SECRET_KEY"] = "test-secret-only-not-for-production"
 os.environ["SECURE_COOKIES"] = "0"
 
 import pytest
-from app import app, db, User, CareLink, GameResult, difficulty_for
+from app import app, db, User, CareLink, GameResult, VideoCall, VideoSignal, difficulty_for
 
 
 @pytest.fixture
@@ -157,3 +157,129 @@ def test_api_returns_next_level_after_two_confident_plays(client):
     assert second.json["level_change"] == 1
     assert second.json["next_level_name"] == "Growing"
     assert b'Growing level' in client.get('/games/numbers').data
+
+
+@pytest.mark.parametrize("game", ["cards", "words", "numbers", "pictures", "puzzle", "family"])
+def test_difficulty_goes_back_down_after_struggle_for_every_game(client, game):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    with app.app_context():
+        patient = User.query.filter_by(email="asha@example.org").one()
+        # Start directly at Challenge to exercise a supported historical state.
+        for score in (54, 49):
+            db.session.add(GameResult(patient_id=patient.id, game_type=game,
+                                      difficulty=3, score=score, mistakes=5,
+                                      duration_seconds=110))
+        db.session.commit()
+        assert difficulty_for(patient.id, game) == 2
+        # Once a lower-level game is played, don't bounce up based on old rows.
+        db.session.add(GameResult(patient_id=patient.id, game_type=game,
+                                  difficulty=2, score=50, mistakes=4,
+                                  duration_seconds=70))
+        db.session.commit()
+        assert difficulty_for(patient.id, game) == 2
+        db.session.add(GameResult(patient_id=patient.id, game_type=game,
+                                  difficulty=2, score=58, mistakes=4,
+                                  duration_seconds=75))
+        db.session.commit()
+        assert difficulty_for(patient.id, game) == 1
+
+
+def test_severe_difficulty_eases_after_one_very_poor_game(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    with app.app_context():
+        patient_id = User.query.filter_by(email="asha@example.org").one().id
+        db.session.add(GameResult(patient_id=patient_id, game_type="words", difficulty=3,
+                                  score=20, mistakes=6, duration_seconds=130))
+        db.session.commit()
+        assert difficulty_for(patient_id, "words") == 2
+
+
+def test_live_api_can_raise_then_lower_game_difficulty(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    headers = {"X-CSRF-Token": token(client, "/games")}
+    def finish(level, score, mistakes):
+        return client.post("/api/games/finish", json={"game":"numbers", "score":score,
+             "mistakes":mistakes, "seconds":60, "difficulty":level}, headers=headers)
+    assert finish(1,95,0).json["new_level"] == 1
+    assert finish(1,95,0).json["new_level"] == 2
+    first = finish(2,55,4)
+    assert first.status_code == 200 and first.json["new_level"] == 2
+    second = finish(2,55,4)
+    assert second.status_code == 200
+    assert second.json["new_level"] == 1 and second.json["level_change"] == -1
+    assert b'Gentle level' in client.get('/games/numbers').data
+
+
+def connect_accounts(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    with app.app_context():
+        patient = User.query.filter_by(email="asha@example.org").one()
+        pid, code = patient.id, patient.invite_code
+    logout(client)
+    register(client, "Sita Care", "sita@example.org", "caregiver")
+    with app.app_context():
+        cid = User.query.filter_by(email="sita@example.org").one().id
+    client.post("/caregiver/link", data={"csrf_token":token(client),"invite_code":code})
+    with app.app_context():
+        link_id = CareLink.query.one().id
+    logout(client)
+    login(client, "asha@example.org")
+    client.post(f"/caregiver/approve/{link_id}", data={"csrf_token":token(client)})
+    return pid, cid, link_id
+
+
+def test_only_approved_users_can_start_a_call(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    response = client.post('/calls/start', data={'csrf_token':token(client), 'contact_id':'9999'})
+    assert response.status_code == 403
+    logout(client)
+    assert client.get('/api/calls/incoming').status_code == 302
+
+
+def test_video_call_consent_signaling_and_leave(client):
+    pid, cid, link_id = connect_accounts(client)
+    start = client.post('/calls/start', data={"csrf_token":token(client), "contact_id":str(cid)})
+    assert start.status_code == 302
+    address = start.headers['Location']
+    call_id = address.rsplit('/',1)[-1]
+    assert client.get(address).status_code == 200
+    assert 'camera=(self)' in client.get(address).headers['Permissions-Policy']
+    assert b'Video call with Sita Care' in client.get(address).data
+    offer = {"type":"offer","sdp":"v=0\r\n"}
+    t = token(client)
+    assert client.post(f'/api/calls/{call_id}/signal',json={"kind":"offer","payload":offer},
+                       headers={"X-CSRF-Token":t}).status_code == 200
+    assert client.get('/api/calls/incoming').json['calls'] == []
+    logout(client)
+    login(client, 'sita@example.org')
+    incoming = client.get('/api/calls/incoming').json['calls']
+    assert len(incoming) == 1 and incoming[0]['id'] == call_id
+    events = client.get(f'/api/calls/{call_id}/events').json['events']
+    assert len(events) == 1 and events[0]['kind'] == 'offer'
+    assert client.post(f'/api/calls/{call_id}/signal',json={"kind":"answer","payload":{"type":"answer","sdp":"v=0"}},
+                       headers={"X-CSRF-Token":token(client)}).status_code == 403
+    assert client.post(f'/api/calls/{call_id}/accept',headers={"X-CSRF-Token":token(client)}).status_code == 200
+    assert client.post(f'/api/calls/{call_id}/signal',json={"kind":"answer","payload":{"type":"answer","sdp":"v=0"}},
+                       headers={"X-CSRF-Token":token(client)}).status_code == 200
+    logout(client)
+    login(client, 'asha@example.org')
+    events = client.get(f'/api/calls/{call_id}/events').json['events']
+    assert len(events) == 1 and events[0]['kind'] == 'answer'
+    assert client.post(f'/api/calls/{call_id}/end',headers={"X-CSRF-Token":token(client)}).status_code == 200
+    assert client.get(f'/api/calls/{call_id}/events').json['status'] == 'ended'
+    with app.app_context():
+        assert VideoSignal.query.filter_by(call_id=call_id).count() == 0
+
+
+def test_revoking_caregiver_access_invalidates_video_call(client):
+    pid, cid, link_id = connect_accounts(client)
+    response = client.post('/calls/start',data={"csrf_token":token(client),"contact_id":str(cid)})
+    url = response.headers['Location']
+    assert client.get(url).status_code == 200
+    client.post(f'/caregiver/revoke/{link_id}',data={"csrf_token":token(client)})
+    assert client.get(url).status_code == 404
+    assert client.get(url.replace('/video-call/','/api/calls/')+'/events').status_code == 404
+    logout(client)
+    login(client,'sita@example.org')
+    assert client.get(url).status_code == 404
+    assert client.get('/api/calls/incoming').json['calls'] == []

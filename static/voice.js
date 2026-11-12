@@ -16,6 +16,7 @@
   let lastTime = 0;
   let reminderInProgress = false;
   let pendingAnnouncement = null;
+  let callPause = false;
   const announced = new Set();
 
   const score = (v) => {
@@ -48,7 +49,7 @@
   } else if (status) status.textContent = 'Voice unavailable on this device';
 
   const speak = (message, options={}) => {
-    if (!supported || !message || document.hidden) return false;
+    if (!supported || !message || document.hidden || callPause) return false;
     const clean = String(message).trim().slice(0,240);
     const now = Date.now();
     if (!options.repeat && clean === lastSpoken && now - lastTime < 2800) return false;
@@ -92,10 +93,12 @@
   document.addEventListener('pointerdown', unlock, {capture:true});
   document.addEventListener('keydown', unlock, {capture:true});
   replay?.addEventListener('click', () => {unlocked=true;speak(greeting,{repeat:true});});
-  window.MindCareVoice = {speak, announce, available:supported};
+  window.MindCareVoice = {speak, announce, available:supported,
+    pause() {callPause = true; try {synth?.cancel();} catch (_) {}},
+    resume() {callPause = false;}};
 
   const tick = async () => {
-    if (reminderInProgress || document.hidden || !navigator.onLine) return;
+    if (reminderInProgress || document.hidden || callPause || !navigator.onLine) return;
     reminderInProgress=true;
     try {
       const resp = await fetch('/api/reminders/today', {credentials:'same-origin',cache:'no-store'});
