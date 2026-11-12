@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% block title %}{{ 'Create your account' if mode == 'register' else 'Welcome back' }}{% endblock %}
+{% block content %}
+<section class="auth-layout"><div class="auth-panel"><span class="eyebrow">YOUR SPACE TO FLOURISH</span><h1>{{ 'A little care starts here.' if mode == 'register' else 'Lovely to see you again.' }}</h1><p>{{ 'Join MindCare and discover a calmer way to make everyday moments count.' if mode == 'register' else 'Pick up where you left off. Every little step matters.' }}</p>
+  <div class="auth-illustration"><span>🌷</span><div><strong>One day at a time</strong><small>Gentle reminders. Joyful moments. Family connection.</small></div></div>
+</div><div class="auth-form-card"><h2>{{ 'Create your account' if mode == 'register' else 'Sign in to MindCare' }}</h2><p class="muted">{{ 'Already have an account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in' if mode == 'register' else 'Create an account' }}</a></p>
+<form method="post" class="form-grid"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% if mode == 'register' %}
+  <label class="input-label">Your full name<input type="text" name="name" placeholder="e.g. Asha Sharma" maxlength="90" autocomplete="name" required></label>
+  <fieldset class="role-options"><legend>I am joining as</legend><label class="role-choice"><input type="radio" name="role" value="patient" checked><span>🌷 <b>Patient</b><small>Play games and enjoy reminders</small></span></label><label class="role-choice"><input type="radio" name="role" value="caregiver"><span>💛 <b>Caregiver</b><small>Support someone you love</small></span></label></fieldset>
+  <div class="patient-extra"><label class="input-label">Age (optional)<input type="number" name="age" min="1" max="120" placeholder="e.g. 72"></label><label class="input-label">State or region (optional)<select name="region"><option value="">Choose region</option>{% for state in ['Arunachal Pradesh','Assam','Manipur','Meghalaya','Mizoram','Nagaland','Sikkim','Tripura','Other'] %}<option value="{{ state }}">{{ state }}</option>{% endfor %}</select></label></div>
+{% endif %}
+<label class="input-label">Email address<input type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="180" required></label>
+<label class="input-label">Password<input type="password" name="password" placeholder="At least 10 characters" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" minlength="{{ '10' if mode == 'register' else '1' }}" required></label>
+<button class="button button-primary button-block button-lg" type="submit">{{ 'Create my space' if mode == 'register' else 'Sign in' }} <span>→</span></button>
+<p class="form-disclaimer">Your data is private to you and caregivers you explicitly approve. This is a non-medical support application.</p>
+</form></div></section>
+{% endblock %}

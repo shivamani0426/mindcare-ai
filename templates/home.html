@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block title %}A gentler way to stay connected{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy"><span class="eyebrow"><span class="eyebrow-dot"></span> A little brighter, every day</span>
+    <h1>Small moments.<br><em>Meaningful</em> memories.</h1>
+    <p class="hero-description">An inviting space for older adults to enjoy gentle brain games, remember daily routines, and feel closer to the people who matter most.</p>
+    <div class="hero-actions"><a class="button button-primary button-lg" href="{{ url_for('register') }}">Start your journey <span>↗</span></a><a class="button button-outline button-lg" href="#how-it-works">Explore MindCare <span>↘</span></a></div>
+    <div class="trust-line"><div class="stack-avatars"><span>🌸</span><span>🧡</span><span>🌻</span></div><p>Simple to use · Made for families · Calm by design</p></div>
+  </div>
+  <div class="hero-scene" aria-label="Decorative illustration of a welcoming brain games dashboard" role="img"><div class="orb orb-1"></div><div class="orb orb-2"></div>
+    <div class="hero-app"><div class="hero-app-top"><div class="hero-app-logo">✦</div><div><strong>Good morning, Asha!</strong><span>Let's make today a lovely one.</span></div><span class="sun">☀️</span></div>
+      <div class="hero-feature"><span class="mini-label">TODAY'S LITTLE WIN</span><span class="featured-emoji">🌷</span><strong>You're doing beautifully!</strong><p>A few minutes of play goes a long way.</p><div class="hero-progress"><span></span></div></div>
+      <div class="hero-app-footer"><div><span>🧠</span><b>Memory games</b><small>Play at your pace</small></div><div><span>🔔</span><b>Daily routine</b><small>Stay on track</small></div></div>
+    </div><div class="floating-note"><span>💛</span><span><strong>Stay connected</strong><small>One precious moment at a time</small></span></div><div class="sparkle sparkle-1">✧</div><div class="sparkle sparkle-2">✦</div>
+  </div>
+</section>
+<section class="section" id="features"><div class="section-heading center"><span class="eyebrow">THOUGHTFULLY DESIGNED</span><h2>Care that feels like <em>care.</em></h2><p>Everything in one warm, easy-to-use space. No pressure, just progress at your own pace.</p></div>
+  <div class="feature-grid"><article class="feature-tile"><span class="feature-icon mint">🧩</span><h3>Playful brain games</h3><p>Memory cards, puzzles, word and number games that adapt gently to each person.</p><a href="{{ url_for('register') }}">Explore games <span>→</span></a></article>
+    <article class="feature-tile"><span class="feature-icon peach">🔔</span><h3>Friendly reminders</h3><p>Small nudges for medicine, meals, appointments and special family moments.</p><a href="{{ url_for('register') }}">Explore reminders <span>→</span></a></article>
+    <article class="feature-tile"><span class="feature-icon lavender">👨‍👩‍👧</span><h3>Faces you love</h3><p>See familiar photos, names and relationships, and practise remembering loved ones.</p><a href="{{ url_for('register') }}">Explore family space <span>→</span></a></article>
+    <article class="feature-tile"><span class="feature-icon lemon">📈</span><h3>Caregiver insights</h3><p>See activity history and spot changes worth a gentle conversation, not a diagnosis.</p><a href="{{ url_for('register') }}">Explore insights <span>→</span></a></article>
+  </div>
+</section>
+<section class="how-section" id="how-it-works"><div class="how-header"><div><span class="eyebrow">AS SIMPLE AS ONE, TWO, THREE</span><h2>Getting started is <em>easy.</em></h2></div><p>Whether you're here for yourself or someone you care for, MindCare grows with you.</p></div>
+  <div class="steps-grid"><div><span class="step-number">01</span><h3>Create your space</h3><p>Choose a patient or caregiver account. Just a few simple details.</p></div><div><span class="step-number">02</span><h3>Enjoy a little activity</h3><p>Pick a game, add daily reminders, and explore familiar faces.</p></div><div><span class="step-number">03</span><h3>Stay close together</h3><p>Connect securely with a caregiver and share activity updates.</p></div></div>
+</section>
+<section class="cta-panel"><div><span class="eyebrow">YOUR JOURNEY BEGINS HERE</span><h2>Every day is worth <em>remembering.</em></h2><p>A little encouragement can make a big difference. Start with just five minutes.</p><a class="button button-white button-lg" href="{{ url_for('register') }}">Create a free account ↗</a></div><span class="cta-illustration">🌼</span></section>
+{% endblock %}

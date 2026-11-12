@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block title %}{{ GAMES[slug][0] }}{% endblock %}
+{% block head %}<script src="{{ url_for('static', filename='games.js') }}" defer></script>{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('games') }}">← Back to all games</a>
+<section class="play-page"><div class="play-header"><div><span class="eyebrow">A LITTLE FUN FOR TODAY</span><h1>{{ GAMES[slug][2] }} {{ GAMES[slug][0] }}</h1><p>{{ GAMES[slug][1] }}. Take your time!</p></div><span class="level-pill big-pill">{{ LEVEL_NAMES[level] }} level</span></div>
+<div id="game-root" class="game-root" data-game="{{ slug }}" data-level="{{ level }}" data-family='{{ family|tojson }}' aria-live="polite"><div class="game-start"><span class="game-start-icon">{{ GAMES[slug][2] }}</span><h2>Ready when you are!</h2><p>There is no timer counting down. Play in your own time.</p><button type="button" class="button button-primary button-lg" id="begin-game">Start game →</button></div></div>
+<div class="play-note"><span>💚</span><p>Games are designed for gentle engagement. Results cannot measure, diagnose or predict a medical condition.</p></div></section>
+{% endblock %}
