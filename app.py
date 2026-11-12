@@ -27,7 +27,7 @@ if (DATABASE_URL.startswith("postgres") or os.getenv("SECURE_COOKIES") == "1") a
     raise RuntimeError("SECRET_KEY is required for production/database-backed deployment")
 app.config.update(
     SECRET_KEY=os.getenv("SECRET_KEY", "development-only-change-me"),
-    SQLALCHEMY_DATABASE_URI=DATABASE_URL.replace("postgres://", "postgresql://", 1),
+    SQLALCHEMY_DATABASE_URI=(DATABASE_URL.replace("postgres://", "postgresql://", 1).replace("postgresql://", "postgresql+psycopg2://", 1)),
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 280},
     MAX_CONTENT_LENGTH=2 * 1024 * 1024,
