@@ -23,3 +23,11 @@
 .large-text .button,.large-text .main-nav a,.large-text .input-label,.large-text .input-label input,.large-text .input-label select,.large-text .input-label textarea{font-size:17px}
 .large-text .routine-item strong,.large-text .reminder-description strong,.large-text .patient-card small,.large-text .game-shortcut small{font-size:16px}
 .upcoming-reminders{margin-top:24px;background:#f7faf5;padding:17px;border-radius:15px}.upcoming-reminders h3{font-size:16px;margin:0}
+
+/* Calm, unobtrusive always-on voice indicator. */
+.voice-replay{display:inline-flex;gap:6px;align-items:center;border:1px solid #cce5d3;border-radius:24px;background:#edf7ed;color:#397d55;font-size:11px;font-weight:750;padding:8px 11px;white-space:nowrap;cursor:pointer}
+.voice-replay:hover,.voice-replay:focus-visible{background:#def1e3;outline-offset:2px}
+@media(max-width:760px){.voice-replay span{display:none}.voice-replay{padding:8px 10px}}
+
+.memory-grid-advanced .memory-card{height:72px;font-size:34px}
+@media(max-width:450px){.memory-grid-advanced .memory-card{height:58px;font-size:25px}}

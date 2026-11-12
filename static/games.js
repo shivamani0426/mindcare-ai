@@ -3,7 +3,8 @@
   const root = document.getElementById('game-root');
   if (!root) return;
   const game = root.dataset.game;
-  const level = Number(root.dataset.level) || 1;
+  const level = Math.max(1,Math.min(3,Number(root.dataset.level) || 1));
+  const levelNames = {1:'Gentle',2:'Growing',3:'Challenge'};
   let family = [];
   try { family = JSON.parse(root.dataset.family || '[]'); } catch (_) { /* empty */ }
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -15,9 +16,15 @@
     for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
     return a;
   };
-  const toolbar = (instruction, status='Take your time') => `<div class="game-toolbar"><strong>🌱 ${escapeHTML(instruction)}</strong><span>${escapeHTML(status)}</span></div>`;
+  const toolbar = (instruction, status='Take your time') => `<div class="game-toolbar"><strong>🌱 ${escapeHTML(instruction)}</strong><span>${escapeHTML(status)} · ${levelNames[level]} level</span></div>`;
+  const say = message => window.MindCareVoice?.speak(message);
   const button = (text, id, secondary=false) => `<button type="button" class="button ${secondary?'button-outline':'button-primary'} button-lg" id="${id}">${text}</button>`;
-  const init = () => {started=Date.now();mistakes=0;({cards,words,numbers,pictures,puzzle,family:familyGame}[game] || cards)();};
+  const init = () => {
+    started=Date.now();mistakes=0;
+    ({cards,words,numbers,pictures,puzzle,family:familyGame}[game] || cards)();
+    const help = {cards:'Find two cards with matching pictures.',words:'Take a moment to remember the words. Press ready when you feel comfortable.',numbers:'Look at the number sequence. Press ready when you want to try.',pictures:'Look at the picture and choose its name.',puzzle:'Touch two picture pieces to swap their places.',family:'Look at the family photo and choose the name you remember.'};
+    say(help[game] || 'Enjoy your game. Take your time.');
+  };
   root.querySelector('#begin-game')?.addEventListener('click', init);
   async function finish(score) {
     score = Math.max(0,Math.min(100,Math.round(score)));
@@ -31,19 +38,24 @@
       });
       if (!response.ok) throw Error('Not saved');
       const data=await response.json();
-      root.querySelector('#save-status').textContent = '✓ Saved to your activity history. ' + (data.new_level>level?'Next time, a new gentle challenge awaits!':'');
+      let message='Saved to your activity history. You can play again at your own pace.';
+      if (data.level_change>0) message='Well done! Your next game will have a new, gentle challenge at the '+data.next_level_name+' level.';
+      if (data.level_change<0) message='Your next game will be a little easier. There is no rush.';
+      root.querySelector('#save-status').textContent='✓ '+message;
+      say(message);
     } catch (_) {
       root.querySelector('#save-status').textContent = 'Your game finished, but this score could not be saved. Check your connection.';
     }
   }
   function cards() {
     const symbols = ['🌻','🍎','🧸','🐢','🎈','🌈','🦋','⭐'];
-    const pairs = [3,4,6][level-1];
+    const pairs = [3,5,8][level-1];
     const deck = shuffle(symbols.slice(0,pairs).flatMap((s,i)=>[{i,s},{i,s}]));
     let revealed = [],matched = new Set(),busy=false;
     root.innerHTML = toolbar('Find two matching pictures') + `<p class="game-instructions">Tap two cards to find a pair</p><div class="memory-grid" id="memory-board" aria-label="Memory cards"></div><p class="game-message" id="game-message">0 of ${pairs} pairs found</p>`;
     const board=root.querySelector('#memory-board');
     board.style.gridTemplateColumns=`repeat(${pairs===3?3:4},minmax(0,1fr))`;
+    if(pairs===8) board.classList.add('memory-grid-advanced');
     deck.forEach((card,index)=> {
       const el=document.createElement('button');el.type='button';el.className='memory-card';el.dataset.index=String(index);el.textContent='✦';el.setAttribute('aria-label','Hidden memory card '+(index+1));
       el.addEventListener('click',()=>{
@@ -54,7 +66,7 @@
           const [a,b]=revealed;
           if(deck[a].i===deck[b].i){matched.add(a);matched.add(b);revealed=[];board.children[a].classList.add('is-matched');board.children[b].classList.add('is-matched');board.children[a].disabled=true;board.children[b].disabled=true;
             root.querySelector('#game-message').textContent=`${matched.size/2} of ${pairs} pairs found. Lovely!`;
-            if(matched.size===deck.length)setTimeout(()=>finish(Math.max(40,100-mistakes*12)),650);
+            if(matched.size===deck.length)setTimeout(()=>finish(Math.max(0,100-Math.round(mistakes*100/(pairs*2.5)))),650);
           }else{mistakes++;busy=true;root.querySelector('#game-message').textContent='A good try. Have another look!';
             setTimeout(()=>{for(const n of revealed){const btn=board.children[n];btn.textContent='✦';btn.classList.remove('is-open');btn.setAttribute('aria-label','Hidden memory card '+(n+1));}revealed=[];busy=false;},950);
           }
@@ -64,7 +76,7 @@
   }
   function words() {
     const pool=['flower','garden','apple','friend','music','sunshine','river','family','bird','smile','moon','house','orange','pencil','window','book'];
-    const count=level+2;
+    const count=[3,5,7][level-1];
     const targets=shuffle(pool).slice(0,count);
     root.innerHTML=toolbar('Look at these words')+`<p class="game-instructions">Read the words, then press Ready when you feel ready.</p><div class="word-display">${targets.map(w=>`<span>${w}</span>`).join('')}</div><div class="center-actions">${button("I'm ready to remember →",'ready')}</div>`;
     root.querySelector('#ready').addEventListener('click',()=>{
@@ -84,7 +96,7 @@
     });
   }
   function numbers() {
-    const count=level+3;
+    const count=[4,6,8][level-1];
     const seq=Array.from({length:count},()=>Math.floor(Math.random()*9)+1).join('');
     root.innerHTML=toolbar('Look at this number')+`<p class="game-instructions">Remember these numbers in order, then press Ready.</p><div class="number-display">${seq}</div><div class="center-actions">${button("I'm ready →",'ready')}</div>`;
     root.querySelector('#ready').addEventListener('click',()=>{
@@ -99,10 +111,11 @@
   }
   function pictures() {
     const objects=[['🍎','Apple'],['🐕','Dog'],['🚲','Bicycle'],['🌻','Sunflower'],['☕','Cup'],['🐘','Elephant'],['📚','Books'],['🍌','Banana'],['⌚','Watch'],['🚌','Bus'],['🎁','Gift'],['🪁','Kite']];
-    const rounds=shuffle(objects).slice(0,4);let round=0,correct=0;
+    const roundCount=[3,5,6][level-1];
+    const rounds=shuffle(objects).slice(0,roundCount);let round=0,correct=0;
     const show=()=>{
       if(round===rounds.length){finish(correct/rounds.length*100);return;}
-      const [emoji,label]=rounds[round];const choices=shuffle([label,...shuffle(objects.map(x=>x[1]).filter(n=>n!==label)).slice(0,level+1)]);
+      const [emoji,label]=rounds[round];const choices=shuffle([label,...shuffle(objects.map(x=>x[1]).filter(n=>n!==label)).slice(0,level)]);
       root.innerHTML=toolbar('Name the picture',`Picture ${round+1} of ${rounds.length}`)+`<p class="game-instructions">What do you see in this picture?</p><div class="big-picture" role="img" aria-label="Picture to recognise">${emoji}</div><div class="choice-grid">${choices.map((name,i)=>`<button type="button" class="choice" data-answer="${escapeHTML(name)}">${escapeHTML(name)}</button>`).join('')}</div><p id="picture-feedback" class="game-message"></p>`;
       root.querySelectorAll('[data-answer]').forEach(btn=>btn.addEventListener('click',()=>{
         if(root.querySelector('.choice:disabled'))return;
@@ -114,21 +127,29 @@
     };show();
   }
   function puzzle() {
-    const size=level===1?2:level===2?3:3;
+    const size=[2,3,4][level-1];
     const total=size*size;
     let tiles=shuffle(Array.from({length:total},(_,i)=>i));
     if(tiles.every((v,i)=>v===i))[tiles[0],tiles[1]]=[tiles[1],tiles[0]];
-    let selected=null, moves=0;
+    // Minimum number of swaps needed to solve this permutation. Extra moves
+    // are an understandable feedback measure, unlike counting moves that
+    // temporarily move a tile away from its correct position.
+    const visited=new Set();let cycles=0;
+    for(let i=0;i<total;i++){
+      if(visited.has(i))continue;
+      cycles++;let j=i;
+      while(!visited.has(j)){visited.add(j);j=tiles[j];}
+    }
+    const optimalSwaps=total-cycles;
+    let selected=null,moves=0;
     root.innerHTML=toolbar('Put the picture back together')+`<p class="game-instructions">Tap two pieces to swap them, or drag one onto another.</p><img class="puzzle-reference" src="/static/garden.svg" alt="Reference picture: a bright garden with a house and a tree"><div class="puzzle-grid" id="puzzle-board" role="group" aria-label="Garden picture puzzle"></div><p id="puzzle-status" class="game-message">Use the little picture above as your guide.</p>`;
     const board=root.querySelector('#puzzle-board');board.style.gridTemplateColumns=`repeat(${size},1fr)`;
     const swap=(a,b)=>{
       if(a===b){selected=null;render();return;}
-      const before=[a,b].filter(i=>tiles[i]===i).length;
       [tiles[a],tiles[b]]=[tiles[b],tiles[a]];moves++;
-      const after=[a,b].filter(i=>tiles[i]===i).length;
-      if(after<=before)mistakes++;
+      mistakes=Math.max(0,moves-optimalSwaps);
       selected=null;render();
-      if(tiles.every((v,i)=>v===i)){root.querySelector('#puzzle-status').textContent='You completed the picture!';setTimeout(()=>finish(Math.max(40,100-mistakes*5)),700);}
+      if(tiles.every((v,i)=>v===i)){root.querySelector('#puzzle-status').textContent='You completed the picture!';setTimeout(()=>finish(Math.max(0,100-mistakes*[12,7,4][level-1])),700);}
     };
     function render(){
       board.innerHTML='';
@@ -150,19 +171,51 @@
   }
   function familyGame() {
     if(!family.length){root.innerHTML=toolbar('Family memories')+`<div class="empty-small"><span>💛</span><h2>Photos come first</h2><p>Ask your approved caregiver to add family photos to your family space.</p><a class="button button-outline" href="/family">Go to family space →</a></div>`;return;}
-    const rounds=shuffle(family).slice(0,Math.min(5,family.length));let index=0,correct=0;
-    function show(){
-      if(index===rounds.length){finish(correct/rounds.length*100);return;}
-      const p=rounds[index];const other=shuffle(family.filter(m=>m.id!==p.id)).slice(0,3).map(m=>m.name);
-      const choices=shuffle([p.name,...other,...(other.length<2?["I'm not sure"]:[])]);
-      root.innerHTML=toolbar('Remember a familiar face',`Photo ${index+1} of ${rounds.length}`)+`<p class="game-instructions">Who is in this photo?</p><img class="family-picture" src="${escapeHTML(p.image)}" alt="A familiar family photo"><div class="choice-grid">${choices.map(name=>`<button type="button" class="choice" data-answer="${escapeHTML(name)}">${escapeHTML(name)}</button>`).join('')}</div><p class="game-message" id="family-feedback">It's okay if you don't remember straight away.</p>`;
+    const rounds=shuffle(family).slice(0,Math.min([2,3,5][level-1],family.length));
+    let index=0,correct=0,questions=0;
+    const relationOptions=['Daughter','Son','Granddaughter','Grandson','Sister','Brother','Wife','Husband','Friend','Niece','Nephew','Caregiver'];
+    const endQuestion=(right,answer,feedbackId)=>{
+      questions++;
+      if(right) correct++; else mistakes++;
+      root.querySelectorAll('[data-answer]').forEach(b=>b.disabled=true);
+      const feedback=root.querySelector('#'+feedbackId);
+      if(feedback)feedback.textContent=answer;
+    };
+    const nextRound=()=>{index++;show();};
+    const askRelation=(person)=>{
+      const distractors=shuffle([...new Set([...family.filter(m=>m.id!==person.id).map(m=>m.relation),...relationOptions])]
+        .filter(x=>x.toLowerCase()!==person.relation.toLowerCase())).slice(0,level===2?2:3);
+      const choices=shuffle([person.relation,...distractors]);
+      root.innerHTML=toolbar('Remember the relationship',`Photo ${index+1} of ${rounds.length}`)+
+        `<p class="game-instructions">How is ${escapeHTML(person.name)} connected to you?</p>`+
+        `<img class="family-picture" src="${escapeHTML(person.image)}" alt="Familiar family member">`+
+        `<div class="choice-grid">${choices.map(name=>`<button type="button" class="choice" data-answer="${escapeHTML(name)}">${escapeHTML(name)}</button>`).join('')}</div>`+
+        `<p class="game-message" id="family-feedback">Take your time remembering.</p>`;
       root.querySelectorAll('[data-answer]').forEach(btn=>btn.addEventListener('click',()=>{
         if(root.querySelector('[data-answer]:disabled'))return;
-        const right=btn.dataset.answer===p.name;if(right){correct++;btn.classList.add('correct');}else{mistakes++;btn.classList.add('wrong');}
-        root.querySelectorAll('[data-answer]').forEach(b=>b.disabled=true);
-        root.querySelector('#family-feedback').textContent='This is '+p.name+', your '+p.relation+'. 💛';
-        setTimeout(()=>{index++;show();},1900);
+        const right=btn.dataset.answer===person.relation;
+        btn.classList.add(right?'correct':'wrong');
+        endQuestion(right,`${person.name} is your ${person.relation}. 💛`,'family-feedback');
+        setTimeout(nextRound,1700);
       }));
-    }show();
+    };
+    function show(){
+      if(index===rounds.length){finish(questions?correct/questions*100:0);return;}
+      const person=rounds[index];
+      const other=shuffle([...new Set(family.filter(m=>m.id!==person.id).map(m=>m.name))]).slice(0,level);
+      const choices=shuffle([person.name,...other,...(other.length===0?["I'm not sure"]:[])]);
+      root.innerHTML=toolbar('Remember a familiar face',`Photo ${index+1} of ${rounds.length}`)+
+        `<p class="game-instructions">Who is in this photo?</p><img class="family-picture" src="${escapeHTML(person.image)}" alt="A familiar family photo">`+
+        `<div class="choice-grid">${choices.map(name=>`<button type="button" class="choice" data-answer="${escapeHTML(name)}">${escapeHTML(name)}</button>`).join('')}</div>`+
+        `<p class="game-message" id="family-feedback">It's okay if you don't remember straight away.</p>`;
+      root.querySelectorAll('[data-answer]').forEach(btn=>btn.addEventListener('click',()=>{
+        if(root.querySelector('[data-answer]:disabled'))return;
+        const right=btn.dataset.answer===person.name;
+        btn.classList.add(right?'correct':'wrong');
+        endQuestion(right,`This is ${person.name}, your ${person.relation}. 💛`,'family-feedback');
+        setTimeout(()=>{if(level>=2)askRelation(person);else nextRound();},1800);
+      }));
+    }
+    show();
   }
 })();

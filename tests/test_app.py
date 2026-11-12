@@ -107,3 +107,53 @@ def test_adaptive_level_after_three_good_games(client):
                                       mistakes=0, duration_seconds=35, difficulty=1))
         db.session.commit()
         assert difficulty_for(patient_id,"cards") == 2
+
+
+def test_difficulty_changes_independently_and_only_one_level_per_streak(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    with app.app_context():
+        uid = User.query.filter_by(email="asha@example.org").one().id
+        assert difficulty_for(uid, "cards") == 1
+        assert difficulty_for(uid, "puzzle") == 1
+
+        for _ in range(2):
+            db.session.add(GameResult(patient_id=uid,game_type="cards",score=95,
+                                      mistakes=0,duration_seconds=40,difficulty=1))
+        db.session.commit()
+        assert difficulty_for(uid, "cards") == 2
+        assert difficulty_for(uid, "puzzle") == 1
+
+        # One success at the new level must NOT immediately leap to level 3,
+        # even when the previous two low-level games were excellent.
+        db.session.add(GameResult(patient_id=uid,game_type="cards",score=96,
+                                  mistakes=0,duration_seconds=50,difficulty=2))
+        db.session.commit()
+        assert difficulty_for(uid, "cards") == 2
+
+        db.session.add(GameResult(patient_id=uid,game_type="cards",score=93,
+                                  mistakes=0,duration_seconds=50,difficulty=2))
+        db.session.commit()
+        assert difficulty_for(uid, "cards") == 3
+
+        # Repeated difficulty at level 3 steps down only one level.
+        for _ in range(2):
+            db.session.add(GameResult(patient_id=uid,game_type="cards",score=30,
+                                      mistakes=7,duration_seconds=180,difficulty=3))
+        db.session.commit()
+        assert difficulty_for(uid, "cards") == 2
+
+
+def test_api_returns_next_level_after_two_confident_plays(client):
+    register(client,"Asha Sharma","asha@example.org","patient")
+    headers={"X-CSRF-Token":token(client,"/games")}
+    payload={"game":"numbers","score":100,"mistakes":0,"seconds":45,"difficulty":1}
+    first=client.post("/api/games/finish",json=payload,headers=headers)
+    assert first.status_code == 200
+    assert first.json["new_level"] == 1
+    assert first.json["level_change"] == 0
+    second=client.post("/api/games/finish",json=payload,headers=headers)
+    assert second.status_code == 200
+    assert second.json["new_level"] == 2
+    assert second.json["level_change"] == 1
+    assert second.json["next_level_name"] == "Growing"
+    assert b'Growing level' in client.get('/games/numbers').data

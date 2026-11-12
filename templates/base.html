@@ -9,9 +9,10 @@
   <title>{% block title %}MindCare AI{% endblock %} · MindCare</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='voice.js') }}" defer></script>
   {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
     <header class="site-header">
@@ -28,6 +29,7 @@
         {% endif %}
         </nav>
         <div class="nav-right">
+        {% if me and me.role == 'patient' %}<button type="button" id="voice-replay" class="voice-replay" title="Hear the gentle voice again" aria-label="Hear the gentle voice again">🔊 <span id="voice-status">Gentle voice is on</span></button>{% endif %}
         <button type="button" class="font-toggle" id="font-toggle" aria-label="Toggle larger text" title="Toggle larger text">A+</button>
         {% if me %}
           <span class="user-pill" title="Signed in as {{ me.name }}"><span class="avatar-mini">{{ me.name[0]|upper }}</span><span class="user-name">{{ me.name.split(' ')[0] }}</span></span>

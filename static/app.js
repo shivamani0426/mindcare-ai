@@ -39,36 +39,9 @@
     points.forEach((p,i)=> {mk('circle',{cx:p.x,cy:p.y,r:6,class:'chart-point'}); mk('text',{x:p.x,y:218,'text-anchor':'middle',class:'chart-label'},values[i].day);});
     el.appendChild(s);
   });
-  // Client-side voice reminders only. No background notification or server-side promise.
-  const voiceButton=document.getElementById('voice-enable');
-  const toast=document.getElementById('voice-toast');
-  if (voiceButton) {
-    let lastKey='';
-    let enabled = false;
-    const tick = async () => {
-      if (!enabled || document.hidden) return;
-      try {
-        const resp=await fetch('/api/reminders/today',{credentials:'same-origin'});
-        if (!resp.ok) return;
-        const {reminders=[]}=await resp.json();
-        const now=new Date();
-        const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-        const due=reminders.find(r=>!r.done && r.time===hhmm);
-        const key=now.toDateString()+hhmm+(due?.id||'');
-        if(due && key!==lastKey) {
-          lastKey=key;
-          const message='A gentle reminder: '+due.title+'.';
-          if(toast){toast.textContent='🔔 '+message;toast.hidden=false;setTimeout(()=>toast.hidden=true,15000);}
-          if('speechSynthesis' in window) {window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));}
-        }
-      } catch (_) { /* Offline? Keep the app usable. */ }
-    };
-    voiceButton.addEventListener('click', () => {
-      if(!('speechSynthesis' in window)){voiceButton.textContent='Voice is unavailable in this browser';voiceButton.disabled=true;return;}
-      enabled=!enabled;
-      voiceButton.textContent=enabled?'🔊 Spoken reminders are on':'🔊 Enable spoken reminders';
-      if(enabled){window.speechSynthesis.speak(new SpeechSynthesisUtterance('Spoken reminders are enabled.'));tick();}
-    });
-    setInterval(tick,30000);
-  }
+  // Voice guidance and due reminders run automatically on every patient page.
+  // The voice selector and platform autoplay handling live in voice.js.
+  document.getElementById('voice-replay-reminder')?.addEventListener('click', () => {
+    window.MindCareVoice?.speak('Hello. I am here to help you remember your day.', {repeat:true});
+  });
 })();

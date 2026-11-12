@@ -174,20 +174,34 @@ def selected_patient():
     return patients[0] if patients else None
 
 
+# Gentle, independent progression for each game.  No health inferences.
+# Two consecutive excellent sessions at the *same* difficulty unlock exactly one
+# step; two difficult sessions lower it again.  Older sessions from a previous
+# difficulty must not cause an immediate second promotion or demotion.
+STRONG_SCORE = 85
+STRUGGLING_SCORE = 45
+MIN_CONSECUTIVE_SESSIONS = 2
+
+
 def difficulty_for(patient_id, game):
     latest = (GameResult.query.filter_by(patient_id=patient_id, game_type=game)
-              .order_by(GameResult.id.desc()).limit(4).all())
+              .order_by(GameResult.id.desc()).limit(3).all())
     if not latest:
         return 1
-    level = latest[0].difficulty
-    if len(latest) >= 3:
-        recent = latest[:3]
-        average_score = mean(x.score for x in recent)
-        average_errors = mean(x.mistakes for x in recent)
-        if average_score >= 82 and average_errors <= 2:
-            level = min(3, level + 1)
-        elif average_score < 48 or average_errors >= 5:
-            level = max(1, level - 1)
+    level = max(1, min(3, latest[0].difficulty))
+    # Only consider the uninterrupted streak played at the current level.
+    at_level = []
+    for result in latest:
+        if result.difficulty != level:
+            break
+        at_level.append(result)
+    if len(at_level) < MIN_CONSECUTIVE_SESSIONS:
+        return level
+    last_two = at_level[:2]
+    if all(r.score >= STRONG_SCORE and r.mistakes <= 3 for r in last_two):
+        return min(3, level + 1)
+    if all(r.score <= STRUGGLING_SCORE for r in last_two):
+        return max(1, level - 1)
     return level
 
 
@@ -396,7 +410,12 @@ def finish_game():
     db.session.add(GameResult(patient_id=current_user().id, game_type=slug, score=score,
                               mistakes=errors, duration_seconds=seconds, difficulty=difficulty))
     db.session.commit()
-    return jsonify(ok=True, new_level=difficulty_for(current_user().id, slug), stats=performance(current_user().id))
+    new_level = difficulty_for(current_user().id, slug)
+    # The current play is saved at the level used, even if the next play changes.
+    return jsonify(ok=True, new_level=new_level,
+                   level_change=new_level - difficulty,
+                   next_level_name=LEVEL_NAMES[new_level],
+                   stats=performance(current_user().id))
 
 
 @app.route("/reminders")
