@@ -1,10 +1,151 @@
-{% extends 'base.html' %}{% block title %}Caregiver dashboard{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Caregiver dashboard{% endblock %}
+{% block head %}<script defer src="{{ url_for('static', filename='caregiver-dashboard.js') }}"></script>{% endblock %}
 {% block content %}
-<section class="page-heading"><span class="eyebrow">CARING IS A TEAM EFFORT</span><h1>Good to see you, {{ me.name.split(' ')[0] }} 💛</h1><p>A gentle overview of the people you support and their everyday activity.</p></section>
-<div class="care-top-grid"><div class="panel"><h2>Connect with a loved one</h2><p class="muted">Ask them for their 8-character connection code. They must approve your request before you can see their information.</p><form class="inline-form" action="{{ url_for('caregiver_link') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label class="input-label">Patient connection code<input name="invite_code" placeholder="e.g. A1B2C3D4" maxlength="16" required autocomplete="off"></label><button class="button button-primary" type="submit">Request access →</button></form></div><div class="care-tip"><span class="feature-icon peach">🌼</span><h3>A thoughtful reminder</h3><p>Scores may vary with sleep, health, mood, and environment. A lower score is a reason for care, not a clinical conclusion.</p></div></div>
-<section class="section-spaced"><div class="section-heading row-heading"><div><span class="eyebrow">YOUR CARE CIRCLE</span><h2>People you support</h2></div><span class="soft-label">{{ summaries|length }} connected</span></div>
-{% if summaries %}<div class="patients-grid">{% for row in summaries %}<article class="patient-card"><div class="patient-card-head"><div class="patient-avatar">{{ row.patient.name[0]|upper }}</div><div><h3>{{ row.patient.name }}</h3><small>{{ row.patient.region or 'Your care circle' }}</small></div><span class="status-chip">Connected</span></div><div class="patient-mini-stats"><div><strong>{{ row.stats.count }}</strong><span>Games</span></div><div><strong>{{ row.stats.average }}%</strong><span>Avg. score</span></div><div><strong>{{ row.reminders|length }}</strong><span>Reminders</span></div></div><div class="patient-trend"><span class="trend-dot"></span><span>{{ row.stats.trend }}</span></div><a class="button button-outline button-block" href="{{ url_for('caregiver_detail', patient_id=row.patient.id) }}">View their activity →</a>
-<form method="post" action="{{ url_for('start_video_call') }}" class="call-contact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="contact_id" value="{{ row.patient.id }}"><button class="button button-primary button-block call-contact-button" type="submit">📹 Video call {{ row.patient.name.split(' ')[0] }}</button></form></article>{% endfor %}</div>{% else %}<div class="empty-state"><span>🤝</span><h3>Your care circle starts here</h3><p>When a patient approves your connection request, their information will appear here.</p></div>{% endif %}
-{% if pending %}<div class="panel pending-list"><h3>Waiting for patient approval</h3>{% for row in pending %}<p>⏳ {{ row.patient.name }} — request sent</p>{% endfor %}</div>{% endif %}
+<section class="caregiver-v2" aria-labelledby="caregiver-title">
+  <header class="caregiver-hero">
+    <div class="caregiver-hero-copy">
+      <span class="eyebrow">YOUR CARE CIRCLE · MINDFUL SUPPORT</span>
+      <h1 id="caregiver-title">Welcome back, {{ me.name.split(' ')[0] }} <span aria-hidden="true">💛</span></h1>
+      <p>See how your connected loved ones are doing, notice check-ins, and help with the next small step.</p>
+      <div class="caregiver-hero-tags"><span>🔒 Only patients who approved you</span><span>📅 {{ today_date.strftime('%A, %d %B %Y') }}</span></div>
+    </div>
+    <div class="caregiver-hero-art" aria-hidden="true"><span>🌿</span><span>✦</span></div>
+  </header>
+
+  <section class="caregiver-stats" aria-label="Care circle overview">
+    <article class="caregiver-stat caregiver-stat-people"><span class="caregiver-stat-icon" aria-hidden="true">👥</span><span>Connected people</span><strong>{{ counts.patients }}</strong><small>Approved connections</small></article>
+    <article class="caregiver-stat"><span class="caregiver-stat-icon" aria-hidden="true">💛</span><span>Today's check-ins</span><strong>{{ counts.checkins }} <small>/ {{ counts.patients }}</small></strong><small>Voluntary wellbeing reports</small></article>
+    <article class="caregiver-stat {{ 'caregiver-stat-attention' if counts.support else '' }}"><span class="caregiver-stat-icon" aria-hidden="true">🤝</span><span>Support check-ins to review</span><strong>{{ counts.support }}</strong><small>Within the last seven days</small></article>
+    <article class="caregiver-stat"><span class="caregiver-stat-icon" aria-hidden="true">🔔</span><span>Past-due reminders</span><strong>{{ counts.overdue }}</strong><small>Not self-marked complete today</small></article>
+  </section>
+
+  <section class="caregiver-support-section" id="support-requests" aria-labelledby="caregiver-support-title">
+    <div class="caregiver-section-heading">
+      <div><span class="eyebrow">WHEN SOMEONE NEEDS A HAND</span><h2 id="caregiver-support-title">Support check-ins</h2><p>Requests appear here when you visit or refresh MindCare. This is <strong>not</strong> an emergency alert service.</p></div>
+      <span class="caregiver-soft-count">{{ counts.support }} awaiting review</span>
+    </div>
+    {% if support_queue %}
+    <div class="caregiver-support-list">
+      {% for item in support_queue %}
+      <article class="caregiver-support-item">
+        <span class="caregiver-support-avatar" aria-hidden="true">{{ item.patient.name[0]|upper }}</span>
+        <div class="caregiver-support-copy">
+          <h3>{{ item.patient.name }}</h3>
+          <p class="caregiver-support-when">{{ item.checkin.checked_date.strftime('%d %b %Y') }} · Patient selected "Need support"</p>
+          {% if item.checkin.note %}<p class="caregiver-support-note">{{ item.checkin.note }}</p>{% endif %}
+          <p class="caregiver-small-print">Marking reviewed only records that you saw this entry. It does not notify or contact the patient.</p>
+        </div>
+        <div class="caregiver-support-actions">
+          <a class="button button-outline" href="{{ url_for('caregiver_detail', patient_id=item.patient.id, _anchor='wellbeing') }}">View details</a>
+          <form method="post" action="{{ url_for('caregiver_support_review', checkin_id=item.checkin.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button button-primary">✓ Mark reviewed</button>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="caregiver-support-empty" role="status"><span aria-hidden="true">🌼</span><div><strong>No unreviewed support check-ins</strong><p>Patients can request support with their daily wellbeing check-in. Nothing is sent automatically; check back when you visit.</p></div></div>
+    {% endif %}
+  </section>
+
+  <div class="caregiver-middle-grid">
+    <section class="caregiver-connect-panel panel" aria-labelledby="caregiver-connect-title">
+      <span class="eyebrow">GROW YOUR CIRCLE</span>
+      <h2 id="caregiver-connect-title">Connect with a loved one</h2>
+      <p>Ask the patient for their connection code. Only after they approve your request can you view their information.</p>
+      <form action="{{ url_for('caregiver_link') }}" method="post" class="caregiver-connect-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="caregiver-invite-code">Patient connection code</label>
+        <div class="caregiver-connect-controls">
+          <input type="text" id="caregiver-invite-code" name="invite_code" placeholder="e.g. A1B2C3D4" maxlength="16" autocomplete="off" spellcheck="false" required>
+          <button type="submit" class="button button-primary">Request access</button>
+        </div>
+      </form>
+      {% if pending %}
+      <div class="caregiver-pending">
+        <h3>Waiting for approval</h3>
+        {% for entry in pending %}<p>⏳ {{ entry.patient.name }} — request sent</p>{% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    <aside class="caregiver-guidance-panel" aria-label="Caregiving guidance">
+      <span aria-hidden="true" class="caregiver-guidance-symbol">🌱</span>
+      <h2>Support, not scores</h2>
+      <p>Game scores and reminder checkmarks are helpful context, not a diagnosis or proof that medicine was taken.</p>
+      <p>When someone asks for support, try reaching them directly. An in-app review mark is not a reply.</p>
+    </aside>
+  </div>
+
+  <section class="caregiver-directory" aria-labelledby="caregiver-directory-title">
+    <div class="caregiver-section-heading">
+      <div><span class="eyebrow">THE PEOPLE YOU CARE FOR</span><h2 id="caregiver-directory-title">Your care circle</h2><p>Small, meaningful updates for every approved connection.</p></div>
+      <span class="caregiver-soft-count">{{ summaries|length }} connected</span>
+    </div>
+    {% if summaries %}
+    <div class="caregiver-directory-tools">
+      <label class="caregiver-search-label" for="caregiver-patient-search"><span aria-hidden="true">⌕</span><span class="sr-only">Find a patient</span><input id="caregiver-patient-search" type="search" placeholder="Find a loved one by name…" autocomplete="off"></label>
+      <div class="caregiver-filter-pills" role="group" aria-label="Filter people">
+        <button type="button" class="caregiver-filter-button" data-care-filter="all" aria-pressed="true">Everyone</button>
+        <button type="button" class="caregiver-filter-button" data-care-filter="support" aria-pressed="false">Needs follow-up</button>
+        <button type="button" class="caregiver-filter-button" data-care-filter="overdue" aria-pressed="false">Past-due reminders</button>
+        <button type="button" class="caregiver-filter-button" data-care-filter="unchecked" aria-pressed="false">No check-in today</button>
+      </div>
+      <p class="caregiver-filter-status" id="caregiver-filter-status" role="status" aria-live="polite">Showing {{ summaries|length }} people</p>
+    </div>
+    <div class="caregiver-patient-grid">
+    {% for row in summaries %}
+      <article class="caregiver-patient-card" data-care-patient data-patient-name="{{ row.patient.name|lower }}" data-care-support="{{ '1' if row.pending_support else '0' }}" data-care-overdue="{{ '1' if row.overdue_count else '0' }}" data-care-unchecked="{{ '0' if row.checkin else '1' }}">
+        <div class="caregiver-patient-header">
+          <span class="caregiver-patient-avatar" aria-hidden="true">{{ row.patient.name[0]|upper }}</span>
+          <div class="caregiver-patient-identity"><h3>{{ row.patient.name }}</h3><p>{{ row.patient.region or 'Your care circle' }}</p></div>
+          {% if row.pending_support %}<span class="caregiver-patient-status caregiver-patient-status-support">Support to review</span>
+          {% elif row.checkin %}<span class="caregiver-patient-status">Checked in today</span>
+          {% else %}<span class="caregiver-patient-status caregiver-patient-status-neutral">No check-in today</span>{% endif %}
+        </div>
+        <div class="caregiver-patient-wellbeing">
+          <span class="caregiver-mini-label">Wellbeing</span>
+          {% if row.checkin %}
+            <strong>{{ {'happy':'😊 Feeling happy','okay':'🙂 Feeling okay','tired':'😴 Feeling tired','need_help':'🤝 Needs support'}.get(row.checkin.feeling, 'Daily check-in') }}</strong>
+            {% if row.checkin.note %}<p>{{ row.checkin.note }}</p>{% endif %}
+          {% elif row.latest_checkin %}
+            <strong>No check-in today</strong><p>Last check-in on {{ row.latest_checkin.checked_date.strftime('%d %b') }}. No check-in is not proof of a problem.</p>
+          {% else %}
+            <strong>Not checked in yet</strong><p>The patient can share their wellbeing voluntarily.</p>
+          {% endif %}
+        </div>
+        <div class="caregiver-patient-metrics" aria-label="Today and activity statistics">
+          <div><strong>{{ row.done_count }} / {{ row.reminders|length }}</strong><span>Reminders self-marked</span></div>
+          <div><strong>{{ row.stats.count }}</strong><span>Games played</span></div>
+          <div><strong>{{ row.family_count }}</strong><span>Family photos</span></div>
+        </div>
+        {% if row.overdue_count %}
+        <p class="caregiver-overdue-note">🔔 {{ row.overdue_count }} reminder{{ 's' if row.overdue_count != 1 else '' }} past the scheduled time and not marked done.</p>
+        {% elif row.upcoming %}
+        <p class="caregiver-next-note">Next reminder: {{ row.upcoming.item.scheduled_time }} · {{ row.upcoming.item.title }}</p>
+        {% else %}
+        <p class="caregiver-next-note">No outstanding reminders scheduled for today.</p>
+        {% endif %}
+        <div class="caregiver-patient-actions">
+          <a class="button button-primary" href="{{ url_for('caregiver_detail', patient_id=row.patient.id) }}">View patient overview</a>
+          <a class="button button-outline" href="{{ url_for('reminders_page', patient_id=row.patient.id) }}">Reminders</a>
+          <a class="button button-outline" href="{{ url_for('family_page', patient_id=row.patient.id) }}">Family photos</a>
+          <form action="{{ url_for('start_video_call') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="contact_id" value="{{ row.patient.id }}">
+            <button type="submit" class="button button-outline">📹 Video call</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+    </div>
+    <p id="caregiver-no-results" class="caregiver-filter-empty" hidden>No matching people. Try another name or filter.</p>
+    {% else %}
+    <div class="caregiver-directory-empty"><span aria-hidden="true">💛</span><h3>Your care circle starts with trust</h3><p>Enter the patient's code above. They decide whether to approve your access.</p></div>
+    {% endif %}
+  </section>
+  <p class="caregiver-disclaimer">MindCare is a non-medical support tool. Entries reflect voluntary patient check-ins and self-reported reminders. This page updates when opened or refreshed; it does not send emergency or push alerts.</p>
 </section>
 {% endblock %}
