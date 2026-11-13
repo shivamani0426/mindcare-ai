@@ -143,16 +143,3 @@ A wellbeing 'Need support' selection is **not an emergency alert** and does **no
 New PostgreSQL tables: `wellbeing_check`, `emergency_contact`, `patient_preference`. Startup `db.create_all()` adds missing tables without modifying existing family photos, accounts, games, reminders, or care links.
 
 Notifications while the website is closed **remain a separate future feature**, requiring a push subscription/service worker/notification worker plus explicit opt-in; browser voice reminders still require an open tab. The caregiver dashboard has not been modified in this phase.
-
-
-### Free guest voice calling (patient ↔ trusted contact)
-
-The **Help & contacts** page keeps the original WhatsApp call handoff and native phone dialer, and adds a separate **Free MindCare voice call** button for each trusted contact.
-
-1. Patient signs in, adds a trusted contact, and presses **Free MindCare voice call**.
-2. MindCare creates a private invitation that expires after five minutes if unanswered.
-3. Patient taps **Send invitation via WhatsApp** (and sends the message), or copies the link into another messenger.
-4. Contact taps the invitation, opens MindCare in a browser, and taps **Answer voice call**. No MindCare registration or installation is necessary.
-5. Both participants approve microphone access. Audio uses WebRTC; MindCare only stores short-lived signaling information, not recordings.
-
-**Important limitations:** The guest link **does not automatically ring a SIM phone number or trigger a native WhatsApp voice call**. The invitation arrives as a normal message; its recipient must open the link and actively answer. A link can be used by the first person who accepts it, so send it only to the intended trusted person; no identity verification occurs. Both participants must keep their browser call pages open. No background web-push subscription/notification service is configured. STUN-only WebRTC may fail between certain mobile/carrier networks unless a TURN relay is provisioned with the optional \`TURN_URL\`, \`TURN_USERNAME\`, and \`TURN_PASSWORD\` settings. Network/data/relay usage is not guaranteed free indefinitely. This is **not for emergency services**; the 112 dialer remains separate. A new PostgreSQL table for guest voice sessions and another for expiring signaling data are created by \`db.create_all()\`.
