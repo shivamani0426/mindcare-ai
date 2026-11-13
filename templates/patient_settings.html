@@ -1,0 +1,19 @@
+{% extends 'base.html' %}{% block title %}My settings{% endblock %}
+{% block content %}
+<section class="patient-space settings-page">
+<a class="back-link" href="{{ url_for('dashboard') }}">← {{ tr('overview') }}</a>
+<section class="page-heading"><span class="eyebrow">MADE FOR YOU</span><h1>{{ tr('settings_title') }} 🌿</h1><p>{{ tr('settings_sub') }}</p></section>
+<form class="panel settings-form" action="{{ url_for('patient_settings') }}" method="post">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+ <label class="input-label">{{ tr('language') }}
+ <select name="language" id="interface-language">{% for code, label in LANGUAGES.items() %}<option value="{{ code }}" {{ 'selected' if (preferences.language if preferences else 'en') == code else '' }}>{{ label }}</option>{% endfor %}</select></label>
+ <div class="settings-options">
+ <label class="setting-option"><input type="checkbox" name="large_text" {{ 'checked' if preferences and preferences.large_text else '' }}><span>{{ tr('large_text') }}</span></label>
+ <label class="setting-option"><input type="checkbox" name="high_contrast" {{ 'checked' if preferences and preferences.high_contrast else '' }}><span>{{ tr('high_contrast') }}</span></label>
+ <label class="setting-option"><input type="checkbox" name="reduced_motion" {{ 'checked' if preferences and preferences.reduced_motion else '' }}><span>{{ tr('reduced_motion') }}</span></label>
+ </div>
+ <button class="button button-primary button-lg" type="submit">{{ tr('save_settings') }} →</button>
+ <p class="clinical-note">{{ tr('language_note') }}</p>
+</form>
+</section>
+{% endblock %}
