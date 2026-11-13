@@ -83,11 +83,13 @@ try:
         page.get_by_role("button", name=re.compile("Create my space")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
+        verify(page.locator("[data-quick-support-button]").count() == 1, "Full dashboard has a prominent Need Support button")
         verify(page.get_by_text("Your activity", exact=True).count() == 1, "Full dashboard loads activity")
 
         page.locator(".patient-mode-shortcut button").click()
         page.wait_for_selector(".simple-dashboard")
         verify(page.locator(".simple-action-card").count() == 4, "Simple View has four action cards")
+        verify(page.locator("[data-quick-support-button]").count() == 1, "Simple View also has a prominent Need Support button")
         verify(page.locator('.simple-bottom-actions a[href="tel:112"]').count() == 1,
                "Simplified view retains emergency 112 dialer")
         for width, height in [(320, 780), (375, 812), (768, 1024), (1280, 900)]:
@@ -168,11 +170,12 @@ try:
         verify("QA family edited" in page.locator(".contact-row").inner_text(),
                "Trusted contact can be edited")
         page.goto(base + "/dashboard")
-        page.locator('input[name="feeling"][value="need_help"]').check()
-        page.locator('.wellbeing-form button[type="submit"]').click()
+        page.locator("[data-quick-support-button]").click()
         page.wait_for_url("**/dashboard*")
         verify(page.locator(".support-help-box").count() == 1,
                "Need support displays manual contact actions")
+        verify(page.locator(".patient-support-quick-saved").count() == 1,
+               "One-tap Need Support acknowledgement appears without a second submit")
         verify(page.locator(".support-help-box a.whatsapp-open-button").count() == 1,
                "Need support offers a WhatsApp contact action")
 

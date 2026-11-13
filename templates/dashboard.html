@@ -1,6 +1,30 @@
 {% extends 'base.html' %}{% block title %}{{ tr('dash_page_title') }}{% endblock %}
 {% block content %}
 <section class="welcome-banner"><div><span class="eyebrow">{{ tr('dash_eyebrow') }}</span><h1>{{ tr('dash_hello') }}, {{ me.name.split(' ')[0] }} <span>👋</span></h1><p>{{ tr('dash_intro') }}</p><div class="welcome-actions"><a class="button button-primary" href="{{ url_for('games') }}">{{ tr('dash_play') }} →</a><a class="button button-outline" href="{{ url_for('reminders_page') }}">{{ tr('dash_routine') }}</a></div></div><div class="welcome-flower">🌻</div></section>
+<section class="patient-support-quick" aria-labelledby="patient-support-quick-title" data-quick-support-panel>
+  <div class="patient-support-quick-content">
+    <span class="patient-support-quick-icon" aria-hidden="true">🤝</span>
+    <div>
+      <h2 id="patient-support-quick-title">{{ tr('support_one_tap') }}</h2>
+      <p>{{ tr('support_one_tap_hint') }}</p>
+      {% if checkin and checkin.feeling == 'need_help' %}
+      <p class="patient-support-quick-saved" role="status">✓ {{ tr('support_request_saved') }}</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="patient-support-quick-actions">
+    <form method="post" action="{{ url_for('wellbeing_checkin') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="feeling" value="need_help">
+      <input type="hidden" name="quick_support" value="1">
+      <button type="submit" class="button patient-support-action" data-quick-support-button>🤝 {{ tr('support_one_tap') }}</button>
+    </form>
+    {% if checkin and checkin.feeling == 'need_help' and support_url %}
+    <a class="button whatsapp-open-button" href="{{ support_url }}" target="_blank" rel="noopener noreferrer external" aria-label="{{ tr('simple_open_whatsapp_for') }} {{ support_contact.name }}">💬 {{ tr('simple_open_whatsapp') }}</a>
+    <p class="patient-support-quick-hint">{{ tr('support_call_now') }}</p>
+    {% endif %}
+  </div>
+</section>
 <form method="post" action="{{ url_for('patient_view_mode') }}" class="patient-mode-shortcut">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <input type="hidden" name="simplified" value="1">
