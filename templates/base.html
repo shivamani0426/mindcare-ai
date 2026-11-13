@@ -10,11 +10,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-today.js') }}" defer></script>{% endif %}
+  {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-notifications.js') }}" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='voice.js') }}" defer></script>
   {% if me %}<script src="{{ url_for('static', filename='calls.js') }}" defer></script>{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
+<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }} {{ 'simple-view' if simple_view else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
     <header class="site-header">
