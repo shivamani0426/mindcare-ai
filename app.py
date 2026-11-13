@@ -21,6 +21,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
+from patient_labels import PATIENT_LABELS
 
 app = Flask(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///mindcare_local.db")
@@ -194,7 +195,7 @@ PATIENT_TEXT = {
         "settings_title": "Make MindCare comfortable", "settings_sub": "Choose what is easiest for you to see and use.",
         "language": "Dashboard language", "large_text": "Larger text", "high_contrast": "Higher contrast",
         "reduced_motion": "Reduce animations", "save_settings": "Save my settings",
-        "language_note": "Translation is currently available for the new patient panels and main navigation. Games, reminders, and spoken guidance are still mainly in English.",
+        "language_note": "Patient pages and core game instructions are available in English, Hindi and Kannada. Spoken voices depend on your device.",
         "quick_help": "I need help", "view_today": "My day", "open_settings": "Display settings"
     },
     "hi": {
@@ -217,7 +218,7 @@ PATIENT_TEXT = {
         "settings_title":"माइंडकेयर को आरामदायक बनाएं","settings_sub":"पढ़ने और उपयोग करने की सुविधा चुनें।",
         "language":"डैशबोर्ड की भाषा","large_text":"बड़े अक्षर","high_contrast":"अधिक कंट्रास्ट",
         "reduced_motion":"कम एनिमेशन","save_settings":"सेटिंग सहेजें",
-        "language_note":"अभी नए पैनल और मुख्य मेनू अनुवादित हैं। खेल, रिमाइंडर और आवाज़ मुख्यतः अंग्रेज़ी में हैं।",
+        "language_note":"मरीज के पेज और खेल के मुख्य निर्देश हिन्दी में उपलब्ध हैं। आवाज़ आपके डिवाइस पर निर्भर करती है।",
         "quick_help":"मुझे मदद चाहिए","view_today":"मेरा दिन","open_settings":"दिखावट बदलें"
     },
     "kn": {
@@ -240,7 +241,7 @@ PATIENT_TEXT = {
         "settings_title":"ಮೈಂಡ್‌ಕೇರ್ ಬಳಸಲು ಸುಲಭವಾಗಲಿ","settings_sub":"ನಿಮಗೆ ಸುಲಭವಾದ ಆಯ್ಕೆಗಳನ್ನು ಆರಿಸಿ.",
         "language":"ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಭಾಷೆ","large_text":"ದೊಡ್ಡ ಅಕ್ಷರ","high_contrast":"ಹೆಚ್ಚು ಕಾಂಟ್ರಾಸ್ಟ್",
         "reduced_motion":"ಕಡಿಮೆ ಚಲನೆ","save_settings":"ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಿ",
-        "language_note":"ಹೊಸ ಪ್ಯಾನೆಲ್‌ಗಳು ಮತ್ತು ಮುಖ್ಯ ಮೆನು ಅನುವಾದಗೊಂಡಿವೆ. ಆಟಗಳು ಮತ್ತು ಧ್ವನಿ ಇನ್ನೂ ಮುಖ್ಯವಾಗಿ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿವೆ.",
+        "language_note":"ರೋಗಿಯ ಪುಟಗಳು ಮತ್ತು ಆಟದ ಪ್ರಮುಖ ಸೂಚನೆಗಳು ಕನ್ನಡದಲ್ಲಿವೆ. ಧ್ವನಿ ನಿಮ್ಮ ಸಾಧನದ ಲಭ್ಯತೆಯನ್ನು ಅವಲಂಬಿಸಿದೆ.",
         "quick_help":"ನನಗೆ ಸಹಾಯ ಬೇಕು","view_today":"ನನ್ನ ದಿನ","open_settings":"ಪ್ರದರ್ಶನ ಸೆಟ್ಟಿಂಗ್‌ಗಳು"
     },
 }
@@ -262,7 +263,9 @@ def is_simple_view(user):
 def t_for(preference):
     lang = preference.language if preference and preference.language in LANGUAGE_LABELS else "en"
     lexicon = PATIENT_TEXT[lang]
-    return lambda key: lexicon.get(key, PATIENT_TEXT["en"].get(key, key))
+    extra = PATIENT_LABELS[lang]
+    english_extra = PATIENT_LABELS["en"]
+    return lambda key: lexicon.get(key, extra.get(key, PATIENT_TEXT["en"].get(key, english_extra.get(key, key))))
 
 
 def now_utc():
