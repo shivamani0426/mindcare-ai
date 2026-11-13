@@ -540,6 +540,7 @@ def dashboard():
     context = dict(stats=stats, reminders=reminders, recent=recent,
                    checkin=checkin, family_faces=family_faces, next_reminder=next_reminder,
                    today_pretty=today_local().strftime("%A, %d %B %Y"),
+                   now_minute=current_minute,
                    suggested=list(GAMES.items())[:5], pending_links=pending_links,
                    approved_links=approved_links, support_contact=support_contact, support_url=support_url)
     if is_simple_view(current_user()):
