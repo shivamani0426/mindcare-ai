@@ -28,6 +28,7 @@
     </ol>
     <p class="whatsapp-note">Both people need WhatsApp and internet access. WhatsApp calls use internet data. For an emergency, use the separate 112 phone-dialer button above.</p>
   </section>
+    <p class="whatsapp-note">Want to speak without WhatsApp voice calling? Each contact also has a <strong>Free MindCare voice call</strong> option. It creates a private link you can send to them. They must tap the link and Answer to connect; this does not ring a normal SIM number.</p>
   <div class="support-columns">
     <section class="panel patient-panel"><h2>{{ tr('contacts') }}</h2>
     {% if contacts %}<div class="contacts-list">{% for contact in contacts %}<article class="contact-row">
@@ -48,6 +49,12 @@
         <span class="whatsapp-contact-hint">For WhatsApp, save this contact with a full international number (for example +919876543210).</span>
         {% endif %}
       </div>
+      <form method="post" action="{{ url_for('guest_voice_start') }}" class="guest-voice-contact">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="contact_id" value="{{ contact.id }}">
+        <button type="submit" class="button guest-voice-contact-button" aria-label="Start a free browser voice call invitation for {{ contact.name }}">☎ Free MindCare voice call</button>
+        <span class="guest-voice-contact-hint">Send a private link. {{ contact.name }} can answer in a browser without a MindCare account.</span>
+      </form>
       <form method="post" action="{{ url_for('contact_delete', contact_id=contact.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="delete-link" data-confirm="Remove this trusted contact?">{{ tr('remove') }}</button></form>
     </article>{% endfor %}</div>{% else %}<p class="muted">{{ tr('no_contacts') }}</p>{% endif %}
     {% if contacts|length < 5 %}<form class="form-grid contact-add-form" action="{{ url_for('contact_add') }}" method="post">
