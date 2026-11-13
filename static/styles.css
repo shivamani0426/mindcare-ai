@@ -263,3 +263,6 @@ body.high-contrast .simple-action-card .button,body.high-contrast .simple-feelin
   .support-help-box .button{width:100%}
 }
 @media(max-width:370px){.simple-banner .simple-flower{display:none}.simple-feeling span{font-size:14px;padding:8px}.simple-feeling span span{font-size:27px}}
+
+.simple-action-card .simple-missed{font-size:15px;font-weight:800;color:#815015;padding:7px 10px;border-radius:9px;background:#fff2d7}
+body.high-contrast .simple-action-card .simple-missed{color:#56310c;background:#fff7df}
