@@ -158,3 +158,19 @@ Notifications while the website is closed **remain a separate future feature**, 
 **Translations:** Expanded Hindi/Kannada UI for patient dashboard, reminders, help, family and game instructions, with dynamic in-game labels and native-voice capability detection. User-provided contact names, family names and reminder text are never translated automatically; fallback to English is used for unsupported text.
 
 **QA:** CI checks Python syntax, Flask API tests, app JS and patient-specific scripts. End-to-end browser, screen reader, real device and caregiver acceptance testing remain essential before using the app for independent daily care.
+
+
+## Caregiver Dashboard 2.0
+
+Caregivers see only patient accounts **that explicitly approved their connection**. The dashboard now provides:
+
+- A daily care-circle summary with approved patient count, today's voluntary wellbeing check-ins, unreviewed support check-ins from the last seven days, and past-due reminders that the patient has not marked complete.
+- A searchable, filterable patient directory with easy access to activity details, reminders, family photos and the existing consent-based video call.
+- A private **Support check-ins** review queue. The patient can choose *Need support* and optionally write a note. The caregiver sees it when they open or refresh MindCare, not as a real-time alert. A **Mark reviewed** action records only that this caregiver saw the entry. It does not notify or contact the patient. When a patient changes a need-support note, any previous review acknowledgement is cleared so the request appears again.
+- A patient-specific wellbeing timeline of up to 14 daily check-ins, self-reported reminder acknowledgements and game engagement stats. Game scores are **not** medical assessments.
+- Pending connection requests remain separated from approved patient data. Revoking approval immediately prevents the caregiver from viewing records or acknowledging support.
+
+**Privacy/safety:** Review records are tied to the currently approved caregiver account. This workflow is not intended as urgent response, emergency dispatch, automatic push notification, medical diagnosis, or verification that medicine was taken. Keep the application's separate 112 emergency action and the patient's existing WhatsApp call handoff unchanged. No external service is contacted when a caregiver clicks *Mark reviewed*.
+
+### Tests
+The project runs Python permission/unit tests and two disposable Chromium journeys through GitHub Actions: \`tests/browser_smoke.py\` for patients and \`tests/browser_caregiver_smoke.py\` for caregivers. Both use isolated local databases and do not alter production accounts.
