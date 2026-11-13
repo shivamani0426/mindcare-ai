@@ -15,6 +15,8 @@ import re
 import tempfile
 import threading
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 tempdir = tempfile.TemporaryDirectory(prefix="mindcare-browser-")
 os.environ["DATABASE_URL"] = "sqlite:///" + str(Path(tempdir.name) / "e2e.db")
