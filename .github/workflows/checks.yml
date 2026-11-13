@@ -24,3 +24,4 @@ jobs:
           node --check static/calls.js
           node --check static/family-lightbox.js
           node --check static/patient-today.js
+          node --check static/patient-help-calls.js
