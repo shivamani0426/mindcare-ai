@@ -943,6 +943,7 @@ def test_phone_otp_server_requires_verified_identity_before_account_creation(cli
     client.get("/login")
     csrf = token(client, "/login")
     monkeypatch.setattr(authapp, "firebase_phone_ready", lambda: True)
+    monkeypatch.setattr(authapp, "firebase_public_config", lambda: {"apiKey":"test", "authDomain":"test.firebaseapp.com", "projectId":"test", "appId":"test"})
     monkeypatch.setattr(authapp, "verify_firebase_phone_id_token",
         lambda token: ("phone-provider-uid-123", "+919876543210")
         if token == "verified-firebase-id-token-"+"x"*90
@@ -1016,7 +1017,9 @@ def test_google_verified_profile_uses_subject_and_does_not_autolink_email(client
         assert ExternalIdentity.query.count() == 0
         assert User.query.count() == 1 and User.query.one().id == old_id
     login(client,"google-safe@example.org")
-    # User explicitly links their existing verified Google email.
+    # Authorized user initiated a Google-link flow; OAuth state is verified by Authlib.
+    with client.session_transaction() as sess:
+        sess["google_link_user"] = old_id
     linked=client.get("/auth/google/callback")
     assert linked.status_code == 302 and linked.location.endswith("/account/security")
     with app.app_context():
