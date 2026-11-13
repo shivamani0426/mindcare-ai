@@ -51,7 +51,12 @@ def no_horizontal_scroll(page, width):
     metrics = page.evaluate("""() => ({
        content: document.documentElement.scrollWidth,
        viewport: window.innerWidth,
-       body: document.body.scrollWidth
+       body: document.body.scrollWidth,
+       overflowing: [...document.querySelectorAll('*')].map(el => {
+         const rect=el.getBoundingClientRect();
+         return {tag:el.tagName,className:typeof el.className==='string'?el.className.slice(0,90):'',
+                 right:Math.round(rect.right),width:Math.round(rect.width)};
+       }).filter(row=>row.right>window.innerWidth+4).sort((a,b)=>b.right-a.right).slice(0,8)
     })""")
     verify(metrics["content"] <= metrics["viewport"] + 3,
            f"No horizontal overflow at {width}px (measured {metrics})")
