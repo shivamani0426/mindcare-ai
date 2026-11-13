@@ -266,3 +266,12 @@ body.high-contrast .simple-action-card .button,body.high-contrast .simple-feelin
 
 .simple-action-card .simple-missed{font-size:15px;font-weight:800;color:#815015;padding:7px 10px;border-radius:9px;background:#fff2d7}
 body.high-contrast .simple-action-card .simple-missed{color:#56310c;background:#fff7df}
+
+
+/* Tablet navigation must wrap before its combined brand + controls + links overflow. */
+@media (min-width:761px) and (max-width:1040px){
+  .nav-container{flex-wrap:wrap;gap:10px 18px;padding-top:10px;padding-bottom:10px;min-width:0}
+  .nav-container .brand{flex-shrink:0}
+  .nav-container .main-nav{order:3;flex:1 1 100%;width:100%;margin-left:0;min-width:0;overflow-x:auto;justify-content:flex-start;gap:19px;padding:6px 0 7px}
+  .nav-container .nav-right{margin-left:auto;min-width:0}
+}
