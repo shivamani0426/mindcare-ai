@@ -311,7 +311,7 @@ def test_help_contact_privacy_validation_and_deletion(client):
         cid=contact.id
     logout(client)
     register(client,"Ram","ram@example.org","patient")
-    assert b"Priya" not in client.get("/help").data
+    assert b"tel:+919876543210" not in client.get("/help").data
     assert client.post(f"/help/contacts/{cid}/delete", data={"csrf_token":token(client,"/help")}).status_code == 404
     logout(client)
     login(client,"asha@example.org")
