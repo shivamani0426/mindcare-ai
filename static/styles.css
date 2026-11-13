@@ -132,3 +132,27 @@ body.large-text .patient-top-tiles p,body.large-text .patient-top-tiles strong,b
 @media(max-width:1120px){.patient-top-tiles{grid-template-columns:1fr 1fr}.patient-top-tiles .patient-today{grid-column:1 / -1}}
 @media(max-width:720px){.patient-top-tiles{grid-template-columns:1fr;margin-top:17px}.patient-top-tiles .patient-today{grid-column:auto}.support-columns{grid-template-columns:1fr}.sos-callout{flex-direction:column;align-items:stretch}.sos-callout .button{width:100%}.patient-top-tiles .panel{padding:20px}.today-facts{gap:8px}.contact-row .button{flex:1 1 auto}}
 @media(prefers-reduced-motion:reduce){.patient-top-tiles *, .patient-space *{animation:none!important;transition:none!important}}
+
+/* Patient help: native dialer actions, desktop guidance and accessible copy fallback. */
+.phone-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.phone-emergency-actions{justify-content:flex-end;flex:0 0 auto}
+.phone-emergency-actions .button-outline{border-color:#b45b58;background:#fff;color:#863234;min-height:48px}
+.sos-callout{flex-wrap:wrap}
+.sos-callout .phone-device-hint{flex-basis:100%;font-size:14px;color:#6d4d4b;margin:0;line-height:1.55}
+.contact-phone-actions{flex:0 1 auto}
+.contact-phone-actions .button{min-height:44px}
+.phone-inline-status{display:block;flex-basis:100%;font-size:13px;color:#215b45;font-weight:650}
+.phone-call-dialog{width:min(92vw,510px);max-width:510px;max-height:90vh;overflow-y:auto;margin:auto;border:1px solid #c7d8cb;border-radius:22px;padding:0;background:#fff;color:#203b32;box-shadow:0 20px 60px #152b2680}
+.phone-call-dialog::backdrop{background:#10241cb8;backdrop-filter:blur(3px)}
+.phone-call-dialog-content{position:relative;padding:29px 25px;display:flex;flex-direction:column;gap:14px;text-align:left}
+.phone-call-dialog-content h2{font-size:clamp(24px,4vw,32px);margin:0;line-height:1.25}
+.phone-call-dialog-content p{margin:0;line-height:1.5;font-size:16px}
+.phone-dialog-symbol{font-size:34px}
+.phone-dialog-number{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:1px;overflow-wrap:anywhere;background:#eef7ef;padding:16px;border-radius:12px;text-align:center;user-select:all}
+.phone-dialog-notice{color:#624c42}
+.phone-dialog-actions{display:flex;flex-wrap:wrap;gap:9px}
+.phone-dialog-actions .button{flex:1 1 180px;min-height:48px;text-align:center}
+.phone-dialog-dismiss{position:absolute;top:10px;right:12px;min-height:44px;min-width:44px;border:0;background:transparent;font-size:30px;color:#284f3d;cursor:pointer}
+.phone-dialog-done{align-self:flex-end}
+.phone-copy-status{color:#205a46;font-weight:650;min-height:21px}
+@media(max-width:720px){.sos-callout .phone-emergency-actions{justify-content:stretch;flex:1 1 100%}.sos-callout .phone-emergency-actions .button{flex:1 1 auto}.contact-phone-actions{width:100%}.contact-phone-actions .button{flex:1 1 auto}.phone-call-dialog-content{padding:23px 16px}}
