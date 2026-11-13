@@ -1,8 +1,98 @@
-{% extends 'base.html' %}{% block title %}{{ patient.name }}'s activity{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · caregiver overview{% endblock %}
 {% block content %}
-<a class="back-link" href="{{ url_for('dashboard') }}">← Back to care circle</a><section class="page-heading"><span class="eyebrow">CAREGIVER INSIGHTS</span><h1>{{ patient.name }}'s journey 🌱</h1><p>Celebrate their little wins, and look out for changes worth a gentle check-in.</p></section>
-<div class="stats-row"><div class="stat-card"><span>Games played</span><strong>{{ stats.count }}</strong></div><div class="stat-card"><span>Average game score</span><strong>{{ stats.average }}%</strong></div><div class="stat-card"><span>Play time</span><strong>{{ stats.minutes }} <small>min</small></strong></div></div>
-<div class="detail-grid"><section class="panel"><div class="panel-heading"><div><h3>Game activity trend</h3><p>Recent daily average scores</p></div><span class="insight-tag">{{ stats.trend }}</span></div>{% if stats.series %}<div class="trend-chart" data-series='{{ stats.series|tojson }}'></div>{% else %}<div class="empty-small">No game results yet.</div>{% endif %}<p class="clinical-note">{{ stats.trend_help }} This trend reflects game engagement, not cognitive decline or diagnosis.</p></section><section class="panel"><div class="panel-heading"><div><h3>Today's reminders</h3><p>Patient self-reported acknowledgements</p></div><a href="{{ url_for('reminders_page', patient_id=patient.id) }}">Manage →</a></div>{% if reminders %}<div class="routine-list">{% for r in reminders %}<div class="routine-item"><span class="routine-time">{{ r.item.scheduled_time }}</span><div><strong>{{ r.item.title }}</strong><small>{{ 'Marked done' if r.done else 'Not yet marked done' }}</small></div><span class="{{ 'done-mark' if r.done else 'unknown-mark' }}">{{ '✓' if r.done else '·' }}</span></div>{% endfor %}</div>{% else %}<div class="empty-small">No reminders yet.</div>{% endif %}</section></div>
-<section class="panel section-spaced"><h3>Recent games</h3><div class="table-scroll"><table><thead><tr><th>Game</th><th>Date</th><th>Score</th><th>Level</th><th>Time</th></tr></thead><tbody>{% for r in results %}<tr><td>{{ GAMES[r.game_type][0] }}</td><td>{{ r.played_at.strftime('%d %b %Y') }}</td><td><b>{{ r.score }}%</b></td><td>{{ LEVEL_NAMES[r.difficulty] }}</td><td>{{ r.duration_seconds }} sec</td></tr>{% else %}<tr><td colspan="5">No games played yet.</td></tr>{% endfor %}</tbody></table></div></section>
-<div class="inline-actions section-spaced"><form method="post" action="{{ url_for('start_video_call') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="contact_id" value="{{ patient.id }}"><button class="button button-primary" type="submit">📹 Start video call</button></form><a class="button button-primary" href="{{ url_for('reminders_page', patient_id=patient.id) }}">Manage reminders</a><a class="button button-outline" href="{{ url_for('family_page', patient_id=patient.id) }}">Family photos</a></div>
+<section class="caregiver-detail-v2" aria-labelledby="caregiver-detail-title">
+  <a class="back-link" href="{{ url_for('dashboard') }}">← Back to care circle</a>
+  <header class="caregiver-detail-heading">
+    <span class="eyebrow">A CARING VIEW · APPROVED ACCESS</span>
+    <h1 id="caregiver-detail-title">{{ patient.name }}'s day <span aria-hidden="true">💛</span></h1>
+    <p>One place to review voluntary wellbeing check-ins, today's routine and gentle activities.</p>
+    <div class="caregiver-detail-actions">
+      <a href="{{ url_for('reminders_page', patient_id=patient.id) }}" class="button button-primary">🔔 Manage reminders</a>
+      <a href="{{ url_for('family_page', patient_id=patient.id) }}" class="button button-outline">📷 Family photos</a>
+      <form method="post" action="{{ url_for('start_video_call') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="contact_id" value="{{ patient.id }}">
+        <button type="submit" class="button button-outline">📹 Start video call</button>
+      </form>
+    </div>
+  </header>
+
+  <section class="caregiver-detail-kpis" aria-label="Activity overview">
+    <article class="stat-card"><span>Games played</span><strong>{{ stats.count }}</strong><small>Engagement, not a clinical measure</small></article>
+    <article class="stat-card"><span>Average game score</span><strong>{{ stats.average }}%</strong><small>Across completed games</small></article>
+    <article class="stat-card"><span>Time playing</span><strong>{{ stats.minutes }} <small>min</small></strong><small>At their own pace</small></article>
+  </section>
+
+  <section class="caregiver-detail-wellbeing panel" id="wellbeing" aria-labelledby="caregiver-detail-wellbeing-title">
+    <div class="caregiver-section-heading">
+      <div><span class="eyebrow">EVERY FEELING MATTERS</span><h2 id="caregiver-detail-wellbeing-title">Recent wellbeing check-ins</h2><p>Up to 14 most recent voluntary entries. No check-in does not mean something is wrong.</p></div>
+    </div>
+    {% if recent_checkins %}
+    <div class="caregiver-wellbeing-list">
+      {% for check in recent_checkins %}
+      <article class="caregiver-wellbeing-entry {{ 'caregiver-wellbeing-support' if check.feeling == 'need_help' else '' }}">
+        <span class="caregiver-wellbeing-emoji" aria-hidden="true">{{ {'happy':'😊','okay':'🙂','tired':'😴','need_help':'🤝'}.get(check.feeling, '💛') }}</span>
+        <div class="caregiver-wellbeing-entry-body">
+          <h3>{{ {'happy':'Feeling happy','okay':'Feeling okay','tired':'Feeling tired','need_help':'Requested support'}.get(check.feeling,'Wellbeing check-in') }}</h3>
+          <p class="caregiver-checkin-date">{{ check.checked_date.strftime('%A, %d %B %Y') }}</p>
+          {% if check.note %}<p class="caregiver-checkin-note">{{ check.note }}</p>{% endif %}
+          {% if check.feeling == 'need_help' %}
+            {% if check.id in reviewed_support %}
+            <p class="caregiver-reviewed-label">✓ You marked this entry reviewed</p>
+            {% else %}
+            <form method="post" action="{{ url_for('caregiver_support_review', checkin_id=check.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="patient">
+              <button class="button button-primary" type="submit">✓ Mark reviewed</button>
+            </form>
+            {% endif %}
+            <p class="caregiver-small-print">A review mark does not contact the patient. Please reach out separately when appropriate.</p>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="caregiver-detail-empty"><span aria-hidden="true">🌿</span><p>No voluntary check-ins yet. You can still help this patient with their reminders and family photos.</p></div>
+    {% endif %}
+  </section>
+
+  <div class="caregiver-detail-lower">
+    <section class="panel caregiver-detail-routine">
+      <div class="panel-heading"><div><h2>Today's reminders</h2><p>Completions are self-reported by the patient.</p></div><a href="{{ url_for('reminders_page', patient_id=patient.id) }}">Manage →</a></div>
+      {% if reminders %}
+      <div class="routine-list">
+      {% for r in reminders %}
+      <div class="routine-item">
+        <span class="routine-time">{{ r.item.scheduled_time }}</span>
+        <span class="routine-emoji" aria-hidden="true">{{ {'medicine':'💊','meal':'🍽️','appointment':'🩺','activity':'🌱','family':'💛'}.get(r.item.category,'🔔') }}</span>
+        <div><strong>{{ r.item.title }}</strong><small>{{ 'Patient marked done' if r.done else 'Not marked done yet' }}</small></div>
+        <span class="{{ 'done-mark' if r.done else 'unknown-mark' }}" aria-label="{{ 'Patient marked done' if r.done else 'Not marked done' }}">{{ '✓' if r.done else '·' }}</span>
+      </div>
+      {% endfor %}
+      </div>
+      {% else %}<div class="caregiver-detail-empty">No reminders for today. Add a gentle reminder from Manage reminders.</div>{% endif %}
+    </section>
+    <section class="panel caregiver-detail-trend">
+      <div class="panel-heading"><div><h2>Game engagement</h2><p>Recent daily average game scores</p></div><span class="insight-tag">{{ stats.trend }}</span></div>
+      {% if stats.series %}<div class="trend-chart" data-series='{{ stats.series|tojson }}' role="img" aria-label="Daily game-score trend"></div>
+      {% else %}<div class="caregiver-detail-empty">No game results yet. Activity will appear when the patient chooses to play.</div>{% endif %}
+      <p class="clinical-note">{{ stats.trend_help }} Game scores do not diagnose dementia or measure progression.</p>
+    </section>
+  </div>
+
+  <section class="panel caregiver-recent-games">
+    <h2>Recent games</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">Game</th><th scope="col">Date</th><th scope="col">Score</th><th scope="col">Level</th><th scope="col">Time</th></tr></thead>
+        <tbody>{% for r in results %}
+          <tr><td>{{ GAMES[r.game_type][0] }}</td><td>{{ r.played_at.strftime('%d %b %Y') }}</td><td><strong>{{ r.score }}%</strong></td><td>{{ LEVEL_NAMES[r.difficulty] }}</td><td>{{ r.duration_seconds }} sec</td></tr>
+        {% else %}<tr><td colspan="5">No games played yet.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <p class="caregiver-disclaimer">This page is visible only to currently approved caregivers. Patients can revoke access at any time. All wellbeing information is self-reported and not a diagnosis.</p>
+</section>
 {% endblock %}
