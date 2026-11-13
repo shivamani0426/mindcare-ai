@@ -348,3 +348,23 @@ def test_patient_checkins_not_mixed_between_accounts(client):
     with app.app_context():
         assert WellbeingCheck.query.count()==2
         assert len({x.patient_id for x in WellbeingCheck.query.all()})==2
+
+
+def test_help_phone_links_explain_device_limitations_and_allow_copy(client):
+    """Phone numbers remain private to the patient and never trigger server-side calls."""
+    register(client, "Leela", "leela-phone@example.org", "patient")
+    page = client.get("/help")
+    assert page.status_code == 200
+    assert b'href="tel:112"' in page.data
+    assert b'data-phone-emergency="1"' in page.data
+    assert b'data-phone-copy' in page.data
+    assert b'id="phone-call-options"' in page.data
+    assert b'patient-help-calls.js' in page.data
+    response = client.post("/help/contacts/add", data={
+        "csrf_token": token(client, "/help"), "name": "Priya",
+        "relation": "Daughter", "phone": "+91 98765 43210",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'href="tel:+919876543210"' in response.data
+    assert b'data-phone-number="+919876543210"' in response.data
+    assert b'aria-label="Copy phone number for Priya"' in response.data
