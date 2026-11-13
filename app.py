@@ -530,7 +530,10 @@ def dashboard():
     checkin = WellbeingCheck.query.filter_by(patient_id=current_user().id, checked_date=today_local()).first()
     family_faces = FamilyMember.query.filter_by(patient_id=current_user().id).order_by(FamilyMember.name).limit(3).all()
     current_minute = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
-    next_reminder = next((r for r in reminders if not r["done"] and r["item"].scheduled_time >= current_minute), None)
+    # Never hide an unfinished morning reminder just because its scheduled time passed.
+    # Show the next upcoming item or the earliest missed, unfinished item.
+    next_reminder = next((r for r in reminders if not r["done"] and r["item"].scheduled_time >= current_minute),
+                         next((r for r in reminders if not r["done"]), None))
     trusted = EmergencyContact.query.filter_by(patient_id=current_user().id).order_by(EmergencyContact.id).all()
     support_contact = next((contact for contact in trusted if whatsapp_chat_url(contact.phone)), None)
     support_url = whatsapp_chat_url(support_contact.phone) if support_contact else ""
