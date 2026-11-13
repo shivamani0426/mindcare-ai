@@ -662,7 +662,7 @@ def google_auth_callback():
     subject = profile.get("sub")
     email = profile.get("email") or ""
     verified = profile.get("email_verified") is True or profile.get("email_verified") == "true"
-    if not verified or not isinstance(email, str) or not re.fullmatch(r"[^\\s@]+@[^\\s@]+\\.[^\\s@]+", email):
+    if not verified or not isinstance(email, str) or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
         flash("Please choose a Google account with a verified email address.", "error")
         return redirect(url_for("login"))
     expected_link = session.pop("google_link_user", None)
@@ -693,7 +693,7 @@ def verify_firebase_phone_id_token(token):
         raise ValueError("Not a phone-verified identity")
     phone = claims.get("phone_number")
     subject = claims.get("uid")
-    if (not isinstance(phone, str) or not re.fullmatch(r"\\+[1-9][0-9]{7,14}", phone)
+    if (not isinstance(phone, str) or not re.fullmatch(r"\+[1-9][0-9]{7,14}", phone)
             or not isinstance(subject, str) or not subject):
         raise ValueError("Phone verification is incomplete")
     return subject, phone
