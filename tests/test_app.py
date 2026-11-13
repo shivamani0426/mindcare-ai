@@ -414,3 +414,176 @@ def test_whatsapp_contact_chat_links_are_patient_only_and_preserve_phone_call_op
 def test_whatsapp_chat_url_does_not_guess_non_indian_country_code(phone, expected):
     from app import whatsapp_chat_url
     assert whatsapp_chat_url(phone) == expected
+
+
+def test_simple_dashboard_persists_and_returns_to_full_view(client):
+    register(client, "Patient Asha", "simple@example.org", "patient")
+    full = client.get("/dashboard")
+    assert b"patient-mode-shortcut" in full.data
+    assert b"Your activity" in full.data
+    bad = client.post("/patient/view-mode", data={
+        "csrf_token": token(client, "/dashboard"), "simplified": "sometimes"})
+    assert bad.status_code == 400
+    response = client.post("/patient/view-mode", data={
+        "csrf_token": token(client, "/dashboard"), "simplified": "1"},follow_redirects=True)
+    assert response.status_code == 200
+    assert b"simple-dashboard" in response.data
+    assert b"simple-feelings" in response.data
+    assert b"Your activity" not in response.data
+    assert b"href=\"tel:112\"" in response.data
+    assert b"patient-notifications.js" in response.data
+    logout(client)
+    login(client, "simple@example.org")
+    assert b"simple-dashboard" in client.get("/dashboard").data
+    response = client.post("/patient/view-mode", data={
+        "csrf_token": token(client, "/dashboard"), "simplified": "0"},follow_redirects=True)
+    assert b"patient-mode-shortcut" in response.data
+    assert b"simple-dashboard" not in response.data
+
+
+def test_simple_mode_settings_and_caregiver_separation(client):
+    register(client, "Patient Asha", "simple-prefs@example.org", "patient")
+    response = client.post("/settings", data={
+        "csrf_token": token(client, "/settings"), "language": "hi",
+        "large_text": "on", "simplified_mode": "on", "high_contrast":"on",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'name="simplified_mode" checked' in response.data
+    assert "सरल मरीज डैशबोर्ड" in response.get_data(as_text=True)
+    assert "मेरी याद दिलाने वाली बातें" in client.get("/dashboard").get_data(as_text=True)
+    logout(client)
+    register(client, "Caregiver Test", "simple-caregiver@example.org", "caregiver")
+    assert client.post("/patient/view-mode", data={
+        "csrf_token": token(client, "/dashboard"), "simplified": "1"
+    }).status_code == 403
+    assert b"simple-dashboard" not in client.get("/dashboard").data
+
+
+def test_patient_can_edit_own_contact_without_breaking_whatsapp(client):
+    register(client, "Patient Asha", "edit-contacts@example.org", "patient")
+    client.post("/help/contacts/add", data={
+        "csrf_token": token(client, "/help"), "name": "Maya",
+        "relation": "Daughter", "phone": "+919876543210"
+    })
+    with app.app_context():
+        ident = EmergencyContact.query.one().id
+    page = client.get("/help")
+    assert b"contact-edit-details" in page.data
+    assert b"wa.me/919876543210" in page.data
+    bad = client.post(f"/help/contacts/{ident}/edit", data={
+        "csrf_token": token(client, "/help"), "name": "<script>",
+        "relation": "Friend", "phone":"tel:9999999999"
+    })
+    assert bad.status_code == 400
+    update = client.post(f"/help/contacts/{ident}/edit", data={
+        "csrf_token": token(client, "/help"), "name": "Family Maya",
+        "relation": "Sister", "phone":"+91 91234 56789"
+    },follow_redirects=True)
+    assert update.status_code == 200
+    assert b"wa.me/919123456789" in update.data
+    assert b"tel:+919123456789" in update.data
+    assert b"tel:112" in update.data
+    logout(client)
+    register(client, "Other Patient", "edit-other@example.org", "patient")
+    forbidden = client.post(f"/help/contacts/{ident}/edit", data={
+        "csrf_token": token(client, "/help"),"name":"Wrong Person",
+        "relation":"Friend","phone":"9876543210"
+    })
+    assert forbidden.status_code == 404
+    assert b"wa.me/919123456789" not in client.get("/help").data
+
+
+def test_reminder_edit_updates_schedule_resets_today_tick_and_rejects_cross_patient(client):
+    register(client, "Patient Asha", "edit-reminders@example.org", "patient")
+    added = client.post("/reminders/create", data={
+        "csrf_token": token(client, "/reminders"),"title":"Morning",
+        "category":"medicine","scheduled_time":"09:00"
+    },follow_redirects=True)
+    assert added.status_code == 200
+    with app.app_context():
+        from app import Reminder
+        rid = Reminder.query.one().id
+    client.post(f"/reminders/{rid}/check", data={
+        "csrf_token": token(client, "/dashboard")
+    })
+    with app.app_context():
+        from app import ReminderCheck
+        assert ReminderCheck.query.filter_by(reminder_id=rid).count() == 1
+    changed = client.post(f"/reminders/{rid}/edit",data={
+        "csrf_token": token(client, "/reminders"),
+        "title": "Afternoon medicine", "category":"medicine",
+        "scheduled_time":"15:30","notes":"With water", "on_date":""
+    },follow_redirects=True)
+    assert changed.status_code == 200
+    assert b"Afternoon medicine" in changed.data
+    assert b'15:30' in changed.data
+    assert b"reminder-edit-details" in changed.data
+    with app.app_context():
+        from app import Reminder, ReminderCheck
+        assert Reminder.query.get(rid).notes == "With water"
+        assert ReminderCheck.query.filter_by(reminder_id=rid).count() == 0
+    invalid = client.post(f"/reminders/{rid}/edit",data={
+        "csrf_token":token(client,"/reminders"),"title":"",
+        "category":"medicine","scheduled_time":"55:90","on_date":""
+    })
+    assert invalid.status_code == 400
+    logout(client)
+    register(client, "Other Patient", "reminders-other@example.org", "patient")
+    assert client.post(f"/reminders/{rid}/edit",data={
+        "csrf_token":token(client,"/reminders"),"title":"Hacked",
+        "category":"activity","scheduled_time":"10:00","on_date":""
+    }).status_code == 404
+
+
+def test_need_support_shows_explicit_contact_action_not_false_alert(client):
+    register(client, "Patient Asha", "support-cta@example.org", "patient")
+    client.post("/help/contacts/add",data={
+        "csrf_token":token(client,"/help"),"name":"My Son",
+        "relation":"Son","phone":"9876543210"
+    })
+    result = client.post("/wellbeing/check-in",data={
+        "csrf_token":token(client,"/dashboard"),"feeling":"need_help"
+    },follow_redirects=True)
+    assert result.status_code == 200
+    assert b"support-help-box" in result.data
+    assert b"wa.me/919876543210" in result.data
+    assert b"did not notify anyone" in result.data
+    assert b"patient-mode-shortcut" in result.data
+    with app.app_context():
+        from app import WellbeingCheck
+        assert WellbeingCheck.query.one().feeling == "need_help"
+
+
+def test_patient_language_labels_are_localized_on_all_major_pages(client):
+    register(client, "Patient Asha", "translation@example.org", "patient")
+    for locale, examples in {
+        "hi": [("dashboard", "आपकी गतिविधि"),("reminders", "प्यार से याद दिलाना"),
+               ("games", "आराम से खेलें"),("family", "परिचित चेहरे, प्यारी यादें"),
+               ("help", "व्हाट्सऐप पर परिवार को कॉल करें"),("settings", "हिन्दी")],
+        "kn": [("dashboard", "ನಿಮ್ಮ ಚಟುವಟಿಕೆ"),("reminders", "ಮೃದುವಾದ ಜ್ಞಾಪನೆಗಳು"),
+               ("games", "ನಿಮ್ಮ ವೇಗದಲ್ಲಿ ಆಡಿ"),("family", "ಪರಿಚಿತ ಮುಖಗಳು, ಸಿಹಿ ನೆನಪುಗಳು"),
+               ("help", "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಕುಟುಂಬಕ್ಕೆ ಕರೆ ಮಾಡಿ"),("settings", "ಕನ್ನಡ")]
+    }.items():
+        update=client.post("/settings",data={"csrf_token":token(client,"/settings"),
+            "language":locale},follow_redirects=True)
+        assert update.status_code==200
+        for path, expected in examples:
+            page=client.get("/"+path).get_data(as_text=True)
+            assert expected in page, f"Missing {locale} translation on {path}: {expected}"
+        play = client.get("/games/cards")
+        assert play.status_code == 200
+        assert b"game-i18n.js" in play.data
+        assert b"patient-notifications.js" in play.data
+
+
+def test_optional_notification_has_clear_device_limit_and_whatsapp_stays_intact(client):
+    register(client, "Patient Asha", "notify@example.org", "patient")
+    page=client.get("/reminders")
+    assert page.status_code == 200
+    assert b'id="reminder-notify-button"' in page.data
+    assert b'id="reminder-notify-status"' in page.data
+    assert b"while MindCare is open" in page.data
+    help_page=client.get("/help").data
+    assert b"whatsapp-howto" in help_page
+    assert b'href="tel:112"' in help_page
+    assert b"guest-voice" not in help_page
