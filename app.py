@@ -544,6 +544,29 @@ def wellbeing_checkin():
     return redirect(url_for("dashboard", _anchor="wellbeing"))
 
 
+@app.template_filter("whatsapp_chat_url")
+def whatsapp_chat_url(phone):
+    """Safe official WhatsApp chat link; it NEVER initiates a phone call.
+
+    Assume Indian country code only for a local 10-digit saved number.
+    All other countries must be saved with an explicit +country code.
+    """
+    number = (phone or "").strip()
+    if not re.fullmatch(r"\+?[0-9]{10,15}", number):
+        return ""
+    if number.startswith("+"):
+        digits = number[1:]
+    elif len(number) == 10:
+        digits = "91" + number
+    elif len(number) == 12 and number.startswith("91"):
+        digits = number
+    else:
+        return ""
+    if not re.fullmatch(r"[1-9][0-9]{9,14}", digits):
+        return ""
+    return f"https://wa.me/{digits}"
+
+
 @app.route("/help")
 @require_login("patient")
 def patient_help():

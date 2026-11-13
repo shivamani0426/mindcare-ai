@@ -156,3 +156,24 @@ body.large-text .patient-top-tiles p,body.large-text .patient-top-tiles strong,b
 .phone-dialog-done{align-self:flex-end}
 .phone-copy-status{color:#205a46;font-weight:650;min-height:21px}
 @media(max-width:720px){.sos-callout .phone-emergency-actions{justify-content:stretch;flex:1 1 100%}.sos-callout .phone-emergency-actions .button{flex:1 1 auto}.contact-phone-actions{width:100%}.contact-phone-actions .button{flex:1 1 auto}.phone-call-dialog-content{padding:23px 16px}}
+
+
+/* WhatsApp trusted-contact handoff — links open chats; never place calls themselves. */
+.whatsapp-howto{margin:0 0 24px;background:linear-gradient(145deg,#effbf2,#f9fdfa);border:1px solid #b7dbc1;border-radius:22px;padding:24px 26px;color:#183c29}
+.whatsapp-howto-title{display:flex;gap:16px;align-items:flex-start}
+.whatsapp-howto-title h2{margin:3px 0 7px;font-size:clamp(21px,3.5vw,27px);line-height:1.2}
+.whatsapp-howto-title p{margin:0;color:#305844;line-height:1.6;font-size:16px}
+.whatsapp-howto-icon{display:grid;place-items:center;flex:0 0 54px;width:54px;height:54px;border-radius:16px;background:#d4f2dc;font-size:27px}
+.whatsapp-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;margin:19px 0;list-style:none}
+.whatsapp-steps li{display:flex;align-items:flex-start;gap:10px;padding:13px;background:#fff;border:1px solid #daebde;border-radius:13px;line-height:1.45;font-size:14px}
+.whatsapp-step-number{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:#176c3e;color:#fff;font-weight:800}
+.whatsapp-note{font-size:13px!important;color:#345a43;line-height:1.55;margin:0}
+.whatsapp-contact-actions{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;gap:9px 13px;margin:0 0 2px 60px}
+.whatsapp-open-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#177842;color:#fff!important;border:2px solid #177842;border-radius:13px;min-height:50px;white-space:nowrap;font-size:16px;font-weight:800}
+.whatsapp-open-button:hover{background:#0f6031;color:#fff;border-color:#0f6031}
+.whatsapp-open-button:focus-visible{outline:3px solid #195b35;outline-offset:4px}
+.whatsapp-contact-hint{font-size:13px;color:#365747;line-height:1.5}
+body.high-contrast .whatsapp-howto{background:#fff;border:2px solid #174d2b;color:#112b18}
+body.high-contrast .whatsapp-open-button{background:#0b4f28;border-color:#0b4f28}
+@media(max-width:900px){.whatsapp-steps{grid-template-columns:1fr}.whatsapp-steps li{font-size:15px}}
+@media(max-width:600px){.whatsapp-howto{padding:19px 16px}.whatsapp-howto-title{gap:11px}.whatsapp-howto-icon{width:44px;height:44px;flex-basis:44px}.whatsapp-contact-actions{margin-left:0}.whatsapp-open-button{width:100%;min-height:54px}}

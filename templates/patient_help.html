@@ -12,6 +12,22 @@
     </div>
     <p class="phone-device-hint">On a phone, Call opens the phone dialer. On a laptop or computer, use a connected calling app or copy the number and dial from a phone. The website cannot place telephone calls itself.</p>
   </section>
+  <section class="whatsapp-howto" aria-labelledby="whatsapp-howto-title">
+    <div class="whatsapp-howto-title">
+      <span class="whatsapp-howto-icon" aria-hidden="true">💬</span>
+      <div>
+        <span class="eyebrow">STAY CLOSE, FOR FREE</span>
+        <h2 id="whatsapp-howto-title">Call family on WhatsApp</h2>
+        <p>MindCare opens your loved one's WhatsApp chat. You start the voice call in WhatsApp — it won't ring them until you tap the phone icon there.</p>
+      </div>
+    </div>
+    <ol class="whatsapp-steps">
+      <li><span class="whatsapp-step-number" aria-hidden="true">1</span><span>Tap <strong>Open WhatsApp</strong> next to a trusted person below.</span></li>
+      <li><span class="whatsapp-step-number" aria-hidden="true">2</span><span>When their chat opens, tap the <strong>📞 phone icon</strong> inside WhatsApp.</span></li>
+      <li><span class="whatsapp-step-number" aria-hidden="true">3</span><span>Their WhatsApp rings. They can answer without installing MindCare.</span></li>
+    </ol>
+    <p class="whatsapp-note">Both people need WhatsApp and internet access. WhatsApp calls use internet data. For an emergency, use the separate 112 phone-dialer button above.</p>
+  </section>
   <div class="support-columns">
     <section class="panel patient-panel"><h2>{{ tr('contacts') }}</h2>
     {% if contacts %}<div class="contacts-list">{% for contact in contacts %}<article class="contact-row">
@@ -20,6 +36,17 @@
       <div class="phone-actions contact-phone-actions">
         <a class="button button-primary" href="tel:{{ contact.phone }}" data-phone-dial data-phone-number="{{ contact.phone }}" data-phone-label="{{ contact.name }}" aria-label="Open phone dialer to call {{ contact.name }}">📞 {{ tr('call') }}</a>
         <button type="button" class="button button-outline" data-phone-copy data-phone-number="{{ contact.phone }}" aria-label="Copy phone number for {{ contact.name }}">Copy</button>
+      </div>
+      {% set whatsapp_url = contact.phone|whatsapp_chat_url %}
+      <div class="whatsapp-contact-actions">
+        {% if whatsapp_url %}
+        <a class="button whatsapp-open-button" href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer external" aria-label="Open WhatsApp chat with {{ contact.name }} in a new tab or app; then tap the phone icon in WhatsApp to call">
+          <span aria-hidden="true">💬</span> Open WhatsApp <span aria-hidden="true">↗</span>
+        </a>
+        <span class="whatsapp-contact-hint">Then tap 📞 inside WhatsApp to call {{ contact.name }}.</span>
+        {% else %}
+        <span class="whatsapp-contact-hint">For WhatsApp, save this contact with a full international number (for example +919876543210).</span>
+        {% endif %}
       </div>
       <form method="post" action="{{ url_for('contact_delete', contact_id=contact.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="delete-link" data-confirm="Remove this trusted contact?">{{ tr('remove') }}</button></form>
     </article>{% endfor %}</div>{% else %}<p class="muted">{{ tr('no_contacts') }}</p>{% endif %}
