@@ -931,7 +931,7 @@ def test_auth_v3_professional_page_preserves_email_password_and_roles(client):
     assert b"auth-account-link" in client.get("/dashboard").data
     logout(client)
     login(client, "auth-legacy@example.org")
-    assert b"Hello, Sana" in client.get("/dashboard").data
+    assert b"Hello, Patient" in client.get("/dashboard").data
 
 
 def test_phone_otp_server_requires_verified_identity_before_account_creation(client, monkeypatch):
