@@ -275,3 +275,12 @@ body.high-contrast .simple-action-card .simple-missed{color:#56310c;background:#
   .nav-container .main-nav{order:3;flex:1 1 100%;width:100%;margin-left:0;min-width:0;overflow-x:auto;justify-content:flex-start;gap:19px;padding:6px 0 7px}
   .nav-container .nav-right{margin-left:auto;min-width:0}
 }
+
+
+/* Protect laptop and tablet layouts from the full authenticated header width.
+   Use a deliberate second navigation row rather than horizontal page scrolling. */
+@media (min-width:761px) and (max-width:1550px) {
+  .nav-container{display:flex;flex-wrap:wrap;column-gap:22px;row-gap:8px;padding-top:10px;padding-bottom:10px;min-width:0}
+  .nav-container .main-nav{order:3;flex:1 1 100%;width:100%;max-width:100%;min-width:0;margin-left:0;overflow-x:auto;justify-content:flex-start;gap:24px;padding:7px 0 6px}
+  .nav-container .nav-right{margin-left:auto;flex:0 1 auto;min-width:0;gap:12px}
+}
