@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ tr('simple_dashboard_title') }}{% endblock %}
 {% block content %}
-<section class="simple-dashboard patient-space" aria-labelledby="simple-title">
+<section class="simple-dashboard patient-space" aria-labelledby="simple-title" data-patient-today data-language="{{ patient_prefs.language if patient_prefs else 'en' }}">
   <div class="simple-banner">
     <div>
       <span class="eyebrow">{{ tr('simple_welcome') }}</span>
