@@ -85,8 +85,7 @@
         delivered.add(key);
         try {localStorage.setItem(key,'1');}catch (_) {}
         const n = new Notification(t.alert, {
-          body:String(reminder.title||'').slice(0,110),tag:key,
-          icon:'/static/favicon.ico',silent:false
+          body:String(reminder.title||'').slice(0,110),tag:key,silent:false
         });
         n.onclick = () => {window.focus();window.location.assign('/reminders');n.close();};
       }
