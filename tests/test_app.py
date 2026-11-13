@@ -798,3 +798,109 @@ def test_caregiver_v2_multiple_patients_have_independent_states(client):
     assert b"Lovely day" not in client.get("/dashboard").data
     assert client.post(f"/caregiver/support/{checkin_id}/review", data={
         "csrf_token": token(client, "/dashboard")}).status_code == 404
+
+
+def test_one_tap_need_support_is_obvious_in_both_patient_views(client):
+    register(client, "Patient Leela", "quick-support-patient@example.org", "patient")
+    full = client.get("/dashboard")
+    assert full.status_code == 200
+    assert full.data.count(b'data-quick-support-button') == 1
+    assert b'quick_support" value="1"' in full.data
+    assert b'I need support' in full.data
+    assert b"when they open MindCare" in full.data
+    assert b'data-patient-today' in full.data
+    assert b"patient-mode-shortcut" in full.data
+    # No need to find a radio choice or fill a note to ask for support.
+    submitted = client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"),
+        "quick_support": "1", "feeling": "need_help"
+    }, follow_redirects=True)
+    assert submitted.status_code == 200
+    assert b'patient-support-quick-saved' in submitted.data
+    assert b'support-help-box' in submitted.data
+    with app.app_context():
+        assert WellbeingCheck.query.one().feeling == "need_help"
+    simple = client.post("/patient/view-mode", data={
+        "csrf_token": token(client, "/dashboard"), "simplified": "1"
+    }, follow_redirects=True)
+    assert simple.status_code == 200
+    assert b"simple-dashboard" in simple.data
+    assert simple.data.count(b'data-quick-support-button') == 1
+    assert b'quick_support" value="1"' in simple.data
+    assert b'patient-support-quick-saved' in simple.data
+    assert b'href="tel:112"' in simple.data
+
+
+def test_one_tap_support_preserves_patient_note_and_reopens_caregiver_queue(client):
+    register(client, "Patient Leela", "quick-support-leela@example.org", "patient")
+    with app.app_context():
+        patient = User.query.filter_by(email="quick-support-leela@example.org").one()
+        code, patient_id = patient.invite_code, patient.id
+    created = client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"), "feeling": "need_help",
+        "note": "Please check my morning medicine"
+    })
+    assert created.status_code == 302
+    with app.app_context():
+        record = WellbeingCheck.query.filter_by(patient_id=patient_id).one()
+        checkin_id = record.id
+    logout(client)
+    register(client, "Caregiver Priya", "quick-support-priya@example.org", "caregiver")
+    # An unapproved caregiver cannot see or review the support check-in.
+    assert b"Please check my morning medicine" not in client.get("/dashboard").data
+    assert client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": token(client, "/dashboard")
+    }).status_code == 404
+    client.post("/caregiver/link", data={
+        "csrf_token": token(client, "/dashboard"), "invite_code": code
+    })
+    with app.app_context():
+        link_id = CareLink.query.filter_by(patient_id=patient_id).one().id
+    logout(client)
+    login(client, "quick-support-leela@example.org")
+    client.post(f"/caregiver/approve/{link_id}", data={
+        "csrf_token": token(client, "/dashboard")
+    })
+    logout(client)
+    login(client, "quick-support-priya@example.org")
+    assert b"Please check my morning medicine" in client.get("/dashboard").data
+    reviewed = client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": token(client, "/dashboard")
+    }, follow_redirects=True)
+    assert reviewed.status_code == 200
+    assert b'caregiver-support-item' not in reviewed.data
+    logout(client)
+    login(client, "quick-support-leela@example.org")
+    one_tap = client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"),
+        "quick_support": "1", "feeling": "need_help"
+    }, follow_redirects=True)
+    assert one_tap.status_code == 200
+    assert b'patient-support-quick-saved' in one_tap.data
+    with app.app_context():
+        from app import CaregiverSupportReview
+        record = WellbeingCheck.query.filter_by(patient_id=patient_id).one()
+        assert record.note == "Please check my morning medicine"
+        assert CaregiverSupportReview.query.filter_by(checkin_id=checkin_id).count() == 0
+    logout(client)
+    login(client, "quick-support-priya@example.org")
+    assert b"Please check my morning medicine" in client.get("/dashboard").data
+    assert b'caregiver-support-item' in client.get("/dashboard").data
+    logout(client)
+    register(client, "Other Patient", "quick-support-other@example.org", "patient")
+    assert b"Please check my morning medicine" not in client.get("/dashboard").data
+    logout(client)
+    register(client, "Unrelated Caregiver", "quick-support-unrelated@example.org", "caregiver")
+    assert b"Please check my morning medicine" not in client.get("/dashboard").data
+
+
+@pytest.mark.parametrize("lang,text", [
+    ("en","I need support"),("hi","मुझे मदद चाहिए"),("kn","ನನಗೆ ಸಹಾಯ ಬೇಕು")
+])
+def test_quick_support_button_is_translated_for_patient(client,lang,text):
+    register(client,"Patient Leela",f"quick-language-{lang}@example.org","patient")
+    updated=client.post("/settings",data={
+        "csrf_token":token(client,"/settings"),"language":lang
+    },follow_redirects=True)
+    assert updated.status_code==200
+    assert text in client.get("/dashboard").get_data(as_text=True)
