@@ -17,6 +17,7 @@
       <span class="simple-card-icon" aria-hidden="true">🔔</span>
       <h2>{{ tr('simple_today_task') }}</h2>
       {% if next_reminder %}
+      {% if next_reminder.item.scheduled_time < now_minute %}<p class="simple-missed">{{ tr('simple_missed') }}</p>{% endif %}
       <p class="simple-next-time">{{ next_reminder.item.scheduled_time }}</p>
       <p class="simple-task">{{ next_reminder.item.title }}</p>
       {% else %}
