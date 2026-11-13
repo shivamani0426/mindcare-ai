@@ -583,9 +583,9 @@ def wellbeing_checkin():
         record.checked_at = now_utc()
     db.session.commit()
     if feeling == "need_help":
-        flash("Your check-in was saved. It does not send an alert. Use Help & contacts to call someone now.", "info")
+        flash(t_for(patient_preferences(current_user()))("flash_support"), "info")
     else:
-        flash("Thank you. Today's check-in was saved.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_checkin"), "success")
     return redirect(url_for("dashboard", _anchor="wellbeing"))
 
 
@@ -637,7 +637,7 @@ def contact_add():
     db.session.add(EmergencyContact(patient_id=current_user().id, name=name,
                                     relation=relation, phone=normalized))
     db.session.commit()
-    flash("Trusted contact added. Use Call to open your phone's dialer.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_contact_add"), "success")
     return redirect(url_for("patient_help"))
 
 
@@ -655,7 +655,7 @@ def contact_edit(contact_id):
         abort(400, "Enter a valid contact name, relationship and phone number.")
     contact.name, contact.relation, contact.phone = name, relation, phone
     db.session.commit()
-    flash("Trusted contact updated.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_contact_edit"), "success")
     return redirect(url_for("patient_help"))
 
 
@@ -667,7 +667,7 @@ def contact_delete(contact_id):
         abort(404)
     db.session.delete(contact)
     db.session.commit()
-    flash("Trusted contact removed.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_contact_removed"), "success")
     return redirect(url_for("patient_help"))
 
 
@@ -692,7 +692,7 @@ def patient_settings():
             db.session.add(mode)
         mode.simplified = request.form.get("simplified_mode") == "on"
         db.session.commit()
-        flash("Your display settings have been saved.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_settings_saved"), "success")
         return redirect(url_for("patient_settings"))
     return render_template("patient_settings.html", preferences=prefs)
 
@@ -780,7 +780,7 @@ def reminder_create():
         db.session.add(Reminder(patient_id=p.id, created_by=current_user().id, title=title,
                                 category=category, scheduled_time=when, on_date=on_date, notes=request.form.get("notes", "").strip()[:240]))
         db.session.commit()
-        flash("Reminder added. Keep the app open to hear browser announcements.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_reminder_added"), "success")
     return redirect(url_for("reminders_page", patient_id=p.id))
 
 
@@ -811,7 +811,7 @@ def reminder_edit(reminder_id):
         # A rescheduled reminder should not inherit the earlier completion tick.
         ReminderCheck.query.filter_by(reminder_id=reminder.id, checked_date=today_local()).delete()
     db.session.commit()
-    flash("Reminder updated.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_edit"), "success")
     return redirect(url_for("reminders_page", patient_id=reminder.patient_id))
 
 
@@ -826,7 +826,7 @@ def reminder_check(reminder_id):
     if not ReminderCheck.query.filter_by(reminder_id=reminder_id, checked_date=today_local()).first():
         db.session.add(ReminderCheck(reminder_id=reminder_id, checked_date=today_local()))
         db.session.commit()
-    flash("Marked as done for today. This is a self-report, not verification of medicine intake.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_done"), "success")
     return redirect(request.form.get("next") if request.form.get("next") in ("/dashboard", "/reminders") else url_for("reminders_page"))
 
 
@@ -838,7 +838,7 @@ def reminder_delete(reminder_id):
         abort(404)
     reminder.active = False
     db.session.commit()
-    flash("Reminder removed.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_removed"), "success")
     return redirect(url_for("reminders_page", patient_id=reminder.patient_id))
 
 
