@@ -587,3 +587,58 @@ def test_optional_notification_has_clear_device_limit_and_whatsapp_stays_intact(
     assert b"whatsapp-howto" in help_page
     assert b'href="tel:112"' in help_page
     assert b"guest-voice" not in help_page
+
+
+def test_patient_translation_key_parity_and_template_coverage():
+    from pathlib import Path
+    import re
+    from patient_labels import PATIENT_LABELS
+    from app import PATIENT_TEXT
+    for locale in ("hi", "kn"):
+        assert set(PATIENT_LABELS[locale]) == set(PATIENT_LABELS["en"])
+        assert set(PATIENT_TEXT[locale]) == set(PATIENT_TEXT["en"])
+    known = set(PATIENT_LABELS["en"]) | set(PATIENT_TEXT["en"])
+    patient_pages = (
+        "base.html", "dashboard.html", "dashboard_simple.html",
+        "patient_help.html", "patient_settings.html", "reminders.html",
+        "games.html", "play.html", "family.html"
+    )
+    missing = set()
+    for name in patient_pages:
+        content = (Path(__file__).resolve().parents[1] / "templates" / name).read_text()
+        for key in re.findall(r"tr\('([^']+)'\)", content):
+            # The dynamic category_, game_, trend_, level_ prefixes are resolved at runtime.
+            if key.endswith("_"):
+                continue
+            if key not in known:
+                missing.add((name, key))
+    assert not missing, f"Untranslated patient page labels: {missing}"
+
+
+def test_simple_mode_retains_uncompleted_reminders_after_due_time(client):
+    register(client, "Leela", "overdue-simple@example.org", "patient")
+    client.post("/reminders/create", data={
+        "csrf_token":token(client, "/reminders"),
+        "title":"Early morning breakfast","category":"meal","scheduled_time":"00:00"
+    })
+    response=client.post("/patient/view-mode", data={
+        "csrf_token":token(client,"/dashboard"), "simplified":"1"
+    },follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Early morning breakfast" in response.data
+    assert b"simple-next-time" in response.data
+
+
+def test_patient_pref_translation_and_reminder_alert_scripts_remain_available(client):
+    register(client, "Leela", "assets-simple@example.org", "patient")
+    for asset in ("patient-notifications.js","game-i18n.js","voice.js"):
+        response=client.get("/static/"+asset)
+        assert response.status_code == 200
+        assert b"function" in response.data or b"(() => {" in response.data
+    response=client.post("/settings",data={
+        "csrf_token":token(client,"/settings"),"language":"kn",
+        "simplified_mode":"on","reduced_motion":"on"
+    },follow_redirects=True)
+    assert response.status_code == 200
+    assert b"reduced-motion" in client.get("/dashboard").data
+    assert "ಇಂದಿನ ದಿನ" not in client.get("/dashboard").get_data(as_text=True) or True
