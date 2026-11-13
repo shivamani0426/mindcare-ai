@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Account security{% endblock %}
+{% block body_class %}account-security-route{% endblock %}
+{% block head %}{% if phone_login_ready %}<script type="module" src="{{ url_for('static',filename='auth-phone.js') }}"></script>{% endif %}{% endblock %}
+{% block content %}
+<section class="account-security-page" aria-labelledby="account-security-title">
+  <a class="back-link" href="{{ url_for('dashboard') }}">← Back to my dashboard</a>
+  <span class="eyebrow">PERSONAL ACCOUNT SETTINGS</span>
+  <h1 id="account-security-title">Account security</h1>
+  <p>Choose how you sign in, while keeping your existing MindCare records and approved family connections.</p>
+  <div class="account-security-summary"><span class="account-security-initial">{{ me.name[:1]|upper }}</span><div><strong>{{ me.name }}</strong><small>{{ 'Phone-based account' if me.email.endswith('@internal.mindcare.invalid') else me.email }} · {{ me.role|capitalize }}</small></div></div>
+  <div class="account-security-methods">
+    <article class="account-security-method">
+      <div><span class="account-security-method-icon" aria-hidden="true">G</span><h2>Google account</h2><p>Connect a Google account to sign in without entering your MindCare password.</p></div>
+      {% set google_id = identities|selectattr('provider','equalto','google')|first %}
+      {% if google_id %}<span class="account-linked-label">✓ Connected: {{ google_id.label }}</span>
+      {% elif google_login_ready %}<a class="button button-primary" href="{{ url_for('google_auth_start',mode='link') }}">Connect Google ↗</a>
+      {% else %}<p class="auth-fineprint">Google OAuth credentials need to be configured by the site administrator.</p>{% endif %}
+    </article>
+    <article class="account-security-method">
+      <div><span class="account-security-method-icon" aria-hidden="true">☎</span><h2>Mobile phone OTP</h2><p>Link your own mobile number after SMS verification. Carrier and SMS provider charges may apply.</p></div>
+      {% set phone_id = identities|selectattr('provider','equalto','firebase_phone')|first %}
+      {% if phone_id %}<span class="account-linked-label">✓ Connected: {{ phone_id.label }}</span>
+      {% elif phone_login_ready %}
+      <section class="auth-phone-flow" data-phone-auth data-firebase-config='{{ firebase_web_config|tojson }}' aria-label="Link a phone number">
+        <form id="phone-send-form" class="auth-phone-send">
+          <div class="auth-form-field"><label for="auth-phone-number">Phone number with country code</label><input type="tel" id="auth-phone-number" placeholder="+919876543210" pattern="\+[1-9][0-9]{7,14}" autocomplete="tel" required></div>
+          <div id="auth-recaptcha" class="auth-recaptcha"></div>
+          <button id="phone-send-button" class="button button-primary" type="submit">Send SMS code</button>
+        </form>
+        <form id="phone-verify-form" class="auth-phone-verify" hidden>
+          <div class="auth-form-field"><label for="auth-sms-code">Verification code</label><input type="text" id="auth-sms-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></div>
+          <button type="submit" class="button button-primary">Verify and link phone</button>
+          <button type="button" class="auth-phone-again" id="phone-try-again">Change number</button>
+        </form>
+        <p id="auth-phone-status" class="auth-phone-status" role="status" aria-live="polite"></p>
+      </section>
+      {% else %}<p class="auth-fineprint">Phone verification needs the site's Firebase SMS provider to be configured first.</p>{% endif %}
+    </article>
+  </div>
+  <p class="clinical-note">For your privacy, another Google or phone account can never be silently attached based on a matching email or number. This page is not a password reset system.</p>
+</section>
+{% endblock %}
