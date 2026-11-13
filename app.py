@@ -5,6 +5,7 @@ Educational, non-diagnostic mini project. No clinical inference is made from sco
 from __future__ import annotations
 
 import io
+import hashlib
 import os
 import random
 import re
@@ -19,6 +20,9 @@ from statistics import mean
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
                    request, send_file, session, url_for)
 from flask_sqlalchemy import SQLAlchemy
+from authlib.integrations.flask_client import OAuth
+from authlib.integrations.base_client.errors import OAuthError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
 from patient_labels import PATIENT_LABELS
@@ -40,6 +44,39 @@ app.config.update(
 )
 db = SQLAlchemy(app)
 
+# OAuth client credentials and Firebase service-account credentials are secrets
+# configured in Render. Never write them in source control or browser templates.
+oauth = OAuth(app)
+GOOGLE_OAUTH_READY = all(os.getenv(k) for k in (
+    "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"))
+if GOOGLE_OAUTH_READY:
+    oauth.register(
+        name="google",
+        client_id=os.environ["GOOGLE_CLIENT_ID"],
+        client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid profile email"},
+    )
+
+
+def firebase_phone_ready():
+    return all(os.getenv(k) for k in (
+        "FIREBASE_API_KEY", "FIREBASE_AUTH_DOMAIN", "FIREBASE_PROJECT_ID",
+        "FIREBASE_APP_ID", "FIREBASE_SERVICE_ACCOUNT_JSON"))
+
+
+def firebase_public_config():
+    if not firebase_phone_ready():
+        return None
+    return {
+        "apiKey": os.environ["FIREBASE_API_KEY"],
+        "authDomain": os.environ["FIREBASE_AUTH_DOMAIN"],
+        "projectId": os.environ["FIREBASE_PROJECT_ID"],
+        "appId": os.environ["FIREBASE_APP_ID"],
+    }
+
+
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,6 +88,31 @@ class User(db.Model):
     region = db.Column(db.String(80), nullable=True)
     invite_code = db.Column(db.String(16), unique=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class ExternalIdentity(db.Model):
+    """Trusted external subject, never an email/phone guess or a client-supplied UID."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    provider = db.Column(db.String(24), nullable=False)
+    subject = db.Column(db.String(180), nullable=False)
+    label = db.Column(db.String(180), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (
+        UniqueConstraint("provider", "subject", name="uq_external_provider_subject"),
+        UniqueConstraint("user_id", "provider", name="uq_one_identity_per_provider"),
+    )
+
+
+class PendingIdentity(db.Model):
+    """Short-lived server-side state for choosing patient/caregiver after verification."""
+    token_hash = db.Column(db.String(64), primary_key=True)
+    provider = db.Column(db.String(24), nullable=False)
+    subject = db.Column(db.String(180), nullable=False)
+    email = db.Column(db.String(180), nullable=True)
+    name = db.Column(db.String(90), nullable=True)
+    label = db.Column(db.String(180), nullable=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
 
 
 class CareLink(db.Model):
@@ -432,7 +494,10 @@ def inject_common():
     return dict(me=current_user(), csrf_token=session.get("csrf_token"), GAMES=GAMES,
                 CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES,
                 patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS,
-                simple_view=is_simple_view(current_user()))
+                simple_view=is_simple_view(current_user()),
+                google_login_ready=GOOGLE_OAUTH_READY,
+                phone_login_ready=firebase_phone_ready(),
+                firebase_web_config=firebase_public_config())
 
 
 @app.after_request
@@ -441,9 +506,25 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
-    response.headers["Content-Security-Policy"] = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
-                                                   "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
-                                                   "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+    # Allow Firebase only on authentication pages; other private pages retain
+    # the original more restrictive Content Security Policy.
+    content_policy = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
+                      "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
+                      "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+    public_firebase = firebase_public_config() if firebase_phone_ready() else None
+    if public_firebase and public_firebase.get("authDomain") and request.endpoint in ("login", "register", "account_security"):
+        content_policy = (
+            "default-src 'self'; "
+            "script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
+            "img-src 'self' data: https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
+            "style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com "
+            "https://www.googleapis.com https://www.gstatic.com; "
+            "frame-src 'self' https://www.google.com https://www.recaptcha.net "
+            "https://" + public_firebase["authDomain"] + "; "
+            "font-src 'self' https://www.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        )
+    response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
     return response
@@ -463,6 +544,239 @@ def home():
     if current_user():
         return redirect(url_for("dashboard"))
     return render_template("home.html")
+
+
+
+# --- External identity login and account linking ----------------------------
+# Never match a Google or phone login to a password account based only on
+# email or phone. A user must first log into that account and connect it.
+AUTH_PENDING_SECONDS = 600
+
+
+def external_login_session(user):
+    session.clear()
+    session["uid"] = user.id
+    session.permanent = True
+
+
+def make_phone_account_email():
+    # Internal, unguessable identity; a phone user can later link Google.
+    return "phone-" + secrets.token_hex(16) + "@internal.mindcare.invalid"
+
+
+def pending_identity_or_none():
+    raw = session.get("pending_identity_token")
+    if not isinstance(raw, str) or len(raw) < 32:
+        return None
+    row = db.session.get(PendingIdentity, hashlib.sha256(raw.encode()).hexdigest())
+    if not row:
+        return None
+    expiry = row.expires_at.replace(tzinfo=timezone.utc) if row.expires_at.tzinfo is None else row.expires_at
+    if now_utc() >= expiry:
+        db.session.delete(row)
+        db.session.commit()
+        session.pop("pending_identity_token", None)
+        return None
+    return row
+
+
+def complete_verified_external_identity(provider, subject, name="", email="", label=""):
+    """Use only after Google OIDC/Firebase Admin successfully verified the token."""
+    if provider not in ("google", "firebase_phone") or not isinstance(subject, str) or not 1 <= len(subject) <= 180:
+        abort(400)
+    existing = ExternalIdentity.query.filter_by(provider=provider, subject=subject).first()
+    if existing:
+        if current_user() and existing.user_id != current_user().id:
+            flash("This sign-in method is already connected to another account.", "error")
+            return redirect(url_for("account_security"))
+        user = db.session.get(User, existing.user_id)
+        if not user:
+            abort(403)
+        external_login_session(user)
+        flash("You are securely signed in.", "success")
+        return redirect(url_for("dashboard"))
+    if current_user():
+        user = current_user()
+        if (provider == "google" and not user.email.endswith("@internal.mindcare.invalid")
+                and (not email or email.lower() != user.email.lower())):
+            flash("Use a Google account with your existing MindCare email to link it.", "error")
+            return redirect(url_for("account_security"))
+        if ExternalIdentity.query.filter_by(user_id=user.id, provider=provider).first():
+            flash("A different account from this provider is already connected.", "error")
+            return redirect(url_for("account_security"))
+        try:
+            db.session.add(ExternalIdentity(
+                user_id=user.id, provider=provider, subject=subject, label=label[:180]
+            ))
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Could not connect this sign-in method. Please try again.", "error")
+            return redirect(url_for("account_security"))
+        flash("Your sign-in method has been connected.", "success")
+        return redirect(url_for("account_security"))
+    if email and User.query.filter(func.lower(User.email) == email.lower()).first():
+        flash("This email already has a MindCare account. Sign in with your password, then connect Google from Account security.", "info")
+        return redirect(url_for("login"))
+    # Store verified identity in Postgres, not in an editable form or the
+    # signed-but-not-encrypted Flask session cookie.
+    random_token = secrets.token_urlsafe(36)
+    pending = PendingIdentity(
+        token_hash=hashlib.sha256(random_token.encode()).hexdigest(),
+        provider=provider, subject=subject,
+        email=email[:180] if provider == "google" else None,
+        name=name[:90], label=label[:180],
+        expires_at=now_utc() + timedelta(seconds=AUTH_PENDING_SECONDS)
+    )
+    db.session.add(pending)
+    db.session.commit()
+    session.pop("pending_identity_token", None)
+    session["pending_identity_token"] = random_token
+    return redirect(url_for("auth_complete"))
+
+
+@app.route("/auth/google")
+def google_auth_start():
+    if not GOOGLE_OAUTH_READY:
+        flash("Google sign-in is not configured yet. Please use your email and password.", "info")
+        return redirect(url_for("login"))
+    if current_user():
+        # Linking is a distinct user-initiated action, never an accidental login.
+        if request.args.get("mode") != "link":
+            return redirect(url_for("account_security"))
+        session["google_link_user"] = current_user().id
+    else:
+        session.pop("google_link_user", None)
+    return oauth.google.authorize_redirect(os.environ["GOOGLE_REDIRECT_URI"])
+
+
+@app.route("/auth/google/callback")
+def google_auth_callback():
+    if not GOOGLE_OAUTH_READY:
+        abort(404)
+    try:
+        token = oauth.google.authorize_access_token()
+        profile = token.get("userinfo") or {}
+    except (OAuthError, ValueError, KeyError):
+        flash("Google could not verify this sign-in. Please try again.", "error")
+        return redirect(url_for("login"))
+    subject = profile.get("sub")
+    email = profile.get("email") or ""
+    verified = profile.get("email_verified") is True or profile.get("email_verified") == "true"
+    if not verified or not isinstance(email, str) or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        flash("Please choose a Google account with a verified email address.", "error")
+        return redirect(url_for("login"))
+    expected_link = session.pop("google_link_user", None)
+    if current_user() and expected_link != current_user().id:
+        abort(403)
+    if expected_link is not None and (not current_user() or expected_link != current_user().id):
+        abort(403)
+    return complete_verified_external_identity(
+        "google", subject, name=profile.get("name") or "",
+        email=email.lower(), label=email.lower()
+    )
+
+
+def verify_firebase_phone_id_token(token):
+    """Verify ID token signature, issuer, project and revocation via Firebase Admin."""
+    import firebase_admin
+    from firebase_admin import auth as firebase_auth, credentials
+    try:
+        fb = firebase_admin.get_app("mindcare-phone")
+    except ValueError:
+        details = json.loads(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"])
+        fb = firebase_admin.initialize_app(
+            credentials.Certificate(details),
+            {"projectId": os.environ["FIREBASE_PROJECT_ID"]}, name="mindcare-phone"
+        )
+    claims = firebase_auth.verify_id_token(token, app=fb, check_revoked=True)
+    if claims.get("firebase", {}).get("sign_in_provider") != "phone":
+        raise ValueError("Not a phone-verified identity")
+    phone = claims.get("phone_number")
+    subject = claims.get("uid")
+    if (not isinstance(phone, str) or not re.fullmatch(r"\+[1-9][0-9]{7,14}", phone)
+            or not isinstance(subject, str) or not subject):
+        raise ValueError("Phone verification is incomplete")
+    return subject, phone
+
+
+@app.route("/auth/phone-session", methods=["POST"])
+def phone_session():
+    if not firebase_phone_ready():
+        return jsonify(error="Phone OTP sign-in is not configured."), 503
+    data = request.get_json(silent=True) or {}
+    token = data.get("id_token", "")
+    if not isinstance(token, str) or not 30 <= len(token) <= 12000:
+        return jsonify(error="Invalid phone verification."), 400
+    try:
+        subject, phone = verify_firebase_phone_id_token(token)
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        return jsonify(error="Could not verify that SMS code. Please try again."), 401
+    except Exception:
+        app.logger.warning("Firebase verification unavailable")
+        return jsonify(error="Phone verification is temporarily unavailable."), 503
+    response = complete_verified_external_identity(
+        "firebase_phone", subject, label=phone
+    )
+    return jsonify(ok=True, next_url=response.location)
+
+
+@app.route("/auth/complete", methods=["GET", "POST"])
+def auth_complete():
+    if current_user():
+        return redirect(url_for("dashboard"))
+    pending = pending_identity_or_none()
+    if not pending:
+        flash("The verified sign-in session expired. Please start again.", "info")
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        role = request.form.get("role", "")
+        age_raw = request.form.get("age", "").strip()
+        if not 2 <= len(name) <= 90 or role not in ("patient", "caregiver"):
+            flash("Choose a patient or caregiver account and enter your name.", "error")
+        elif age_raw and (not age_raw.isdecimal() or not 1 <= int(age_raw) <= 120):
+            flash("Please choose a valid age.", "error")
+        elif pending.email and User.query.filter(func.lower(User.email) == pending.email.lower()).first():
+            flash("This email already has an account. Sign in with your password to connect it.", "error")
+            return redirect(url_for("login"))
+        elif ExternalIdentity.query.filter_by(provider=pending.provider, subject=pending.subject).first():
+            flash("This identity is already connected. Sign in again.", "error")
+            return redirect(url_for("login"))
+        else:
+            invite = secrets.token_hex(4).upper() if role == "patient" else None
+            while invite and User.query.filter_by(invite_code=invite).first():
+                invite = secrets.token_hex(4).upper()
+            user = User(
+                name=name, email=pending.email or make_phone_account_email(),
+                role=role, age=int(age_raw) if role == "patient" and age_raw else None,
+                password_hash=generate_password_hash(secrets.token_urlsafe(48)),
+                invite_code=invite,
+            )
+            try:
+                db.session.add(user)
+                db.session.flush()
+                db.session.add(ExternalIdentity(
+                    user_id=user.id, provider=pending.provider,
+                    subject=pending.subject, label=pending.label
+                ))
+                db.session.delete(pending)
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash("This identity has already been used. Please try signing in.", "error")
+                return redirect(url_for("login"))
+            external_login_session(user)
+            flash("Welcome to MindCare. Your space is ready.", "success")
+            return redirect(url_for("dashboard"))
+    return render_template("auth_complete.html", pending=pending)
+
+
+@app.route("/account/security")
+@require_login()
+def account_security():
+    identities = ExternalIdentity.query.filter_by(user_id=current_user().id).all()
+    return render_template("account_security.html", identities=identities)
 
 
 @app.route("/register", methods=["GET", "POST"])

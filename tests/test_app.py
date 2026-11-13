@@ -904,3 +904,168 @@ def test_quick_support_button_is_translated_for_patient(client,lang,text):
     },follow_redirects=True)
     assert updated.status_code==200
     assert text in client.get("/dashboard").get_data(as_text=True)
+
+
+def test_auth_v3_professional_page_preserves_email_password_and_roles(client):
+    login_page = client.get("/login")
+    register_page = client.get("/register")
+    assert login_page.status_code == 200 and register_page.status_code == 200
+    assert b"auth-v2" in login_page.data
+    assert b'auth-email-form' in login_page.data
+    assert b"Google sign-in" in login_page.data
+    assert b"Phone OTP" in login_page.data
+    assert b"auth-phone-not-ready" in login_page.data
+    assert b'href="/auth/google"' not in login_page.data
+    assert b'auth-role-selector' in register_page.data
+    assert b'value="caregiver"' in register_page.data
+    assert b"auth-ui.js" in register_page.data
+    # Users cannot accidentally enter a fake Google flow without credentials.
+    assert client.get("/auth/google").status_code == 302
+    assert client.post("/auth/phone-session", json={
+        "id_token":"fake" * 70
+    }, headers={"X-CSRF-Token": token(client,"/login")}).status_code == 503
+    register(client, "Patient Sana", "auth-legacy@example.org", "patient")
+    security = client.get("/account/security")
+    assert security.status_code == 200
+    assert b"Account security" in security.data
+    assert b"auth-account-link" in client.get("/dashboard").data
+    logout(client)
+    login(client, "auth-legacy@example.org")
+    assert b"Hello, Patient" in client.get("/dashboard").data
+
+
+def test_phone_otp_server_requires_verified_identity_before_account_creation(client, monkeypatch):
+    import app as authapp
+    assert client.get("/auth/complete").status_code == 302
+    assert client.post("/auth/complete", data={
+        "csrf_token": token(client, "/login"), "role":"caregiver", "name":"Attacker"
+    }).status_code == 302
+    client.get("/login")
+    csrf = token(client, "/login")
+    monkeypatch.setattr(authapp, "firebase_phone_ready", lambda: True)
+    monkeypatch.setattr(authapp, "firebase_public_config", lambda: {"apiKey":"test", "authDomain":"test.firebaseapp.com", "projectId":"test", "appId":"test"})
+    monkeypatch.setattr(authapp, "verify_firebase_phone_id_token",
+        lambda token: ("phone-provider-uid-123", "+919876543210")
+        if token == "verified-firebase-id-token-"+"x"*90
+        else (_ for _ in ()).throw(ValueError("bad token")))
+    rejected = client.post("/auth/phone-session", json={
+        "id_token":"invalid-"+"x"*90,
+        "uid":"phone-provider-uid-123","phone":"+919876543210",
+        "role":"caregiver"
+    }, headers={"X-CSRF-Token":csrf})
+    assert rejected.status_code == 401
+    ok = client.post("/auth/phone-session", json={
+        "id_token":"verified-firebase-id-token-"+"x"*90,
+        "uid":"spoofed-uid","role":"caregiver"
+    }, headers={"X-CSRF-Token":csrf})
+    assert ok.status_code == 200 and ok.json["next_url"] == "/auth/complete"
+    from app import ExternalIdentity, PendingIdentity
+    with app.app_context():
+        assert User.query.count() == 0
+        assert ExternalIdentity.query.count() == 0
+        assert PendingIdentity.query.count() == 1
+    # Must still choose patient or caregiver; no role can be forced in token JSON.
+    page = client.get("/auth/complete")
+    assert b"auth-onboard" in page.data and b"phone number" in page.data
+    created = client.post("/auth/complete", data={
+        "csrf_token":csrf, "name":"Helper Sana", "role":"caregiver"
+    }, follow_redirects=True)
+    assert created.status_code == 200
+    assert b"caregiver-v2" in created.data
+    with app.app_context():
+        user = User.query.one()
+        assert user.role == "caregiver"
+        assert user.email.endswith("@internal.mindcare.invalid")
+        identity = ExternalIdentity.query.one()
+        assert identity.subject == "phone-provider-uid-123"
+        assert identity.label == "+919876543210"
+        assert identity.user_id == user.id
+        assert PendingIdentity.query.count() == 0
+    logout(client)
+    again = client.post("/auth/phone-session", json={
+        "id_token":"verified-firebase-id-token-"+"x"*90
+    }, headers={"X-CSRF-Token":token(client,"/login")})
+    assert again.status_code == 200
+    assert again.json["next_url"] == "/dashboard"
+    with app.app_context():
+        assert User.query.count() == 1
+
+
+def test_google_verified_profile_uses_subject_and_does_not_autolink_email(client,monkeypatch):
+    import app as authapp
+    from types import SimpleNamespace
+    register(client, "Patient Sana", "google-safe@example.org", "patient")
+    with app.app_context():
+        old_id = User.query.one().id
+    logout(client)
+    monkeypatch.setattr(authapp,"GOOGLE_OAUTH_READY",True)
+    class FakeGoogle:
+        def __init__(self, data):
+            self.data=data
+        def authorize_access_token(self):
+            return {"userinfo":self.data}
+    google = FakeGoogle({
+        "sub":"google-sub-verified-1",
+        "email":"google-safe@example.org",
+        "email_verified": True,"name":"Sana"
+    })
+    monkeypatch.setattr(authapp.oauth,"google",google,raising=False)
+    callback=client.get("/auth/google/callback")
+    assert callback.status_code == 302 and callback.location.endswith("/login")
+    with app.app_context():
+        from app import ExternalIdentity
+        assert ExternalIdentity.query.count() == 0
+        assert User.query.count() == 1 and User.query.one().id == old_id
+    login(client,"google-safe@example.org")
+    # Authorized user initiated a Google-link flow; OAuth state is verified by Authlib.
+    with client.session_transaction() as sess:
+        sess["google_link_user"] = old_id
+    linked=client.get("/auth/google/callback")
+    assert linked.status_code == 302 and linked.location.endswith("/account/security")
+    with app.app_context():
+        from app import ExternalIdentity
+        identity=ExternalIdentity.query.one()
+        assert identity.user_id == old_id and identity.subject == "google-sub-verified-1"
+    logout(client)
+    logged_in=client.get("/auth/google/callback")
+    assert logged_in.status_code == 302 and logged_in.location.endswith("/dashboard")
+    with app.app_context():
+        assert User.query.count() == 1
+    logout(client)
+    google.data={"sub":"google-sub-verified-other","email":"new-google@example.org",
+                 "email_verified":False,"name":"Not Verified"}
+    assert client.get("/auth/google/callback").location.endswith("/login")
+    with app.app_context():
+        assert User.query.count() == 1
+
+
+def test_account_link_and_new_google_role_selection_never_override_existing_user(client,monkeypatch):
+    import app as authapp
+    from app import ExternalIdentity
+    from types import SimpleNamespace
+    monkeypatch.setattr(authapp,"GOOGLE_OAUTH_READY",True)
+    google = SimpleNamespace(authorize_access_token=lambda:{"userinfo":{
+        "sub":"brand-new-google-stable-subject",
+        "email":"new-oauth@example.org",
+        "email_verified":True,"name":"Patient Leela"}})
+    monkeypatch.setattr(authapp.oauth,"google",google,raising=False)
+    started=client.get("/auth/google/callback")
+    assert started.location.endswith("/auth/complete")
+    setup=client.get("/auth/complete")
+    assert b"Patient Leela" in setup.data
+    invalid=client.post("/auth/complete",data={
+        "csrf_token":token(client,"/auth/complete"),
+        "name":"S","role":"admin"
+    })
+    assert invalid.status_code == 200
+    created=client.post("/auth/complete",data={
+        "csrf_token":token(client,"/auth/complete"),
+        "name":"Patient Leela","role":"patient"
+    },follow_redirects=True)
+    assert created.status_code==200
+    assert b"patient-mode-shortcut" in created.data
+    with app.app_context():
+        assert ExternalIdentity.query.one().provider=="google"
+        assert User.query.one().invite_code
+    logout(client)
+    assert client.get("/auth/complete").location.endswith("/login")

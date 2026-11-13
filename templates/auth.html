@@ -1,17 +1,96 @@
-{% extends 'base.html' %}{% block title %}{{ 'Create your account' if mode == 'register' else 'Welcome back' }}{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ 'Create your account' if mode == 'register' else 'Sign in' }}{% endblock %}
+{% block body_class %}mindcare-auth-route{% endblock %}
+{% block head %}
+  <script src="{{ url_for('static',filename='auth-ui.js') }}" defer></script>
+  {% if phone_login_ready %}<script type="module" src="{{ url_for('static',filename='auth-phone.js') }}"></script>{% endif %}
+{% endblock %}
 {% block content %}
-<section class="auth-layout"><div class="auth-panel"><span class="eyebrow">YOUR SPACE TO FLOURISH</span><h1>{{ 'A little care starts here.' if mode == 'register' else 'Lovely to see you again.' }}</h1><p>{{ 'Join MindCare and discover a calmer way to make everyday moments count.' if mode == 'register' else 'Pick up where you left off. Every little step matters.' }}</p>
-  <div class="auth-illustration"><span>🌷</span><div><strong>One day at a time</strong><small>Gentle reminders. Joyful moments. Family connection.</small></div></div>
-</div><div class="auth-form-card"><h2>{{ 'Create your account' if mode == 'register' else 'Sign in to MindCare' }}</h2><p class="muted">{{ 'Already have an account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in' if mode == 'register' else 'Create an account' }}</a></p>
-<form method="post" class="form-grid"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-{% if mode == 'register' %}
-  <label class="input-label">Your full name<input type="text" name="name" placeholder="e.g. Asha Sharma" maxlength="90" autocomplete="name" required></label>
-  <fieldset class="role-options"><legend>I am joining as</legend><label class="role-choice"><input type="radio" name="role" value="patient" checked><span>🌷 <b>Patient</b><small>Play games and enjoy reminders</small></span></label><label class="role-choice"><input type="radio" name="role" value="caregiver"><span>💛 <b>Caregiver</b><small>Support someone you love</small></span></label></fieldset>
-  <div class="patient-extra"><label class="input-label">Age (optional)<input type="number" name="age" min="1" max="120" placeholder="e.g. 72"></label><label class="input-label">State or region (optional)<select name="region"><option value="">Choose region</option>{% for state in ['Arunachal Pradesh','Assam','Manipur','Meghalaya','Mizoram','Nagaland','Sikkim','Tripura','Other'] %}<option value="{{ state }}">{{ state }}</option>{% endfor %}</select></label></div>
-{% endif %}
-<label class="input-label">Email address<input type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="180" required></label>
-<label class="input-label">Password<input type="password" name="password" placeholder="At least 10 characters" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" minlength="{{ '10' if mode == 'register' else '1' }}" required></label>
-<button class="button button-primary button-block button-lg" type="submit">{{ 'Create my space' if mode == 'register' else 'Sign in' }} <span>→</span></button>
-<p class="form-disclaimer">Your data is private to you and caregivers you explicitly approve. This is a non-medical support application.</p>
-</form></div></section>
+<section class="auth-v2" aria-labelledby="auth-title">
+  <aside class="auth-v2-story">
+    <div class="auth-story-top"><span class="auth-story-label"><span class="auth-story-dot"></span> A calmer space for families</span><div class="auth-story-decoration" aria-hidden="true">✧</div></div>
+    <div class="auth-story-main">
+      <span class="auth-story-overline">MINDCARE · STAY CONNECTED</span>
+      <h1>Every little moment <em>matters.</em></h1>
+      <p>Care, routine and familiar faces, all in one gentle place for patients and the people who love them.</p>
+      <div class="auth-story-preview" aria-label="MindCare highlights">
+        <div class="auth-preview-heading"><span class="auth-preview-icon">✦</span><div><strong>A lovely day ahead</strong><small>One step at a time</small></div><span class="auth-preview-sun" aria-hidden="true">☀️</span></div>
+        <div class="auth-preview-list">
+          <div><span class="auth-preview-emoji" aria-hidden="true">🔔</span><span><strong>Daily reminders</strong><small>Simple little nudges</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
+          <div><span class="auth-preview-emoji" aria-hidden="true">🧩</span><span><strong>Gentle brain games</strong><small>Play at your own pace</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
+          <div><span class="auth-preview-emoji" aria-hidden="true">💛</span><span><strong>People who care</strong><small>Stay close to family</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-story-bottom"><span>♡ Built for meaningful connection</span><span>Calm · Accessible · Private</span></div>
+  </aside>
+
+  <div class="auth-v2-form-panel">
+    <div class="auth-form-inner">
+      <div class="auth-form-topline"><span class="auth-form-logo" aria-hidden="true">✦</span><span>MINDCARE ACCOUNT</span><span class="auth-form-topline-right">01 / 01</span></div>
+      <span class="auth-form-eyebrow">{{ 'START YOUR JOURNEY' if mode == 'register' else 'WELCOME BACK' }}</span>
+      <h2 id="auth-title">{{ 'Create your MindCare account' if mode == 'register' else 'Good to see you again.' }}</h2>
+      <p class="auth-form-intro">{{ 'Join as a patient or caregiver. Your care circle begins with trust.' if mode == 'register' else 'Choose the sign-in method that feels easiest for you.' }}</p>
+
+      {% if google_login_ready %}
+      <a class="auth-google-button" href="{{ url_for('google_auth_start') }}" aria-label="Continue securely with your Google account">
+        <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.26c0-.77-.07-1.51-.2-2.22H12v4.2h5.23a4.48 4.48 0 0 1-1.94 2.94v2.43h3.13c1.83-1.69 2.93-4.18 2.93-7.35z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.83-.87 6.44-2.36l-3.13-2.43c-.87.59-1.98.94-3.31.94-2.54 0-4.69-1.71-5.46-4.01H3.31v2.51a9.75 9.75 0 0 0 8.69 5.35z"/><path fill="#FBBC05" d="M6.54 13.89a5.8 5.8 0 0 1 0-3.78V7.6H3.31a9.75 9.75 0 0 0 0 8.8l3.23-2.51z"/><path fill="#EA4335" d="M12 6.1c1.43 0 2.71.5 3.71 1.45l2.78-2.78A9.32 9.32 0 0 0 12 2.25 9.75 9.75 0 0 0 3.31 7.6l3.23 2.51c.77-2.3 2.92-4.01 5.46-4.01z"/></svg>
+        <span>Continue with Google</span><span class="auth-button-arrow" aria-hidden="true">↗</span>
+      </a>
+      {% else %}
+      <div class="auth-provider-setup" role="note"><span aria-hidden="true">G</span><div><strong>Google sign-in</strong><small>Available after the site's Google credentials are connected. Email sign-in works now.</small></div></div>
+      {% endif %}
+
+      <div class="auth-separator"><span>or continue securely with</span></div>
+      <div class="auth-method-tabs" role="group" aria-label="Choose sign-in method">
+        <button class="auth-method-tab" type="button" data-auth-tab="email" aria-pressed="true">✉ Email & password</button>
+        <button class="auth-method-tab" type="button" data-auth-tab="phone" aria-pressed="false">☎ Phone OTP{% if not phone_login_ready %} <small>Setup needed</small>{% endif %}</button>
+      </div>
+
+      <div class="auth-method-panel" data-auth-panel="email">
+        <form method="post" class="auth-v2-email-form" id="auth-email-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          {% if mode == 'register' %}
+          <div class="auth-form-field"><label for="auth-full-name">Your full name</label><input id="auth-full-name" name="name" type="text" placeholder="e.g. Asha Sharma" maxlength="90" autocomplete="name" required></div>
+          <fieldset class="auth-role-selector"><legend>I am creating an account as</legend>
+            <label class="auth-role-choice"><input type="radio" name="role" value="patient" checked><span><strong>🌷 Patient</strong><small>For my daily routine and games</small></span></label>
+            <label class="auth-role-choice"><input type="radio" name="role" value="caregiver"><span><strong>💛 Caregiver</strong><small>To support someone I love</small></span></label>
+          </fieldset>
+          <div class="auth-patient-fields">
+            <div class="auth-form-field"><label for="auth-age">Age <small>optional</small></label><input id="auth-age" name="age" type="number" min="1" max="120" placeholder="e.g. 72" inputmode="numeric"></div>
+            <div class="auth-form-field"><label for="auth-region">State or region <small>optional</small></label><select id="auth-region" name="region"><option value="">Choose a region</option>{% for state in ['Arunachal Pradesh','Assam','Manipur','Meghalaya','Mizoram','Nagaland','Sikkim','Tripura','Other'] %}<option value="{{ state }}">{{ state }}</option>{% endfor %}</select></div>
+          </div>
+          {% endif %}
+          <div class="auth-form-field"><label for="auth-email">Email address</label><input id="auth-email" type="email" name="email" placeholder="name@example.com" autocomplete="email" maxlength="180" required></div>
+          <div class="auth-form-field"><label for="auth-password">Password</label><div class="auth-password-field"><input id="auth-password" name="password" type="password" placeholder="{{ 'At least 10 characters' if mode == 'register' else 'Enter your password' }}" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" minlength="{{ '10' if mode == 'register' else '1' }}" required><button type="button" class="auth-password-visibility" aria-controls="auth-password" aria-pressed="false">Show</button></div></div>
+          <button class="button auth-submit-button" type="submit">{{ 'Create my account' if mode == 'register' else 'Sign in securely' }} <span aria-hidden="true">→</span></button>
+        </form>
+      </div>
+
+      <div class="auth-method-panel" data-auth-panel="phone" hidden>
+        {% if phone_login_ready %}
+        <section class="auth-phone-flow" data-phone-auth data-firebase-config='{{ firebase_web_config|tojson }}' aria-label="Phone number sign-in">
+          <p class="auth-phone-intro">We'll send a one-time verification code to your mobile phone. Choose your country code and enter the full number.</p>
+          <form class="auth-phone-send" id="phone-send-form">
+            <div class="auth-form-field"><label for="auth-phone-number">Mobile number with country code</label><input id="auth-phone-number" type="tel" name="phone" placeholder="+919876543210" autocomplete="tel" inputmode="tel" pattern="\+[1-9][0-9]{7,14}" required></div>
+            <div id="auth-recaptcha" class="auth-recaptcha" aria-label="Security verification"></div>
+            <button type="submit" class="button auth-submit-button" id="phone-send-button">Send verification code →</button>
+          </form>
+          <form class="auth-phone-verify" id="phone-verify-form" hidden>
+            <div class="auth-form-field"><label for="auth-sms-code">6-digit SMS verification code</label><input id="auth-sms-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456" required></div>
+            <button type="submit" class="button auth-submit-button">Verify and continue →</button>
+            <button type="button" class="auth-phone-again" id="phone-try-again">Use a different number</button>
+          </form>
+          <p id="auth-phone-status" class="auth-phone-status" role="status" aria-live="polite"></p>
+          <p class="auth-fineprint">SMS delivery is handled by Firebase and may incur provider charges. Phone-only login can be less secure than Google or a password.</p>
+        </section>
+        {% else %}
+        <div class="auth-phone-not-ready" role="status"><span aria-hidden="true">📱</span><h3>Phone OTP sign-in</h3><p>This option needs a verified SMS provider to protect your account. It hasn't been connected yet. You can sign in with email now.</p><button class="button button-outline" type="button" data-auth-return-email>Use email instead</button></div>
+        {% endif %}
+      </div>
+
+      <div class="auth-form-bottom"><p>{{ 'Already have a MindCare account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in instead →' if mode == 'register' else 'Create your account →' }}</a></p><p class="auth-trust-caption">🔒 Patient information is shared only with caregivers you approve.</p></div>
+    </div>
+  </div>
+</section>
 {% endblock %}

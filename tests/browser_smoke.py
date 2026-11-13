@@ -77,10 +77,30 @@ try:
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(base + "/register")
+        verify(page.locator(".auth-v2").count() == 1, "Professional registration page renders")
+        verify(page.locator(".auth-method-tabs").count() == 1, "Email and phone sign-in tabs visible")
+        for width, height in [(320, 780), (375, 812), (768, 1024), (1280, 900)]:
+            page.set_viewport_size({"width": width, "height": height})
+            page.wait_for_timeout(100)
+            no_horizontal_scroll(page, width)
+            verify(page.locator(".auth-v2-email-form").is_visible(),
+                   f"Email registration available at {width}px")
+        page.set_viewport_size({"width": 1280, "height": 860})
+        page.locator('[data-auth-tab="phone"]').click()
+        verify(page.locator(".auth-phone-not-ready").is_visible(),
+               "SMS option explains required provider setup instead of fake sign-in")
+        page.locator("[data-auth-return-email]").click()
+        verify(page.locator(".auth-v2-email-form").is_visible(), "Returning to email sign-in works")
+        page.locator(".auth-password-visibility").click()
+        verify(page.locator('input[name="password"]').get_attribute("type") == "text",
+               "Show password toggles visibility")
+        page.locator(".auth-password-visibility").click()
+        verify(page.locator('input[name="password"]').get_attribute("type") == "password",
+               "Hide password toggles back")
         page.locator('input[name="name"]').fill("Patient Browser QA")
         page.locator('input[name="email"]').fill("browser-patient-qa@example.org")
         page.locator('input[name="password"]').fill("QA-only-test-password-1234")
-        page.get_by_role("button", name=re.compile("Create my space")).click()
+        page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
         verify(page.locator("[data-quick-support-button]").count() == 1, "Full dashboard has a prominent Need Support button")

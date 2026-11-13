@@ -174,3 +174,36 @@ Caregivers see only patient accounts **that explicitly approved their connection
 
 ### Tests
 The project runs Python permission/unit tests and two disposable Chromium journeys through GitHub Actions: \`tests/browser_smoke.py\` for patients and \`tests/browser_caregiver_smoke.py\` for caregivers. Both use isolated local databases and do not alter production accounts.
+
+
+## Secure sign-in: Google, email and mobile OTP
+
+MindCare's refreshed sign-in and registration pages retain working email/password login. Google and Firebase phone login activate only when administrator credentials exist. A disabled provider never claims an SMS was sent or an external identity verified.
+
+### Enable Google OAuth
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure Google Auth Platform, OAuth consent screen and create a Web application OAuth client.
+2. Add the exact authorized redirect URI: https://mindcare-ai-ner.onrender.com/auth/google/callback
+3. Set the following Render service environment variables. Keep secret values private:
+   - GOOGLE_CLIENT_ID (OAuth client identifier)
+   - GOOGLE_CLIENT_SECRET (private OAuth secret)
+   - GOOGLE_REDIRECT_URI = https://mindcare-ai-ner.onrender.com/auth/google/callback
+4. Redeploy the service. The **Continue with Google** button will become enabled. MindCare never sees a user's Google password.
+5. New users select Patient or Caregiver only after Google verifies them. Existing email/password users should sign in first, click their name, and choose **Account security > Connect Google**. To protect existing records, the Google verified email must match the original account's email. Never automatically link solely by email.
+
+### Enable phone OTP with Firebase
+
+Firebase phone sign-in needs an active Firebase Auth project and can incur charges for real SMS delivery. [Official setup documentation](https://firebase.google.com/docs/auth/web/phone-auth).
+
+1. Create a Firebase project and Web app; enable Authentication > Sign-in method > Phone.
+2. Add mindcare-ai-ner.onrender.com to authorized authentication domains. Set an SMS region policy allowing intended countries such as India. Configure billing, budget alerts, fraud controls and quota limits as Firebase requires.
+3. Configure these variables privately in the Render service:
+   - FIREBASE_API_KEY (public web configuration)
+   - FIREBASE_AUTH_DOMAIN (your-project.firebaseapp.com)
+   - FIREBASE_PROJECT_ID (Google/Firebase project ID)
+   - FIREBASE_APP_ID (Firebase web application ID)
+   - FIREBASE_SERVICE_ACCOUNT_JSON (private full JSON credential, NEVER expose in GitHub or HTML)
+4. Redeploy. Users can tap Phone OTP, complete Firebase reCAPTCHA, enter their E.164 number (for example +919876543210) and confirm the SMS. Firebase Admin validates the ID token's signature, project, phone provider and revocation before Flask starts a session.
+5. Verified new users choose Patient or Caregiver. A previously registered user can connect a verified phone from **Account security** without recreating their patient records. For cost-free QA, Firebase supports fictional test numbers that never send real SMS.
+
+**Security and operational cautions:** Firebase charges for eligible real SMS; a phone number may be reassigned or SIM-swapped, making phone-only sign-in weaker than password+MFA. Configure spend controls, throttling, account recovery, log audit and professional security/privacy review before real clinical use. No password-reset email or automatic SMS alert is implemented. The existing WhatsApp trusted-contact feature, patient/caregiver roles, consent checks and emergency 112 dialer are unchanged. Account linking is deliberate and never based on phone/email similarity alone.

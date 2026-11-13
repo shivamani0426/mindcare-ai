@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Finish setting up your account{% endblock %}
+{% block body_class %}mindcare-auth-route{% endblock %}
+{% block head %}<script src="{{ url_for('static',filename='auth-ui.js') }}" defer></script>{% endblock %}
+{% block content %}
+<section class="auth-onboard" aria-labelledby="onboard-title">
+  <a class="back-link" href="{{ url_for('home') }}">← MindCare home</a>
+  <div class="auth-onboard-card">
+    <span class="auth-onboard-icon" aria-hidden="true">✦</span>
+    <span class="eyebrow">JUST ONE MORE STEP</span>
+    <h1 id="onboard-title">Welcome to MindCare.</h1>
+    <p>Your {{ 'Google account' if pending.provider == 'google' else 'phone number' }} has been verified. Choose how you'd like to use your new account.</p>
+    <div class="auth-onboard-verified"><span aria-hidden="true">✓</span><span>{{ pending.label if pending.provider == 'google' else 'Mobile number verified by Firebase' }}</span></div>
+    <form action="{{ url_for('auth_complete') }}" method="post" class="auth-onboard-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="auth-form-field"><label for="onboard-name">Your full name</label><input id="onboard-name" type="text" name="name" minlength="2" maxlength="90" autocomplete="name" value="{{ pending.name or '' }}" placeholder="Your full name" required></div>
+      <fieldset class="auth-role-selector"><legend>How will you use MindCare?</legend>
+        <label class="auth-role-choice"><input type="radio" name="role" value="patient" checked><span><strong>🌷 Patient</strong><small>My daily reminders, games and people</small></span></label>
+        <label class="auth-role-choice"><input type="radio" name="role" value="caregiver"><span><strong>💛 Caregiver</strong><small>Support a loved one with permission</small></span></label>
+      </fieldset>
+      <div class="auth-patient-fields"><div class="auth-form-field"><label for="onboard-age">Age <small>optional</small></label><input type="number" name="age" id="onboard-age" min="1" max="120" placeholder="e.g. 72"></div></div>
+      <button type="submit" class="button auth-submit-button">Finish creating my account <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="auth-fineprint">You can switch sign-in methods later after linking them inside Account security. Patient information is shared with caregivers only after approval.</p>
+  </div>
+</section>
+{% endblock %}

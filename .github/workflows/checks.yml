@@ -29,6 +29,8 @@ jobs:
           node --check static/patient-notifications.js
           node --check static/game-i18n.js
           node --check static/caregiver-dashboard.js
+          node --check static/auth-ui.js
+          node --check static/auth-phone.js
 
   browser:
     runs-on: ubuntu-latest
