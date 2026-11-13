@@ -80,7 +80,7 @@ try:
         invite = patient.locator("#invite-code").inner_text().strip()
         verify(len(invite) == 8, "Patient can share approved connection code")
 
-        patient.locator('input[name="feeling"][value="need_help"]').check()
+        patient.locator('input[type="radio"][name="feeling"][value="need_help"]').check()
         patient.locator('textarea[name="note"]').fill("Please call me when you can.")
         patient.locator('.wellbeing-form button[type="submit"]').click()
         patient.wait_for_url("**/dashboard*")
@@ -151,7 +151,7 @@ try:
                "Reviewed support entry leaves outstanding queue")
 
         patient.goto(url + "/dashboard")
-        patient.locator('input[name="feeling"][value="need_help"]').check()
+        patient.locator('input[type="radio"][name="feeling"][value="need_help"]').check()
         patient.locator('textarea[name="note"]').fill("Updated support request")
         patient.locator('.wellbeing-form button[type="submit"]').click()
         patient.wait_for_url("**/dashboard*")
