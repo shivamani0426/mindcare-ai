@@ -52,7 +52,12 @@ def register(page, role, name, email):
 def overflow_check(page, width):
     metrics = page.evaluate("""() => ({
       content:document.documentElement.scrollWidth,
-      viewport:window.innerWidth
+      viewport:window.innerWidth,
+      offenders: [...document.querySelectorAll('body *')]
+        .map(el => {const r=el.getBoundingClientRect();
+          return {tag:el.tagName,cls:typeof el.className==='string'?el.className.slice(0,80):'',
+            left:Math.round(r.left),right:Math.round(r.right)};})
+        .filter(x=>x.right>window.innerWidth+4 || x.left < -5).slice(0,12)
     })""")
     verify(metrics["content"] <= metrics["viewport"] + 3,
            f"Caregiver dashboard has no horizontal overflow at {width}px: {metrics}")
