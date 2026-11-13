@@ -548,3 +548,24 @@ def test_guest_voice_contact_id_is_private_and_expired_links_fail(client):
     register(client, "Not This Patient", "other-voice@example.org", "patient")
     assert client.get(f"/voice/call/{call_id}").status_code == 404
     assert client.get(f"/api/guest-voice/{call_id}/events").status_code == 404
+
+
+def test_guest_can_decline_voice_invitation_without_joining(client):
+    call_id, invite = create_guest_voice_invite(client)
+    recipient = app.test_client()
+    guest_page = recipient.get(f"/voice/guest/{invite}")
+    assert b'id="guest-voice-decline"' in guest_page.data
+    csrf = token(recipient, f"/voice/guest/{invite}")
+    bad = recipient.post(f"/api/guest-voice/{call_id}/decline",
+        json={"invite_token":"not-the-real-token"},
+        headers={"X-CSRF-Token":csrf})
+    assert bad.status_code == 404
+    declined = recipient.post(f"/api/guest-voice/{call_id}/decline",
+        json={"invite_token":invite},
+        headers={"X-CSRF-Token":csrf})
+    assert declined.status_code == 200
+    assert client.get(f"/api/guest-voice/{call_id}/events").json["status"] == "declined"
+    assert recipient.post(f"/api/guest-voice/{call_id}/join",
+        json={"invite_token":invite},
+        headers={"X-CSRF-Token":csrf}).status_code == 409
+

@@ -1131,6 +1131,26 @@ def guest_voice_signal(call_id):
     return jsonify(ok=True)
 
 
+@app.route("/api/guest-voice/<call_id>/decline", methods=["POST"])
+def guest_voice_decline(call_id):
+    """Recipient may explicitly decline a still-unclaimed, unexpired invitation."""
+    call = db.session.get(GuestVoiceCall, call_id)
+    body = request.get_json(silent=True) or {}
+    supplied = body.get("invite_token")
+    if not call or not isinstance(supplied, str) or not secrets.compare_digest(supplied, call.invite_token):
+        abort(404)
+    guest_voice_finish_if_expired(call)
+    if call.status != "ringing" or call.guest_key:
+        return jsonify(error="This invitation is no longer available."), 409
+    changed = GuestVoiceCall.query.filter_by(
+        id=call.id, status="ringing", guest_key=None
+    ).update({"status":"declined"}, synchronize_session=False)
+    db.session.commit()
+    if changed != 1:
+        return jsonify(error="This invitation was already answered."), 409
+    return jsonify(ok=True)
+
+
 @app.route("/api/guest-voice/<call_id>/end", methods=["POST"])
 def guest_voice_end(call_id):
     call = guest_voice_or_404(call_id)

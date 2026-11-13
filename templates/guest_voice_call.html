@@ -51,6 +51,9 @@
             {{ 'disabled' if call.status in ['ended','expired','declined'] or (not is_patient and not can_join) else '' }}>
       🎙️ {{ 'Enable microphone & wait' if is_patient else ('Reconnect microphone' if already_joined else 'Answer voice call') }}
     </button>
+    {% if not is_patient and not already_joined and can_join %}
+    <button id="guest-voice-decline" class="button button-outline button-lg" type="button">Not now</button>
+    {% endif %}
     <button id="guest-voice-mute" class="button button-outline button-lg" type="button" disabled aria-pressed="false">🎙️ Mute microphone</button>
     <button id="guest-voice-hear" class="button button-outline button-lg" type="button" hidden>🔊 Tap to hear voice</button>
     <button id="guest-voice-end" class="button button-danger button-lg" type="button">☎ End call</button>
