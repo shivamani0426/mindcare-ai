@@ -48,6 +48,16 @@
         <span class="whatsapp-contact-hint">For WhatsApp, save this contact with a full international number (for example +919876543210).</span>
         {% endif %}
       </div>
+      <details class="contact-edit-details">
+        <summary class="edit-summary">{{ tr('edit_contact') }}</summary>
+        <form method="post" action="{{ url_for('contact_edit', contact_id=contact.id) }}" class="contact-edit-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label>{{ tr('contact_name') }}<input name="name" value="{{ contact.name }}" maxlength="90" required></label>
+          <label>{{ tr('relationship') }}<input name="relation" value="{{ contact.relation }}" maxlength="55" required></label>
+          <label>{{ tr('phone') }}<input type="tel" name="phone" value="{{ contact.phone }}" maxlength="22" inputmode="tel" required></label>
+          <button type="submit" class="button button-primary">{{ tr('save_changes') }}</button>
+        </form>
+      </details>
       <form method="post" action="{{ url_for('contact_delete', contact_id=contact.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="delete-link" data-confirm="Remove this trusted contact?">{{ tr('remove') }}</button></form>
     </article>{% endfor %}</div>{% else %}<p class="muted">{{ tr('no_contacts') }}</p>{% endif %}
     {% if contacts|length < 5 %}<form class="form-grid contact-add-form" action="{{ url_for('contact_add') }}" method="post">
