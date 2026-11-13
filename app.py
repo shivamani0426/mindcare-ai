@@ -657,18 +657,23 @@ def patient_view_mode():
 @require_login("patient")
 def wellbeing_checkin():
     feeling = request.form.get("feeling", "").strip()
+    quick_support = request.form.get("quick_support") == "1"
     note = request.form.get("note", "").strip()
     if feeling not in FEELINGS or len(note) > 180:
         abort(400, "Choose a feeling and keep your note under 180 characters.")
     today = today_local()
     record = WellbeingCheck.query.filter_by(patient_id=current_user().id, checked_date=today).first()
+    # The dedicated one-tap support button must not erase a previously
+    # written note. Pressing it again re-opens a reviewed request.
+    if quick_support and feeling == "need_help" and record:
+        note = record.note
     if not record:
         record = WellbeingCheck(patient_id=current_user().id, checked_date=today, feeling=feeling, note=note)
         db.session.add(record)
     else:
         # A new or changed request for support must reappear for approved
         # caregivers even if they reviewed an earlier version today.
-        if feeling == "need_help" and (record.feeling != "need_help" or record.note != note):
+        if feeling == "need_help" and (quick_support or record.feeling != "need_help" or record.note != note):
             CaregiverSupportReview.query.filter_by(checkin_id=record.id).delete(synchronize_session=False)
         record.feeling = feeling
         record.note = note
