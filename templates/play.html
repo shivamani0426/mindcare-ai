@@ -1,8 +1,8 @@
-{% extends 'base.html' %}{% block title %}{{ GAMES[slug][0] }}{% endblock %}
+{% extends 'base.html' %}{% block title %}{{ tr('game_' ~ slug) }}{% endblock %}
 {% block head %}<script src="{{ url_for('static', filename='games.js') }}" defer></script>{% endblock %}
 {% block content %}
-<a class="back-link" href="{{ url_for('games') }}">← Back to all games</a>
-<section class="play-page"><div class="play-header"><div><span class="eyebrow">A LITTLE FUN FOR TODAY</span><h1>{{ GAMES[slug][2] }} {{ GAMES[slug][0] }}</h1><p>{{ GAMES[slug][1] }}. Take your time!</p></div><span class="level-pill big-pill">{{ LEVEL_NAMES[level] }} level</span></div>
-<div id="game-root" class="game-root" data-game="{{ slug }}" data-level="{{ level }}" data-family='{{ family|tojson }}' aria-live="polite"><div class="game-start"><span class="game-start-icon">{{ GAMES[slug][2] }}</span><h2>Ready when you are!</h2><p>There is no countdown. Two strong plays increase the challenge. If a level feels difficult, the next games become easier again.</p><button type="button" class="button button-primary button-lg" id="begin-game">Start game →</button></div></div>
-<div class="play-note"><span>💚</span><p>Games are designed for gentle engagement. Results cannot measure, diagnose or predict a medical condition.</p></div></section>
+<a class="back-link" href="{{ url_for('games') }}">← {{ tr('play_back') }}</a>
+<section class="play-page"><div class="play-header"><div><span class="eyebrow">{{ tr('play_eyebrow') }}</span><h1>{{ GAMES[slug][2] }} {{ GAMES[slug][0] }}</h1><p>{{ tr('game_desc_' ~ slug) }}. {{ tr('play_take_time') }}</p></div><span class="level-pill big-pill">{{ tr('level_' ~ level) }} {{ tr('games_level') }}</span></div>
+<div id="game-root" class="game-root" data-game="{{ slug }}" data-level="{{ level }}" data-family='{{ family|tojson }}' aria-live="polite"><div class="game-start"><span class="game-start-icon">{{ GAMES[slug][2] }}</span><h2>{{ tr('play_ready') }}</h2><p>{{ tr('play_no_countdown') }}</p><button type="button" class="button button-primary button-lg" id="begin-game">{{ tr('play_start') }} →</button></div></div>
+<div class="play-note"><span>💚</span><p>{{ tr('play_disclaimer') }}</p></div></section>
 {% endblock %}
