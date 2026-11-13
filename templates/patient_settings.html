@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% block title %}My settings{% endblock %}
+{% extends 'base.html' %}{% block title %}{{ tr('settings') }}{% endblock %}
 {% block content %}
 <section class="patient-space settings-page">
 <a class="back-link" href="{{ url_for('dashboard') }}">← {{ tr('overview') }}</a>
