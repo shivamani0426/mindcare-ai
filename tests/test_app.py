@@ -449,7 +449,7 @@ def test_simple_mode_settings_and_caregiver_separation(client):
     }, follow_redirects=True)
     assert response.status_code == 200
     assert b'name="simplified_mode" checked' in response.data
-    assert "सरल मरीज डैशबोर्ड" in response.get_data(as_text=True)
+    assert "आसान मरीज डैशबोर्ड" in response.get_data(as_text=True)
     assert "मेरी याद दिलाने वाली बातें" in client.get("/dashboard").get_data(as_text=True)
     logout(client)
     register(client, "Caregiver Test", "simple-caregiver@example.org", "caregiver")
