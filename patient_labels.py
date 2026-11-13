@@ -6,6 +6,7 @@ Missing translations fall back to English in t_for().
 
 PATIENT_LABELS = {
  "en": {
+  "simple_missed":"You may have missed this reminder.",
   "game_cards":"Memory card matching",
   "game_desc_cards":"Match pairs of familiar symbols",
   "game_words":"Word recall",
@@ -123,6 +124,7 @@ PATIENT_LABELS = {
   "contact_guide":"A WhatsApp link opens a chat. The call starts only when you tap the phone icon."
  },
  "hi": {
+  "simple_missed":"शायद यह याद दिलाने वाली बात छूट गई है।",
   "game_cards":"याददाश्त के कार्ड",
   "game_desc_cards":"मिलते-जुलते चित्र खोजें",
   "game_words":"शब्दों को याद करें",
@@ -239,6 +241,7 @@ PATIENT_LABELS = {
   "contact_guide":"व्हाट्सऐप लिंक चैट खोलता है। कॉल शुरू करने के लिए फ़ोन का निशान दबाएँ।"
  },
  "kn": {
+  "simple_missed":"ಈ ಜ್ಞಾಪನೆಯನ್ನು ನೀವು ತಪ್ಪಿಸಿಕೊಂಡಿರಬಹುದು.",
   "game_cards":"ನೆನಪಿನ ಕಾರ್ಡ್‌ಗಳು",
   "game_desc_cards":"ಹೊಂದುವ ಚಿತ್ರಗಳ ಜೋಡಿ ಹುಡುಕಿ",
   "game_words":"ಪದಗಳ ನೆನಪು",
