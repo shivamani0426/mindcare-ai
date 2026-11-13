@@ -468,7 +468,7 @@ def test_guest_voice_invite_requires_explicit_claim_and_preserves_privacy(client
     page = guest.get(f"/voice/guest/{invite}")
     assert page.status_code == 200
     assert b"Answer voice call" in page.data
-    assert b"no MindCare account" in page.data
+    assert b"do not need a MindCare account" in page.data
     assert page.headers["Cache-Control"] == "private, no-store"
     assert page.headers["Referrer-Policy"] == "no-referrer"
     assert guest.get(f"/api/guest-voice/{call_id}/events").status_code == 404
