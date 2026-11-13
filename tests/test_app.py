@@ -641,4 +641,4 @@ def test_patient_pref_translation_and_reminder_alert_scripts_remain_available(cl
     },follow_redirects=True)
     assert response.status_code == 200
     assert b"reduced-motion" in client.get("/dashboard").data
-    assert "ಇಂದಿನ ದಿನ" not in client.get("/dashboard").get_data(as_text=True) or True
+    assert "ನನ್ನ ಮುಂದಿನ ಜ್ಞಾಪನೆ" in client.get("/dashboard").get_data(as_text=True)
