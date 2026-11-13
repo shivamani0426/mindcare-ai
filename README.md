@@ -128,3 +128,18 @@ mindcare-ai/
 - No remote push notifications, SMS, recordings, emergency calling, or background-call delivery. The caregiver should keep the website open to receive the on-screen alert. MindCare itself does not record calls, but it cannot prevent participants from using their own screen recording software.
 - Transport uses encrypted WebRTC channels, but this student project is **not** a healthcare-grade or certified communications system and should not be used for emergency services or confidential clinical discussions without additional security and compliance review.
 - The existing calm spoken guide pauses during a call so it does not interrupt the conversation.
+
+## Full-screen family photo viewer
+
+Tap a family photo (or its **View photo** control in the directory) to open the private, full-viewport viewer. Caregivers and patients can close it with the large Close control or Escape, move through photos with arrows or a touch swipe, and optionally enter device full-screen mode on supported browsers. The viewer preserves photo aspect ratio using `object-fit: contain` and requests the already-authorized same-origin image URL; no new public image endpoints or database changes are required.
+
+
+## Patient dashboard expansion (November 2026)
+
+Patient-only features: an orientation card with today's date/time in India, the patient's name, next scheduled reminder and familiar family faces; a private daily wellbeing check-in (one record per patient per India calendar day, editable on the same day); an accessible Help & contacts page with up to five patient-controlled phone shortcuts and approved-caregiver video calls; and account-persistent language, large-text, contrast and reduced-motion preferences. English, Hindi and Kannada labels cover the *new panels and common patient navigation*; older games and spoken instructions remain primarily in English.
+
+A wellbeing 'Need support' selection is **not an emergency alert** and does **not automatically send SMS/push/email to caregivers**. The Help button shows `tel:` dialer shortcuts, the India 112 emergency number and existing caregiver video-call options. Calling requires a compatible device/service and user action; the app cannot silently make emergency calls or share location. For genuine emergencies follow local emergency procedures.
+
+New PostgreSQL tables: `wellbeing_check`, `emergency_contact`, `patient_preference`. Startup `db.create_all()` adds missing tables without modifying existing family photos, accounts, games, reminders, or care links.
+
+Notifications while the website is closed **remain a separate future feature**, requiring a push subscription/service worker/notification worker plus explicit opt-in; browser voice reminders still require an open tab. The caregiver dashboard has not been modified in this phase.

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-IN">
+<html lang="{{ (patient_prefs.language if patient_prefs else 'en-IN') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,11 +9,12 @@
   <title>{% block title %}MindCare AI{% endblock %} · MindCare</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-today.js') }}" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='voice.js') }}" defer></script>
   {% if me %}<script src="{{ url_for('static', filename='calls.js') }}" defer></script>{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
+<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
     <header class="site-header">
@@ -21,10 +22,11 @@
         <a class="brand" href="{{ url_for('dashboard') if me else url_for('home') }}" aria-label="MindCare AI home"><span class="brand-mark">✦</span><span>mindcare<span class="brand-ai">.ai</span><small>Every memory matters</small></span></a>
         <nav class="main-nav" aria-label="Main navigation">
         {% if me %}
-          <a class="{{ 'active' if request.endpoint in ['dashboard','caregiver_detail'] else '' }}" href="{{ url_for('dashboard') }}">Overview</a>
-          {% if me.role == 'patient' %}<a class="{{ 'active' if request.endpoint in ['games','play_game'] else '' }}" href="{{ url_for('games') }}">Brain games</a>{% endif %}
-          <a class="{{ 'active' if request.endpoint == 'reminders_page' else '' }}" href="{{ url_for('reminders_page') }}">Reminders</a>
-          <a class="{{ 'active' if request.endpoint == 'family_page' else '' }}" href="{{ url_for('family_page') }}">My people</a>
+          <a class="{{ 'active' if request.endpoint in ['dashboard','caregiver_detail'] else '' }}" href="{{ url_for('dashboard') }}">{{ tr('overview') if me.role == 'patient' else 'Overview' }}</a>
+          {% if me.role == 'patient' %}<a class="{{ 'active' if request.endpoint in ['games','play_game'] else '' }}" href="{{ url_for('games') }}">{{ tr('games') }}</a>{% endif %}
+          <a class="{{ 'active' if request.endpoint == 'reminders_page' else '' }}" href="{{ url_for('reminders_page') }}">{{ tr('reminders') if me.role == 'patient' else 'Reminders' }}</a>
+          <a class="{{ 'active' if request.endpoint == 'family_page' else '' }}" href="{{ url_for('family_page') }}">{{ tr('people') if me.role == 'patient' else 'My people' }}</a>
+          {% if me.role == 'patient' %}<a class="{{ 'active' if request.endpoint == 'patient_help' else '' }}" href="{{ url_for('patient_help') }}">{{ tr('help') }}</a><a class="{{ 'active' if request.endpoint == 'patient_settings' else '' }}" href="{{ url_for('patient_settings') }}">{{ tr('settings') }}</a>{% endif %}
         {% else %}
           <a href="#how-it-works">How it works</a><a href="#features">Features</a>
         {% endif %}

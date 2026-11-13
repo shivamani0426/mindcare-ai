@@ -101,6 +101,35 @@ class FamilyMember(db.Model):
     mime_type = db.Column(db.String(24), nullable=False)
 
 
+class WellbeingCheck(db.Model):
+    """Voluntary daily check-in; a request for support is not an automatic alert."""
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    checked_date = db.Column(db.Date, nullable=False)
+    feeling = db.Column(db.String(18), nullable=False)
+    note = db.Column(db.String(180), nullable=False, default="")
+    checked_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (UniqueConstraint("patient_id", "checked_date", name="uq_patient_daily_wellbeing"),)
+
+
+class EmergencyContact(db.Model):
+    """Patient-controlled dial shortcuts. The service does not call or SMS anyone."""
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    name = db.Column(db.String(90), nullable=False)
+    relation = db.Column(db.String(55), nullable=False)
+    phone = db.Column(db.String(18), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class PatientPreference(db.Model):
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
+    language = db.Column(db.String(2), nullable=False, default="en")
+    large_text = db.Column(db.Boolean, nullable=False, default=False)
+    high_contrast = db.Column(db.Boolean, nullable=False, default=False)
+    reduced_motion = db.Column(db.Boolean, nullable=False, default=False)
+
+
 class VideoCall(db.Model):
     """Short-lived private WebRTC signaling session. No audio/video is stored."""
     id = db.Column(db.String(64), primary_key=True)
@@ -131,6 +160,96 @@ GAMES = {
 }
 CATEGORIES = {"medicine": "Medicine", "meal": "Meal", "appointment": "Appointment", "activity": "Activity", "family": "Family event"}
 LEVEL_NAMES = {1: "Gentle", 2: "Growing", 3: "Challenge"}
+
+
+FEELINGS = {"happy": "Happy", "okay": "Okay", "tired": "Tired", "need_help": "Need support"}
+LANGUAGE_LABELS = {"en": "English", "hi": "हिन्दी", "kn": "ಕನ್ನಡ"}
+# These translations cover the new patient pages and common patient navigation.
+# Existing game content and speech instructions remain primarily in English.
+PATIENT_TEXT = {
+    "en": {
+        "overview": "Overview", "games": "Brain games", "reminders": "Reminders", "people": "My people",
+        "help": "Help & contacts", "settings": "My settings", "today": "Today, at your own pace",
+        "today_sub": "You are in your MindCare space. Here is your day.", "my_name": "Your name",
+        "local_time": "Local time in India", "next_step": "Your next little step",
+        "no_next_step": "No more reminders scheduled today. Take your time.", "meet_people": "Familiar faces",
+        "no_people": "Family photos will appear here when added.", "checkin": "How are you feeling today?",
+        "checkin_sub": "Choose how you feel. You can change it later today.", "happy": "Happy", "okay": "Okay",
+        "tired": "Tired", "need_help": "Need support", "note": "Something you want to share (optional)",
+        "save_checkin": "Save today's check-in", "saved_checkin": "Today's check-in is saved",
+        "support_hint": "If you need help now, please use Help & contacts to call someone. This check-in does not send an alert.",
+        "help_title": "Help is close by", "help_sub": "Choose a trusted person to call, or dial emergency services.",
+        "contacts": "My trusted phone contacts", "contact_name": "Name", "relationship": "Relationship",
+        "phone": "Phone number", "add_contact": "Add trusted contact", "remove": "Remove",
+        "call": "Call", "no_contacts": "No phone contacts added yet. Add someone you trust.",
+        "india_emergency": "India emergency number", "emergency_note": "For emergencies in India, call 112. The website cannot place a call automatically or send your location.",
+        "caregivers": "My approved caregivers", "no_caregivers": "You have no approved caregivers yet.",
+        "video_call": "Start video call", "help_disclaimer": "Tapping Call opens your device's dialer. A phone or calling service is required. If you are in immediate danger, contact local emergency services.",
+        "settings_title": "Make MindCare comfortable", "settings_sub": "Choose what is easiest for you to see and use.",
+        "language": "Dashboard language", "large_text": "Larger text", "high_contrast": "Higher contrast",
+        "reduced_motion": "Reduce animations", "save_settings": "Save my settings",
+        "language_note": "Translation is currently available for the new patient panels and main navigation. Games, reminders, and spoken guidance are still mainly in English.",
+        "quick_help": "I need help", "view_today": "My day", "open_settings": "Display settings"
+    },
+    "hi": {
+        "overview":"सारांश","games":"दिमागी खेल","reminders":"याद दिलाने वाली बातें","people":"मेरे अपने",
+        "help":"मदद और संपर्क","settings":"मेरी सेटिंग","today":"आज का दिन, आराम से",
+        "today_sub":"आप अपने माइंडकेयर पेज पर हैं। यह आपका दिन है।","my_name":"आपका नाम",
+        "local_time":"भारत में समय","next_step":"आपका अगला काम","no_next_step":"आज कोई और रिमाइंडर नहीं है। आराम करें।",
+        "meet_people":"परिचित चेहरे","no_people":"परिवार की तस्वीरें यहाँ दिखाई देंगी।",
+        "checkin":"आज आप कैसा महसूस कर रहे हैं?","checkin_sub":"अपनी भावना चुनें। आप इसे आज बदल सकते हैं।",
+        "happy":"खुश","okay":"ठीक हूँ","tired":"थका हुआ","need_help":"मदद चाहिए",
+        "note":"कुछ कहना चाहते हैं? (वैकल्पिक)","save_checkin":"आज की स्थिति सहेजें","saved_checkin":"आज की स्थिति सहेजी गई",
+        "support_hint":"अभी मदद चाहिए तो संपर्क पेज से कॉल करें। यह फॉर्म अपने आप सूचना नहीं भेजता।",
+        "help_title":"मदद पास है","help_sub":"किसी भरोसेमंद व्यक्ति या आपातकालीन सेवा को कॉल करें।",
+        "contacts":"भरोसेमंद फ़ोन संपर्क","contact_name":"नाम","relationship":"रिश्ता","phone":"फ़ोन नंबर",
+        "add_contact":"संपर्क जोड़ें","remove":"हटाएँ","call":"कॉल करें",
+        "no_contacts":"अभी कोई संपर्क नहीं जोड़ा है।","india_emergency":"भारत का आपातकालीन नंबर",
+        "emergency_note":"भारत में आपातकाल के लिए 112 डायल करें। वेबसाइट खुद कॉल नहीं करती या स्थान नहीं भेजती।",
+        "caregivers":"मेरे स्वीकृत देखभालकर्ता","no_caregivers":"अभी कोई स्वीकृत देखभालकर्ता नहीं है।",
+        "video_call":"वीडियो कॉल","help_disclaimer":"कॉल दबाने से फ़ोन का डायलर खुलेगा। तत्काल खतरे में स्थानीय आपातकालीन सेवाओं से संपर्क करें।",
+        "settings_title":"माइंडकेयर को आरामदायक बनाएं","settings_sub":"पढ़ने और उपयोग करने की सुविधा चुनें।",
+        "language":"डैशबोर्ड की भाषा","large_text":"बड़े अक्षर","high_contrast":"अधिक कंट्रास्ट",
+        "reduced_motion":"कम एनिमेशन","save_settings":"सेटिंग सहेजें",
+        "language_note":"अभी नए पैनल और मुख्य मेनू अनुवादित हैं। खेल, रिमाइंडर और आवाज़ मुख्यतः अंग्रेज़ी में हैं।",
+        "quick_help":"मुझे मदद चाहिए","view_today":"मेरा दिन","open_settings":"दिखावट बदलें"
+    },
+    "kn": {
+        "overview":"ಒಟ್ಟಾರೆ ಮಾಹಿತಿ","games":"ಮೆದುಳಿನ ಆಟಗಳು","reminders":"ಜ್ಞಾಪನೆಗಳು","people":"ನನ್ನ ಕುಟುಂಬ",
+        "help":"ಸಹಾಯ ಮತ್ತು ಸಂಪರ್ಕಗಳು","settings":"ನನ್ನ ಸೆಟ್ಟಿಂಗ್‌ಗಳು","today":"ಇಂದಿನ ದಿನ, ನಿಧಾನವಾಗಿ",
+        "today_sub":"ಇದು ನಿಮ್ಮ ಮೈಂಡ್‌ಕೇರ್ ಪುಟ. ಇದು ನಿಮ್ಮ ದಿನ.","my_name":"ನಿಮ್ಮ ಹೆಸರು",
+        "local_time":"ಭಾರತದ ಸಮಯ","next_step":"ನಿಮ್ಮ ಮುಂದಿನ ಕೆಲಸ","no_next_step":"ಇಂದು ಬೇರೆ ಜ್ಞಾಪನೆಗಳಿಲ್ಲ. ಆರಾಮವಾಗಿರಿ.",
+        "meet_people":"ಪರಿಚಿತ ಮುಖಗಳು","no_people":"ಕುಟುಂಬದ ಚಿತ್ರಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
+        "checkin":"ಇಂದು ನಿಮಗೆ ಹೇಗನಿಸುತ್ತಿದೆ?","checkin_sub":"ನಿಮ್ಮ ಭಾವನೆ ಆಯ್ಕೆ ಮಾಡಿ. ನಂತರ ಬದಲಾಯಿಸಬಹುದು.",
+        "happy":"ಸಂತೋಷ","okay":"ಪರವಾಗಿಲ್ಲ","tired":"ದಣಿದಿದ್ದೇನೆ","need_help":"ಸಹಾಯ ಬೇಕು",
+        "note":"ಏನಾದರೂ ಹೇಳಬೇಕೇ? (ಐಚ್ಛಿಕ)","save_checkin":"ಇಂದಿನ ಮಾಹಿತಿ ಉಳಿಸಿ","saved_checkin":"ಇಂದಿನ ಮಾಹಿತಿ ಉಳಿಸಲಾಗಿದೆ",
+        "support_hint":"ಈಗ ಸಹಾಯ ಬೇಕಿದ್ದರೆ ಸಂಪರ್ಕ ಪುಟದಿಂದ ಕರೆ ಮಾಡಿ. ಇದು ಸ್ವಯಂಚಾಲಿತ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
+        "help_title":"ಸಹಾಯ ಹತ್ತಿರದಲ್ಲಿದೆ","help_sub":"ನಂಬಿಕೆಯ ವ್ಯಕ್ತಿಗೆ ಅಥವಾ ತುರ್ತು ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ.",
+        "contacts":"ನಂಬಿಕೆಯ ಫೋನ್ ಸಂಪರ್ಕಗಳು","contact_name":"ಹೆಸರು","relationship":"ಸಂಬಂಧ","phone":"ಫೋನ್ ಸಂಖ್ಯೆ",
+        "add_contact":"ಸಂಪರ್ಕ ಸೇರಿಸಿ","remove":"ತೆಗೆದುಹಾಕಿ","call":"ಕರೆ ಮಾಡಿ",
+        "no_contacts":"ಇನ್ನೂ ಸಂಪರ್ಕಗಳನ್ನು ಸೇರಿಸಿಲ್ಲ.","india_emergency":"ಭಾರತದ ತುರ್ತು ಸಂಖ್ಯೆ",
+        "emergency_note":"ಭಾರತದಲ್ಲಿ ತುರ್ತು ಪರಿಸ್ಥಿತಿಗೆ 112 ಕರೆ ಮಾಡಿ. ಈ ವೆಬ್‌ಸೈಟ್ ಸ್ವತಃ ಕರೆ ಅಥವಾ ಸ್ಥಳ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
+        "caregivers":"ನನ್ನ ಅನುಮೋದಿತ ಆರೈಕೆದಾರರು","no_caregivers":"ಇನ್ನೂ ಅನುಮೋದಿತ ಆರೈಕೆದಾರರಿಲ್ಲ.",
+        "video_call":"ವೀಡಿಯೊ ಕರೆ","help_disclaimer":"ಕರೆ ಒತ್ತಿದರೆ ಫೋನ್ ಡಯಲರ್ ತೆರೆಯುತ್ತದೆ. ತುರ್ತು ಪರಿಸ್ಥಿತಿಯಲ್ಲಿ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ.",
+        "settings_title":"ಮೈಂಡ್‌ಕೇರ್ ಬಳಸಲು ಸುಲಭವಾಗಲಿ","settings_sub":"ನಿಮಗೆ ಸುಲಭವಾದ ಆಯ್ಕೆಗಳನ್ನು ಆರಿಸಿ.",
+        "language":"ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಭಾಷೆ","large_text":"ದೊಡ್ಡ ಅಕ್ಷರ","high_contrast":"ಹೆಚ್ಚು ಕಾಂಟ್ರಾಸ್ಟ್",
+        "reduced_motion":"ಕಡಿಮೆ ಚಲನೆ","save_settings":"ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಿ",
+        "language_note":"ಹೊಸ ಪ್ಯಾನೆಲ್‌ಗಳು ಮತ್ತು ಮುಖ್ಯ ಮೆನು ಅನುವಾದಗೊಂಡಿವೆ. ಆಟಗಳು ಮತ್ತು ಧ್ವನಿ ಇನ್ನೂ ಮುಖ್ಯವಾಗಿ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿವೆ.",
+        "quick_help":"ನನಗೆ ಸಹಾಯ ಬೇಕು","view_today":"ನನ್ನ ದಿನ","open_settings":"ಪ್ರದರ್ಶನ ಸೆಟ್ಟಿಂಗ್‌ಗಳು"
+    },
+}
+
+
+def patient_preferences(user):
+    if not user or user.role != "patient":
+        return None
+    return db.session.get(PatientPreference, user.id)
+
+
+def t_for(preference):
+    lang = preference.language if preference and preference.language in LANGUAGE_LABELS else "en"
+    lexicon = PATIENT_TEXT[lang]
+    return lambda key: lexicon.get(key, PATIENT_TEXT["en"].get(key, key))
 
 
 def now_utc():
@@ -280,8 +399,10 @@ def load_user_and_csrf():
 
 @app.context_processor
 def inject_common():
+    prefs = patient_preferences(current_user())
     return dict(me=current_user(), csrf_token=session.get("csrf_token"), GAMES=GAMES,
-                CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES)
+                CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES,
+                patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS)
 
 
 @app.after_request
@@ -389,8 +510,100 @@ def dashboard():
     approved_links = [{"link": link, "caregiver": db.session.get(User, link.caregiver_id)} for link in CareLink.query.filter_by(patient_id=current_user().id, status="approved").all()]
     recent = (GameResult.query.filter_by(patient_id=current_user().id)
               .order_by(GameResult.id.desc()).limit(4).all())
+    checkin = WellbeingCheck.query.filter_by(patient_id=current_user().id, checked_date=today_local()).first()
+    family_faces = FamilyMember.query.filter_by(patient_id=current_user().id).order_by(FamilyMember.name).limit(3).all()
+    current_minute = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
+    next_reminder = next((r for r in reminders if not r["done"] and r["item"].scheduled_time >= current_minute), None)
     return render_template("dashboard.html", stats=stats, reminders=reminders, recent=recent,
+                           checkin=checkin, family_faces=family_faces, next_reminder=next_reminder,
+                           today_pretty=today_local().strftime("%A, %d %B %Y"),
                            suggested=list(GAMES.items())[:5], pending_links=pending_links, approved_links=approved_links)
+
+
+@app.route("/wellbeing/check-in", methods=["POST"])
+@require_login("patient")
+def wellbeing_checkin():
+    feeling = request.form.get("feeling", "").strip()
+    note = request.form.get("note", "").strip()
+    if feeling not in FEELINGS or len(note) > 180:
+        abort(400, "Choose a feeling and keep your note under 180 characters.")
+    today = today_local()
+    record = WellbeingCheck.query.filter_by(patient_id=current_user().id, checked_date=today).first()
+    if not record:
+        record = WellbeingCheck(patient_id=current_user().id, checked_date=today, feeling=feeling, note=note)
+        db.session.add(record)
+    else:
+        record.feeling = feeling
+        record.note = note
+        record.checked_at = now_utc()
+    db.session.commit()
+    if feeling == "need_help":
+        flash("Your check-in was saved. It does not send an alert. Use Help & contacts to call someone now.", "info")
+    else:
+        flash("Thank you. Today's check-in was saved.", "success")
+    return redirect(url_for("dashboard", _anchor="wellbeing"))
+
+
+@app.route("/help")
+@require_login("patient")
+def patient_help():
+    contacts = EmergencyContact.query.filter_by(patient_id=current_user().id).order_by(EmergencyContact.id).all()
+    links = CareLink.query.filter_by(patient_id=current_user().id, status="approved").all()
+    caregivers = [db.session.get(User, link.caregiver_id) for link in links]
+    return render_template("patient_help.html", contacts=contacts, caregivers=[c for c in caregivers if c])
+
+
+@app.route("/help/contacts/add", methods=["POST"])
+@require_login("patient")
+def contact_add():
+    name = request.form.get("name", "").strip()
+    relation = request.form.get("relation", "").strip()
+    raw_phone = request.form.get("phone", "").strip()
+    normalized = re.sub(r"[\s().-]", "", raw_phone)
+    if not (2 <= len(name) <= 90 and 2 <= len(relation) <= 55):
+        abort(400, "Enter a name and relationship.")
+    if not re.fullmatch(r"\+?[0-9]{10,15}", normalized):
+        abort(400, "Enter a phone number with 10 to 15 digits; an optional + country code is allowed.")
+    if EmergencyContact.query.filter_by(patient_id=current_user().id).count() >= 5:
+        abort(400, "You can save up to five trusted contacts.")
+    db.session.add(EmergencyContact(patient_id=current_user().id, name=name,
+                                    relation=relation, phone=normalized))
+    db.session.commit()
+    flash("Trusted contact added. Use Call to open your phone's dialer.", "success")
+    return redirect(url_for("patient_help"))
+
+
+@app.route("/help/contacts/<int:contact_id>/delete", methods=["POST"])
+@require_login("patient")
+def contact_delete(contact_id):
+    contact = db.session.get(EmergencyContact, contact_id)
+    if not contact or contact.patient_id != current_user().id:
+        abort(404)
+    db.session.delete(contact)
+    db.session.commit()
+    flash("Trusted contact removed.", "success")
+    return redirect(url_for("patient_help"))
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@require_login("patient")
+def patient_settings():
+    prefs = db.session.get(PatientPreference, current_user().id)
+    if request.method == "POST":
+        language = request.form.get("language", "")
+        if language not in LANGUAGE_LABELS:
+            abort(400, "Choose a supported interface language.")
+        if not prefs:
+            prefs = PatientPreference(patient_id=current_user().id)
+            db.session.add(prefs)
+        prefs.language = language
+        prefs.large_text = request.form.get("large_text") == "on"
+        prefs.high_contrast = request.form.get("high_contrast") == "on"
+        prefs.reduced_motion = request.form.get("reduced_motion") == "on"
+        db.session.commit()
+        flash("Your display settings have been saved.", "success")
+        return redirect(url_for("patient_settings"))
+    return render_template("patient_settings.html", preferences=prefs)
 
 
 @app.route("/games")

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}{% block title %}Help & contacts{% endblock %}
+{% block content %}
+<section class="patient-space patient-help-page">
+  <a class="back-link" href="{{ url_for('dashboard') }}">← {{ tr('overview') }}</a>
+  <section class="page-heading"><span class="eyebrow">YOU ARE NOT ALONE</span><h1>{{ tr('help_title') }} 💛</h1><p>{{ tr('help_sub') }}</p></section>
+  <section class="sos-callout" aria-label="Emergency services in India">
+    <div><span class="eyebrow">{{ tr('india_emergency') }}</span><h2>112</h2><p>{{ tr('emergency_note') }}</p></div>
+    <a class="button button-danger button-lg" href="tel:112" aria-label="Dial emergency number one one two">📞 {{ tr('call') }} 112</a>
+  </section>
+  <div class="support-columns">
+    <section class="panel patient-panel"><h2>{{ tr('contacts') }}</h2>
+    {% if contacts %}<div class="contacts-list">{% for contact in contacts %}<article class="contact-row">
+      <div class="contact-avatar" aria-hidden="true">{{ contact.name[0]|upper }}</div>
+      <div class="contact-details"><h3>{{ contact.name }}</h3><p>{{ contact.relation }} · {{ contact.phone }}</p></div>
+      <a class="button button-primary" href="tel:{{ contact.phone }}" aria-label="Call {{ contact.name }}">📞 {{ tr('call') }}</a>
+      <form method="post" action="{{ url_for('contact_delete', contact_id=contact.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="delete-link" data-confirm="Remove this trusted contact?">{{ tr('remove') }}</button></form>
+    </article>{% endfor %}</div>{% else %}<p class="muted">{{ tr('no_contacts') }}</p>{% endif %}
+    {% if contacts|length < 5 %}<form class="form-grid contact-add-form" action="{{ url_for('contact_add') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="input-label">{{ tr('contact_name') }}<input type="text" maxlength="90" name="name" autocomplete="name" required placeholder="e.g. Priya"></label>
+      <label class="input-label">{{ tr('relationship') }}<input type="text" name="relation" maxlength="55" required placeholder="e.g. Daughter"></label>
+      <label class="input-label">{{ tr('phone') }}<input type="tel" name="phone" maxlength="22" inputmode="tel" autocomplete="tel" required placeholder="+919876543210"></label>
+      <button class="button button-outline" type="submit">+ {{ tr('add_contact') }}</button>
+    </form>{% endif %}
+    </section>
+    <aside class="panel patient-panel"><h2>{{ tr('caregivers') }}</h2>
+      {% for caregiver in caregivers %}<div class="care-contact"><strong>{{ caregiver.name }}</strong><form method="post" action="{{ url_for('start_video_call') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="contact_id" value="{{ caregiver.id }}"><button type="submit" class="button button-outline">📹 {{ tr('video_call') }}</button></form></div>
+      {% else %}<p class="muted">{{ tr('no_caregivers') }}</p>{% endfor %}
+      <p class="clinical-note">{{ tr('help_disclaimer') }}</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}

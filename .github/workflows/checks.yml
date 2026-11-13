@@ -22,3 +22,5 @@ jobs:
           node --check static/games.js
           node --check static/voice.js
           node --check static/calls.js
+          node --check static/family-lightbox.js
+          node --check static/patient-today.js

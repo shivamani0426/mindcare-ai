@@ -5,7 +5,7 @@ os.environ["SECRET_KEY"] = "test-secret-only-not-for-production"
 os.environ["SECURE_COOKIES"] = "0"
 
 import pytest
-from app import app, db, User, CareLink, GameResult, VideoCall, VideoSignal, difficulty_for
+from app import app, db, User, CareLink, GameResult, VideoCall, VideoSignal, WellbeingCheck, EmergencyContact, PatientPreference, difficulty_for
 
 
 @pytest.fixture
@@ -283,3 +283,68 @@ def test_revoking_caregiver_access_invalidates_video_call(client):
     login(client,'sita@example.org')
     assert client.get(url).status_code == 404
     assert client.get('/api/calls/incoming').json['calls'] == []
+
+
+def test_patient_today_checkin_and_edit_same_day(client):
+    register(client, "Asha Sharma", "asha@example.org", "patient")
+    assert b"How are you feeling today?" in client.get("/dashboard").data
+    t = token(client, "/dashboard")
+    response = client.post("/wellbeing/check-in", data={"csrf_token":t,"feeling":"happy","note":"Nice morning"}, follow_redirects=True)
+    assert response.status_code == 200 and b"check-in is saved" in response.data
+    response = client.post("/wellbeing/check-in", data={"csrf_token":t,"feeling":"need_help","note":"Please call"}, follow_redirects=True)
+    assert b"does not send an alert" in response.data
+    with app.app_context():
+        checks=WellbeingCheck.query.all()
+        assert len(checks)==1 and checks[0].feeling=="need_help" and checks[0].note=="Please call"
+    assert client.post("/wellbeing/check-in", data={"csrf_token":t,"feeling":"unknown"}).status_code==400
+
+
+def test_help_contact_privacy_validation_and_deletion(client):
+    register(client, "Asha", "asha@example.org", "patient")
+    t=token(client,"/help")
+    bad=client.post("/help/contacts/add",data={"csrf_token":t,"name":"Priya","relation":"Daughter","phone":"javascript:alert(1)"})
+    assert bad.status_code==400
+    ok=client.post("/help/contacts/add",data={"csrf_token":t,"name":"Priya","relation":"Daughter","phone":"+91 98765 43210"},follow_redirects=True)
+    assert b"tel:+919876543210" in ok.data and b"tel:112" in ok.data
+    with app.app_context():
+        contact=EmergencyContact.query.one()
+        cid=contact.id
+    logout(client)
+    register(client,"Ram","ram@example.org","patient")
+    assert b"tel:+919876543210" not in client.get("/help").data
+    assert client.post(f"/help/contacts/{cid}/delete", data={"csrf_token":token(client,"/help")}).status_code == 404
+    logout(client)
+    login(client,"asha@example.org")
+    resp=client.post(f"/help/contacts/{cid}/delete",data={"csrf_token":token(client,"/help")},follow_redirects=True)
+    assert resp.status_code==200
+    with app.app_context(): assert EmergencyContact.query.count()==0
+
+
+def test_patient_settings_persist_and_restrict_caregivers(client):
+    register(client,"Asha Sharma","asha@example.org","patient")
+    t=token(client,"/settings")
+    response=client.post("/settings",data={"csrf_token":t,"language":"kn","large_text":"on","high_contrast":"on","reduced_motion":"on"},follow_redirects=True)
+    assert response.status_code==200
+    content=client.get("/dashboard").data.decode("utf-8")
+    assert "ಇಂದಿನ ದಿನ" in content and 'high-contrast' in content and 'reduced-motion' in content
+    with app.app_context():
+        p=PatientPreference.query.one()
+        assert p.language=="kn" and p.large_text and p.high_contrast and p.reduced_motion
+    assert client.post("/settings",data={"csrf_token":t,"language":"zz"}).status_code==400
+    logout(client)
+    register(client,"Caregiver","care@example.org","caregiver")
+    assert client.get("/settings").status_code==403
+    assert client.get("/help").status_code==403
+    assert client.post("/wellbeing/check-in",data={"csrf_token":token(client,"/dashboard"),"feeling":"happy"}).status_code==403
+
+
+def test_patient_checkins_not_mixed_between_accounts(client):
+    register(client,"Asha","asha@example.org","patient")
+    client.post("/wellbeing/check-in",data={"csrf_token":token(client,"/dashboard"),"feeling":"tired"})
+    logout(client)
+    register(client,"Lila","lila@example.org","patient")
+    assert b"checkin-saved" not in client.get("/dashboard").data
+    client.post("/wellbeing/check-in",data={"csrf_token":token(client,"/dashboard"),"feeling":"happy"})
+    with app.app_context():
+        assert WellbeingCheck.query.count()==2
+        assert len({x.patient_id for x in WellbeingCheck.query.all()})==2

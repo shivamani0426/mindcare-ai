@@ -2,11 +2,11 @@
   'use strict';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const fontButton = document.getElementById('font-toggle');
-  try { if (localStorage.getItem('mindcare-large-text')==='1') document.body.classList.add('large-text'); } catch (_) {}
+  if (document.body.dataset.patient !== '1') { try { if (localStorage.getItem('mindcare-large-text')==='1') document.body.classList.add('large-text'); } catch (_) {} }
   fontButton?.addEventListener('click', () => {
     document.body.classList.toggle('large-text');
     fontButton.setAttribute('aria-pressed', String(document.body.classList.contains('large-text')));
-    try { localStorage.setItem('mindcare-large-text', document.body.classList.contains('large-text') ? '1' : '0'); } catch (_) {}
+    if (document.body.dataset.patient !== '1') { try { localStorage.setItem('mindcare-large-text', document.body.classList.contains('large-text') ? '1' : '0'); } catch (_) {} }
   });
   fontButton?.setAttribute('aria-pressed',String(document.body.classList.contains('large-text')));
   document.querySelectorAll('.flash-close').forEach(b => b.addEventListener('click', () => b.closest('.flash')?.remove()));
