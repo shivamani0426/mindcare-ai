@@ -1,6 +1,38 @@
 {% extends 'base.html' %}{% block title %}Your day{% endblock %}
 {% block content %}
 <section class="welcome-banner"><div><span class="eyebrow">YOUR LITTLE SPACE OF JOY</span><h1>Hello, {{ me.name.split(' ')[0] }} <span>👋</span></h1><p>A wonderful day starts with one small moment. What would you like to do?</p><div class="welcome-actions"><a class="button button-primary" href="{{ url_for('games') }}">Let's play a game →</a><a class="button button-outline" href="{{ url_for('reminders_page') }}">Today's routine</a></div></div><div class="welcome-flower">🌻</div></section>
+<section class="patient-top-tiles" aria-label="Patient today, wellbeing and quick help">
+  <article class="patient-today panel" id="today" data-patient-today data-language="{{ patient_prefs.language if patient_prefs else 'en' }}">
+    <div class="patient-panel-heading"><div><span class="eyebrow">{{ tr('view_today') }}</span><h2>{{ tr('today') }}</h2><p>{{ tr('today_sub') }}</p></div><span class="today-sun" aria-hidden="true">☀️</span></div>
+    <div class="today-date" data-ist-date>{{ today_pretty }}</div>
+    <div class="today-facts"><div><span>{{ tr('local_time') }}</span><strong data-ist-time aria-live="off">--:-- IST</strong></div><div><span>{{ tr('my_name') }}</span><strong>{{ me.name }}</strong></div></div>
+    <div class="today-next"><span class="eyebrow">{{ tr('next_step') }}</span>
+    {% if next_reminder %}<strong>{{ next_reminder.item.scheduled_time }} · {{ next_reminder.item.title }}</strong>
+    {% else %}<strong>{{ tr('no_next_step') }}</strong>{% endif %}</div>
+    <div class="today-faces"><span class="eyebrow">{{ tr('meet_people') }}</span>
+      {% if family_faces %}<div class="today-face-grid">{% for face in family_faces %}<a href="{{ url_for('family_page') }}" class="today-face"><img src="{{ url_for('family_photo', member_id=face.id) }}" alt="{{ face.name }}" loading="lazy"><span>{{ face.name }}<small>{{ face.relation }}</small></span></a>{% endfor %}</div>
+      {% else %}<p class="muted">{{ tr('no_people') }}</p>{% endif %}</div>
+  </article>
+  <article class="patient-checkin panel" id="wellbeing">
+    <span class="eyebrow">ONE MOMENT FOR YOU</span><h2>{{ tr('checkin') }}</h2><p>{{ tr('checkin_sub') }}</p>
+    {% if checkin %}<span class="checkin-saved" role="status">✓ {{ tr('saved_checkin') }}</span>{% endif %}
+    <form method="post" action="{{ url_for('wellbeing_checkin') }}" class="wellbeing-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="feeling-choices" role="group" aria-label="{{ tr('checkin') }}">
+        {% for value, emoji, key in [('happy','😊','happy'),('okay','🙂','okay'),('tired','😴','tired'),('need_help','🫶','need_help')] %}
+        <label class="feeling-choice"><input type="radio" name="feeling" value="{{ value }}" required {{ 'checked' if checkin and checkin.feeling == value else '' }}><span><span class="feeling-emoji" aria-hidden="true">{{ emoji }}</span><strong>{{ tr(key) }}</strong></span></label>
+        {% endfor %}
+      </div>
+      <label class="input-label checkin-note">{{ tr('note') }}<textarea name="note" maxlength="180" rows="2" placeholder="Optional">{{ checkin.note if checkin else '' }}</textarea></label>
+      <button type="submit" class="button button-primary button-block">{{ tr('save_checkin') }} →</button>
+    </form>
+    <p class="clinical-note">{{ tr('support_hint') }}</p>
+  </article>
+  <article class="patient-quick panel"><div class="quick-help-icon" aria-hidden="true">💛</div><h2>{{ tr('help_title') }}</h2>
+    <p>{{ tr('help_sub') }}</p><a class="button button-danger button-lg button-block" href="{{ url_for('patient_help') }}">☎ {{ tr('quick_help') }}</a>
+    <a class="button button-outline button-block" href="{{ url_for('patient_settings') }}">⚙ {{ tr('open_settings') }}</a>
+    <p class="clinical-note">{{ tr('emergency_note') }}</p></article>
+</section>
 <div class="dashboard-grid"><section class="dashboard-main"><div class="section-heading row-heading"><div><span class="eyebrow">MADE FOR LITTLE WINS</span><h2>A moment to play</h2></div><a class="subtle-link" href="{{ url_for('games') }}">All games →</a></div>
   <div class="game-shortcuts">{% for slug, info in suggested %}<a class="game-shortcut" href="{{ url_for('play_game', slug=slug) }}"><span class="shortcut-icon {{ loop.cycle('mint', 'peach', 'lavender', 'lemon', 'sky') }}">{{ info[2] }}</span><strong>{{ info[0] }}</strong><small>{{ info[1] }}</small><span class="shortcut-arrow">↗</span></a>{% endfor %}</div>
   <div class="section-heading row-heading"><div><span class="eyebrow">YOUR PERSONAL JOURNEY</span><h2>Your activity</h2></div><span class="soft-label">Just for you</span></div>
