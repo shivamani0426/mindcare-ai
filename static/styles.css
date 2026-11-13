@@ -177,3 +177,48 @@ body.high-contrast .whatsapp-howto{background:#fff;border:2px solid #174d2b;colo
 body.high-contrast .whatsapp-open-button{background:#0b4f28;border-color:#0b4f28}
 @media(max-width:900px){.whatsapp-steps{grid-template-columns:1fr}.whatsapp-steps li{font-size:15px}}
 @media(max-width:600px){.whatsapp-howto{padding:19px 16px}.whatsapp-howto-title{gap:11px}.whatsapp-howto-icon{width:44px;height:44px;flex-basis:44px}.whatsapp-contact-actions{margin-left:0}.whatsapp-open-button{width:100%;min-height:54px}}
+
+
+/* Separate free, voice-only guest calls. WhatsApp and emergency links are unchanged. */
+.guest-voice-contact{display:flex;align-items:center;flex-wrap:wrap;flex-basis:100%;gap:8px 12px;margin:0 0 0 60px!important}
+.guest-voice-contact-button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:12px 18px;background:#e6eefb;border:2px solid #8daacf;color:#1f456d!important;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer}
+.guest-voice-contact-button:hover{background:#d3e5fc}
+.guest-voice-contact-button:focus-visible{outline:3px solid #215f9a;outline-offset:3px}
+.guest-voice-contact-hint{flex:1 1 175px;color:#466178;font-size:13px;line-height:1.55}
+.guest-voice-page{max-width:880px;margin:10px auto 54px;padding:0 16px;text-align:center}
+.guest-voice-heading{display:flex;align-items:center;flex-direction:column;gap:10px;margin:0 auto 22px}
+.guest-voice-heading .back-link{align-self:flex-start}
+.guest-voice-heading h1{margin:0;font-size:clamp(28px,4vw,44px);line-height:1.15;max-width:780px}
+.guest-voice-heading p{font-size:17px;color:#51645a;max-width:630px;margin:0;line-height:1.6}
+.guest-voice-emblem{display:grid;place-items:center;width:74px;height:74px;background:linear-gradient(135deg,#deeee9,#e0e8f9);border:1px solid #c4ddd3;color:#205942;border-radius:24px;font-size:33px;margin:5px auto}
+.guest-voice-status{display:flex;gap:12px;align-items:center;justify-content:center;padding:18px 20px;border-radius:18px;background:#e9f5ed;border:1px solid #c9e1d0;color:#235b3e;margin-bottom:18px}
+.guest-voice-status p{margin:0;font-size:17px;font-weight:750;line-height:1.5}
+.guest-voice-status-dot{flex:0 0 12px;width:12px;height:12px;background:#2c9965;border-radius:50%;box-shadow:0 0 0 5px #2c996524}
+.guest-voice-invite,.guest-voice-guest-note{background:#fff;border:1px solid #dce7df;border-radius:22px;padding:24px;text-align:left;box-shadow:0 10px 30px #14472b0a}
+.guest-voice-invite h2,.guest-voice-guest-note h2{margin:0 0 8px;font-size:23px}
+.guest-voice-invite p,.guest-voice-guest-note p{line-height:1.6;font-size:16px;color:#3b5547}
+.guest-voice-invite-actions{display:flex;align-items:center;flex-wrap:wrap;gap:11px;margin-top:19px}
+.guest-voice-invite-actions .button{min-height:54px}
+.guest-voice-copy-status{font-size:15px;color:#215b3e;min-height:22px;font-weight:700}
+.guest-voice-guest-note{background:#f1f8f5}
+.guest-voice-ended{color:#a12e38!important;font-weight:750}
+.guest-voice-avatar{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:4px;width:148px;height:148px;border-radius:50%;margin:26px auto 6px;background:linear-gradient(135deg,#f2f7ef,#dae9e0);border:3px solid #bad9c5;color:#245d3f}
+.guest-voice-avatar>span:first-child{font-size:56px}
+.guest-voice-audio-waves{font-size:22px;letter-spacing:5px;color:#2b7350;white-space:nowrap}
+.guest-voice-connected-name{font-size:22px;font-weight:850;margin:8px 0 22px}
+.guest-voice-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:13px;margin:8px auto 21px}
+.guest-voice-controls .button{min-height:57px;border-radius:15px}
+.guest-voice-controls [hidden]{display:none}
+.guest-voice-help{color:#56695f;font-size:14px;line-height:1.65;max-width:760px;margin:14px auto}
+.guest-voice-page audio{display:none}
+body.high-contrast .guest-voice-invite,body.high-contrast .guest-voice-guest-note,body.high-contrast .guest-voice-status{border:2px solid #174b2c}
+@media(max-width:680px){
+  .guest-voice-page{padding:0 4px}
+  .guest-voice-invite,.guest-voice-guest-note{padding:18px}
+  .guest-voice-invite-actions{flex-direction:column;align-items:stretch}
+  .guest-voice-invite-actions .button{width:100%;text-align:center}
+  .guest-voice-controls{display:grid;grid-template-columns:1fr;gap:10px}
+  .guest-voice-controls .button{width:100%;font-size:17px}
+  .guest-voice-contact{margin:0!important}
+  .guest-voice-contact-button{width:100%;min-height:54px}
+}

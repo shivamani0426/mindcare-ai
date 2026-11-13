@@ -13,6 +13,7 @@ import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 from statistics import mean
 
@@ -139,6 +140,28 @@ class VideoCall(db.Model):
     status = db.Column(db.String(14), nullable=False, default="ringing")
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
+
+class GuestVoiceCall(db.Model):
+    """Temporary voice-only invitation. Anyone with the unclaimed link may accept."""
+    id = db.Column(db.String(40), primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, nullable=False)
+    guest_name = db.Column(db.String(90), nullable=False)
+    invite_token = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    guest_key = db.Column(db.String(48), nullable=True)
+    status = db.Column(db.String(14), nullable=False, default="ringing")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
+class GuestVoiceSignal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    call_id = db.Column(db.String(40), db.ForeignKey("guest_voice_call.id"), nullable=False, index=True)
+    sender_side = db.Column(db.String(8), nullable=False)
+    kind = db.Column(db.String(12), nullable=False)
+    payload = db.Column(db.Text, nullable=False)
 
 
 class VideoSignal(db.Model):
@@ -414,8 +437,10 @@ def security_headers(response):
     response.headers["Content-Security-Policy"] = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
                                                    "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
                                                    "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
-    if current_user():
+    if current_user() or request.path.startswith(("/voice/guest/", "/voice/call/", "/api/guest-voice/")):
         response.headers["Cache-Control"] = "private, no-store"
+    if request.path.startswith("/voice/guest/"):
+        response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
 
@@ -906,6 +931,214 @@ def peer_name(call):
     user = db.session.get(User, peer_id)
     return user.name if user else "your loved one"
 
+
+
+# Guest voice calling is separate from authenticated patient/caregiver video calls.
+# A patient sends an expiring invitation privately; the recipient does NOT need an account.
+# NO SIM/PSTN calling, no automatic WhatsApp call, no background push notification.
+GUEST_VOICE_RING_SECONDS = 300
+GUEST_VOICE_MAX_MINUTES = 30
+
+
+def guest_voice_expired(call):
+    expiration = call.expires_at
+    if expiration.tzinfo is None:  # SQLite datetime storage omits tzinfo.
+        expiration = expiration.replace(tzinfo=timezone.utc)
+    return now_utc() >= expiration
+
+
+def guest_voice_finish_if_expired(call):
+    if call.status in ("ringing", "accepted") and guest_voice_expired(call):
+        call.status = "expired"
+        GuestVoiceSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
+        db.session.commit()
+    return call
+
+
+def guest_voice_member(call):
+    """Return which side can signal; unclaimed links do not grant API access."""
+    user = current_user()
+    if user and user.role == "patient" and user.id == call.patient_id:
+        return "patient"
+    key = session.get("guest_voice_" + call.id)
+    if key and call.guest_key and secrets.compare_digest(key, call.guest_key):
+        return "guest"
+    return None
+
+
+def guest_voice_or_404(call_id):
+    call = db.session.get(GuestVoiceCall, call_id)
+    if not call or not guest_voice_member(call):
+        abort(404)
+    return guest_voice_finish_if_expired(call)
+
+
+@app.route("/voice/start", methods=["POST"])
+@require_login("patient")
+def guest_voice_start():
+    raw_id = request.form.get("contact_id", "")
+    if not raw_id.isdecimal():
+        abort(400, "Choose a trusted contact.")
+    contact = db.session.get(EmergencyContact, int(raw_id))
+    if not contact or contact.patient_id != current_user().id:
+        abort(404)
+    # Close old invitations; only one active guest voice call for this patient.
+    active = GuestVoiceCall.query.filter(
+        GuestVoiceCall.patient_id == current_user().id,
+        GuestVoiceCall.status.in_(("ringing", "accepted"))
+    ).limit(30).all()
+    for old in active:
+        old.status = "ended"
+        GuestVoiceSignal.query.filter_by(call_id=old.id).delete(synchronize_session=False)
+    stale = GuestVoiceCall.query.filter(
+        GuestVoiceCall.expires_at < now_utc() - timedelta(days=1)
+    ).limit(100).all()
+    for old in stale:
+        GuestVoiceSignal.query.filter_by(call_id=old.id).delete(synchronize_session=False)
+        db.session.delete(old)
+    call = GuestVoiceCall(
+        id=secrets.token_urlsafe(18), invite_token=secrets.token_urlsafe(32),
+        patient_id=current_user().id, contact_id=contact.id,
+        guest_name=contact.name, status="ringing",
+        expires_at=now_utc() + timedelta(seconds=GUEST_VOICE_RING_SECONDS)
+    )
+    db.session.add(call)
+    db.session.commit()
+    return redirect(url_for("guest_voice_patient_room", call_id=call.id))
+
+
+@app.route("/voice/call/<call_id>")
+@require_login("patient")
+def guest_voice_patient_room(call_id):
+    call = guest_voice_or_404(call_id)
+    if call.patient_id != current_user().id:
+        abort(404)
+    contact = db.session.get(EmergencyContact, call.contact_id)
+    invite_path = url_for("guest_voice_invite", token=call.invite_token)
+    # Use a configured public host instead of trusting a forged Host header.
+    public_url = os.getenv("PUBLIC_BASE_URL", "https://mindcare-ai-ner.onrender.com").rstrip("/")
+    invite_url = public_url + invite_path
+    wa = whatsapp_chat_url(contact.phone) if contact and contact.patient_id == call.patient_id else ""
+    message = "Please join my MindCare voice call using this private link: " + invite_url
+    whatsapp_share = wa + "?text=" + quote(message, safe="") if wa else ""
+    return render_template(
+        "guest_voice_call.html", call=call, is_patient=True,
+        contact_name=call.guest_name, invite_token="", invite_url=invite_url,
+        whatsapp_share=whatsapp_share,
+        turn_url=os.getenv("TURN_URL", ""),
+        turn_user=os.getenv("TURN_USERNAME", ""),
+        turn_password=os.getenv("TURN_PASSWORD", "")
+    )
+
+
+@app.route("/voice/guest/<token>")
+def guest_voice_invite(token):
+    call = GuestVoiceCall.query.filter_by(invite_token=token).first()
+    if not call:
+        abort(404)
+    guest_voice_finish_if_expired(call)
+    patient = db.session.get(User, call.patient_id)
+    already_joined = guest_voice_member(call) == "guest"
+    can_join = call.status == "ringing" or (already_joined and call.status == "accepted")
+    return render_template(
+        "guest_voice_call.html", call=call, is_patient=False,
+        contact_name=patient.name.split(" ")[0] if patient else "your loved one",
+        invite_token=token, invite_url="", whatsapp_share="",
+        can_join=can_join, already_joined=already_joined,
+        turn_url=os.getenv("TURN_URL", ""),
+        turn_user=os.getenv("TURN_USERNAME", ""),
+        turn_password=os.getenv("TURN_PASSWORD", "")
+    )
+
+
+@app.route("/api/guest-voice/<call_id>/join", methods=["POST"])
+def guest_voice_join(call_id):
+    call = db.session.get(GuestVoiceCall, call_id)
+    body = request.get_json(silent=True) or {}
+    supplied = body.get("invite_token")
+    if not call or not isinstance(supplied, str) or not secrets.compare_digest(supplied, call.invite_token):
+        abort(404)
+    guest_voice_finish_if_expired(call)
+    if guest_voice_member(call) == "guest" and call.status == "accepted":
+        return jsonify(ok=True, status="accepted")
+    if call.status != "ringing" or call.guest_key:
+        return jsonify(error="This invitation is no longer available."), 409
+    browser_key = secrets.token_urlsafe(24)
+    changed = GuestVoiceCall.query.filter_by(
+        id=call.id, status="ringing", guest_key=None
+    ).update({
+        "guest_key": browser_key, "status": "accepted",
+        "expires_at": now_utc() + timedelta(minutes=GUEST_VOICE_MAX_MINUTES)
+    }, synchronize_session=False)
+    db.session.commit()
+    if changed != 1:
+        return jsonify(error="Someone else has already answered this invitation."), 409
+    session["guest_voice_" + call.id] = browser_key
+    return jsonify(ok=True, status="accepted")
+
+
+@app.route("/api/guest-voice/<call_id>/events")
+def guest_voice_events(call_id):
+    call = guest_voice_or_404(call_id)
+    raw = request.args.get("after", "0")
+    if not raw.isdecimal():
+        return jsonify(error="Invalid event cursor"), 400
+    after = max(0, min(int(raw), 2**31 - 1))
+    side = guest_voice_member(call)
+    rows = (GuestVoiceSignal.query.filter(
+        GuestVoiceSignal.call_id == call.id, GuestVoiceSignal.sender_side != side,
+        GuestVoiceSignal.id > after
+    ).order_by(GuestVoiceSignal.id).limit(100).all())
+    return jsonify(status=call.status, events=[
+        {"id": row.id, "kind": row.kind, "payload": json.loads(row.payload)}
+        for row in rows
+    ])
+
+
+@app.route("/api/guest-voice/<call_id>/signal", methods=["POST"])
+def guest_voice_signal(call_id):
+    call = guest_voice_or_404(call_id)
+    if call.status != "accepted":
+        return jsonify(error="The invitation has not been answered."), 409
+    side = guest_voice_member(call)
+    body = request.get_json(silent=True) or {}
+    kind, payload = body.get("kind"), body.get("payload")
+    if kind not in ("offer", "answer", "candidate") or not isinstance(payload, dict):
+        return jsonify(error="Invalid signal"), 400
+    if kind == "offer" and side != "patient":
+        return jsonify(error="Only the caller may send a voice offer"), 403
+    if kind == "answer" and side != "guest":
+        return jsonify(error="Only the recipient may answer a voice offer"), 403
+    if kind in ("offer", "answer") and (
+        payload.get("type") != kind or not isinstance(payload.get("sdp"), str)
+        or not 0 < len(payload["sdp"]) <= 20000
+    ):
+        return jsonify(error="Invalid session description"), 400
+    if kind == "candidate" and (
+        not isinstance(payload.get("candidate"), str)
+        or len(payload["candidate"]) > 6000
+    ):
+        return jsonify(error="Invalid connection candidate"), 400
+    packed = json.dumps(payload, separators=(",", ":"))
+    if len(packed) > 24000:
+        return jsonify(error="Signal too large"), 413
+    if GuestVoiceSignal.query.filter_by(call_id=call.id).count() >= 180:
+        return jsonify(error="Too many connection messages"), 429
+    db.session.add(GuestVoiceSignal(
+        call_id=call.id, sender_side=side, kind=kind, payload=packed
+    ))
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route("/api/guest-voice/<call_id>/end", methods=["POST"])
+def guest_voice_end(call_id):
+    call = guest_voice_or_404(call_id)
+    if call.status in ("ringing", "accepted"):
+        call.status = "ended"
+        GuestVoiceSignal.query.filter_by(call_id=call.id).delete(synchronize_session=False)
+        db.session.commit()
+    return jsonify(ok=True)
 
 @app.route("/calls/start", methods=["POST"])
 @require_login()
