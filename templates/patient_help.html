@@ -8,25 +8,25 @@
     <div><span class="eyebrow">{{ tr('india_emergency') }}</span><h2>112</h2><p>{{ tr('emergency_note') }}</p></div>
     <div class="phone-actions phone-emergency-actions">
       <a class="button button-danger button-lg" href="tel:112" data-phone-dial data-phone-number="112" data-phone-label="Emergency services" data-phone-emergency="1" aria-label="Open phone dialer for emergency number 112">📞 {{ tr('call') }} 112</a>
-      <button type="button" class="button button-outline" data-phone-copy data-phone-number="112" aria-label="Copy emergency number 112">Copy 112</button>
+      <button type="button" class="button button-outline" data-phone-copy data-phone-number="112" aria-label="Copy emergency number 112">{{ tr('wa_emergency_copy') }}</button>
     </div>
-    <p class="phone-device-hint">On a phone, Call opens the phone dialer. On a laptop or computer, use a connected calling app or copy the number and dial from a phone. The website cannot place telephone calls itself.</p>
+    <p class="phone-device-hint">{{ tr('wa_phone_hint') }}</p>
   </section>
   <section class="whatsapp-howto" aria-labelledby="whatsapp-howto-title">
     <div class="whatsapp-howto-title">
       <span class="whatsapp-howto-icon" aria-hidden="true">💬</span>
       <div>
-        <span class="eyebrow">STAY CLOSE, FOR FREE</span>
-        <h2 id="whatsapp-howto-title">Call family on WhatsApp</h2>
-        <p>MindCare opens your loved one's WhatsApp chat. You start the voice call in WhatsApp — it won't ring them until you tap the phone icon there.</p>
+        <span class="eyebrow">{{ tr('wa_eyebrow') }}</span>
+        <h2 id="whatsapp-howto-title">{{ tr('wa_title') }}</h2>
+        <p>{{ tr('wa_intro') }}</p>
       </div>
     </div>
     <ol class="whatsapp-steps">
-      <li><span class="whatsapp-step-number" aria-hidden="true">1</span><span>Tap <strong>Open WhatsApp</strong> next to a trusted person below.</span></li>
-      <li><span class="whatsapp-step-number" aria-hidden="true">2</span><span>When their chat opens, tap the <strong>📞 phone icon</strong> inside WhatsApp.</span></li>
-      <li><span class="whatsapp-step-number" aria-hidden="true">3</span><span>Their WhatsApp rings. They can answer without installing MindCare.</span></li>
+      <li><span class="whatsapp-step-number" aria-hidden="true">1</span><span>{{ tr('wa_step1') }}</span></li>
+      <li><span class="whatsapp-step-number" aria-hidden="true">2</span><span>{{ tr('wa_step2') }}</span></li>
+      <li><span class="whatsapp-step-number" aria-hidden="true">3</span><span>{{ tr('wa_step3') }}</span></li>
     </ol>
-    <p class="whatsapp-note">Both people need WhatsApp and internet access. WhatsApp calls use internet data. For an emergency, use the separate 112 phone-dialer button above.</p>
+    <p class="whatsapp-note">{{ tr('wa_note') }}</p>
   </section>
   <div class="support-columns">
     <section class="panel patient-panel"><h2>{{ tr('contacts') }}</h2>
@@ -41,11 +41,11 @@
       <div class="whatsapp-contact-actions">
         {% if whatsapp_url %}
         <a class="button whatsapp-open-button" href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer external" aria-label="Open WhatsApp chat with {{ contact.name }} in a new tab or app; then tap the phone icon in WhatsApp to call">
-          <span aria-hidden="true">💬</span> Open WhatsApp <span aria-hidden="true">↗</span>
+          <span aria-hidden="true">💬</span> {{ tr('wa_open') }} <span aria-hidden="true">↗</span>
         </a>
-        <span class="whatsapp-contact-hint">Then tap 📞 inside WhatsApp to call {{ contact.name }}.</span>
+        <span class="whatsapp-contact-hint">{{ tr('wa_tap_phone') }} {{ contact.name }}.</span>
         {% else %}
-        <span class="whatsapp-contact-hint">For WhatsApp, save this contact with a full international number (for example +919876543210).</span>
+        <span class="whatsapp-contact-hint">{{ tr('wa_full_number') }}</span>
         {% endif %}
       </div>
       <details class="contact-edit-details">
