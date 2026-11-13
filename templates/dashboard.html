@@ -1,6 +1,12 @@
 {% extends 'base.html' %}{% block title %}Your day{% endblock %}
 {% block content %}
 <section class="welcome-banner"><div><span class="eyebrow">YOUR LITTLE SPACE OF JOY</span><h1>Hello, {{ me.name.split(' ')[0] }} <span>👋</span></h1><p>A wonderful day starts with one small moment. What would you like to do?</p><div class="welcome-actions"><a class="button button-primary" href="{{ url_for('games') }}">Let's play a game →</a><a class="button button-outline" href="{{ url_for('reminders_page') }}">Today's routine</a></div></div><div class="welcome-flower">🌻</div></section>
+<form method="post" action="{{ url_for('patient_view_mode') }}" class="patient-mode-shortcut">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="simplified" value="1">
+  <span>{{ tr('simple_mode_intro') }}</span>
+  <button type="submit" class="button button-outline">{{ tr('simple_enable') }} →</button>
+</form>
 <section class="patient-top-tiles" aria-label="Patient today, wellbeing and quick help">
   <article class="patient-today panel" id="today" data-patient-today data-language="{{ patient_prefs.language if patient_prefs else 'en' }}">
     <div class="patient-panel-heading"><div><span class="eyebrow">{{ tr('view_today') }}</span><h2>{{ tr('today') }}</h2><p>{{ tr('today_sub') }}</p></div><span class="today-sun" aria-hidden="true">☀️</span></div>
@@ -27,6 +33,12 @@
       <button type="submit" class="button button-primary button-block">{{ tr('save_checkin') }} →</button>
     </form>
     <p class="clinical-note">{{ tr('support_hint') }}</p>
+    {% if checkin and checkin.feeling == 'need_help' %}
+    <div class="support-help-box" role="status"><strong>{{ tr('support_next_step') }}</strong><p>{{ tr('support_not_alert') }}</p>
+      {% if support_url %}<a class="button whatsapp-open-button" href="{{ support_url }}" target="_blank" rel="noopener noreferrer">💬 {{ tr('support_contact_whatsapp') }}: {{ support_contact.name }}</a>{% endif %}
+      <a href="{{ url_for('patient_help') }}" class="button button-outline">{{ tr('help') }}</a>
+    </div>
+    {% endif %}
   </article>
   <article class="patient-quick panel"><div class="quick-help-icon" aria-hidden="true">💛</div><h2>{{ tr('help_title') }}</h2>
     <p>{{ tr('help_sub') }}</p><a class="button button-danger button-lg button-block" href="{{ url_for('patient_help') }}">☎ {{ tr('quick_help') }}</a>
