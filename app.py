@@ -511,7 +511,8 @@ def security_headers(response):
     content_policy = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
                       "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
                       "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
-    if firebase_phone_ready() and request.endpoint in ("login", "register", "account_security"):
+    public_firebase = firebase_public_config() if firebase_phone_ready() else None
+    if public_firebase and public_firebase.get("authDomain") and request.endpoint in ("login", "register", "account_security"):
         content_policy = (
             "default-src 'self'; "
             "script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
@@ -520,7 +521,7 @@ def security_headers(response):
             "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com "
             "https://www.googleapis.com https://www.gstatic.com; "
             "frame-src 'self' https://www.google.com https://www.recaptcha.net "
-            "https://" + os.environ["FIREBASE_AUTH_DOMAIN"] + "; "
+            "https://" + public_firebase["authDomain"] + "; "
             "font-src 'self' https://www.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
         )
     response.headers["Content-Security-Policy"] = content_policy
