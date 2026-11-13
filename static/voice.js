@@ -74,7 +74,7 @@
     if (nativeLanguageVoice && language !== 'en') {
       if (original === greeting) rendered = speechCopy[language].hello;
       else if (original.startsWith('A gentle reminder. It is time for ') && original.endsWith('.')) {
-        rendered = speechCopy[language].reminder(original.slice(33, -1));
+        rendered = speechCopy[language].reminder(original.slice('A gentle reminder. It is time for '.length, -1));
       } else rendered = window.MindCareGameTranslate?.(original) || original;
     }
     const clean = rendered.slice(0,240);
