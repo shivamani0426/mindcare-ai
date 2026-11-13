@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% block title %}Your people{% endblock %}
+{% extends 'base.html' %}{% block title %}{{ tr('people') }}{% endblock %}
 {% block head %}<script src="{{ url_for('static', filename='family-lightbox.js') }}" defer></script>{% endblock %}
 {% block content %}
 <section class="page-heading"><span class="eyebrow">{{ tr('family_eyebrow') }}</span><h1>{{ tr('family_title') }} 💛</h1><p>{{ tr('family_sub') }}</p></section>
