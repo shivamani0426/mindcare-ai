@@ -42,6 +42,6 @@
   // Voice guidance and due reminders run automatically on every patient page.
   // The voice selector and platform autoplay handling live in voice.js.
   document.getElementById('voice-replay-reminder')?.addEventListener('click', () => {
-    window.MindCareVoice?.speak('Hello. I am here to help you remember your day.', {repeat:true});
+    window.MindCareVoice?.replay?.();
   });
 })();

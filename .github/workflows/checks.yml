@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: pip install -r requirements.txt pytest
+      - run: python -m compileall -q app.py patient_labels.py
       - run: python -m pytest -q
       - run: |
           node --check static/app.js
@@ -25,3 +26,5 @@ jobs:
           node --check static/family-lightbox.js
           node --check static/patient-today.js
           node --check static/patient-help-calls.js
+          node --check static/patient-notifications.js
+          node --check static/game-i18n.js

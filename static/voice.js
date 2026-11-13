@@ -7,7 +7,17 @@
   const toast = document.getElementById('voice-toast');
   const status = document.getElementById('voice-status');
   const replay = document.getElementById('voice-replay');
-  const greeting = 'Hello. Welcome to MindCare. I am here to help you, one gentle step at a time.';
+  const language = (document.documentElement.lang || 'en').slice(0,2);
+  const speechCopy = {
+    en:{hello:'Hello. Welcome to MindCare. I am here to help you, one gentle step at a time.',
+      reminder: title=>'A gentle reminder. It is time for '+title+'.'},
+    hi:{hello:'नमस्ते। माइंडकेयर में आपका स्वागत है। हम धीरे-धीरे आगे बढ़ेंगे।',
+      reminder:title=>'एक प्यार भरी याद। अब '+title+' का समय है।'},
+    kn:{hello:'ನಮಸ್ಕಾರ. ಮೈಂಡ್‌ಕೇರ್‌ಗೆ ಸ್ವಾಗತ. ನಿಧಾನವಾಗಿ, ಒಂದೊಂದೇ ಹೆಜ್ಜೆ ಇಡೋಣ.',
+      reminder:title=>'ಒಂದು ಸೌಮ್ಯ ಜ್ಞಾಪನೆ. ಈಗ '+title+' ಮಾಡುವ ಸಮಯವಾಗಿದೆ.'}
+  };
+  const greeting = speechCopy.en.hello;
+  let nativeLanguageVoice = language === 'en';
   let voice = null;
   let unlocked = false;
   let greetingPlayed = false;
@@ -22,9 +32,9 @@
   const score = (v) => {
     const name = (v.name || '').toLowerCase();
     const lang = (v.lang || '').toLowerCase();
-    if (!lang.startsWith('en')) return -1000;
+    if (!lang.startsWith(language === 'hi' || language === 'kn' ? language : 'en')) return -1000;
     let points = 10;
-    if (lang.startsWith('en-in')) points += 8;
+    if (lang.startsWith((language === 'hi' || language === 'kn' ? language : 'en')+'-in')) points += 8;
     if (v.localService) points += 3;
     if (name.includes('natural') || name.includes('neural') || name.includes('enhanced')) points += 12;
     // These are voice names, not a gender classification of a person.
@@ -39,18 +49,35 @@
     if (!synth) return;
     const available = synth.getVoices();
     if (!available.length) return;
-    voice = [...available].sort((a,b) => score(b)-score(a))[0];
-    if (score(voice) < 0) voice = null;
+    const chosen = [...available].sort((a,b) => score(b)-score(a))[0];
+    nativeLanguageVoice = !!chosen && score(chosen) >= 0;
+    if (nativeLanguageVoice) voice = chosen;
+    else {
+      // Never attempt to read Hindi or Kannada as nonsensical English phonetics.
+      // Speak clear English on devices that lack a local-language TTS voice.
+      voice = available.find(v=>(v.lang||'').toLowerCase().startsWith('en')) || null;
+    }
+    if (status) status.textContent = nativeLanguageVoice ?
+      ({hi:'हिंदी में आवाज़ चालू है',kn:'ಕನ್ನಡದಲ್ಲಿ ಧ್ವನಿ ಆನ್ ಆಗಿದೆ'}[language] || 'Gentle voice is on') :
+      'This device uses English voice guidance';
   };
   if (supported) {
     chooseVoice();
     synth.addEventListener?.('voiceschanged', chooseVoice);
-    if (status) status.textContent = 'Gentle voice is on';
+    if (status && !status.textContent) status.textContent = 'Gentle voice is on';
   } else if (status) status.textContent = 'Voice unavailable on this device';
 
   const speak = (message, options={}) => {
     if (!supported || !message || document.hidden || callPause) return false;
-    const clean = String(message).trim().slice(0,240);
+    const original = String(message).trim();
+    let rendered = original;
+    if (nativeLanguageVoice && language !== 'en') {
+      if (original === greeting) rendered = speechCopy[language].hello;
+      else if (original.startsWith('A gentle reminder. It is time for ') && original.endsWith('.')) {
+        rendered = speechCopy[language].reminder(original.slice('A gentle reminder. It is time for '.length, -1));
+      } else rendered = window.MindCareGameTranslate?.(original) || original;
+    }
+    const clean = rendered.slice(0,240);
     const now = Date.now();
     if (!options.repeat && clean === lastSpoken && now - lastTime < 2800) return false;
     lastSpoken = clean;
@@ -59,7 +86,8 @@
       const utterance = new SpeechSynthesisUtterance(clean);
       if (!voice) chooseVoice();
       if (voice) {utterance.voice=voice; utterance.lang=voice.lang;}
-      else utterance.lang='en-IN';
+      else utterance.lang = nativeLanguageVoice ?
+        ({hi:'hi-IN',kn:'kn-IN'}[language] || 'en-IN') : 'en-IN';
       utterance.rate=.86; // Slower, clear and unhurried.
       utterance.pitch=1.12;
       utterance.volume=.95;
@@ -94,6 +122,7 @@
   document.addEventListener('keydown', unlock, {capture:true});
   replay?.addEventListener('click', () => {unlocked=true;speak(greeting,{repeat:true});});
   window.MindCareVoice = {speak, announce, available:supported,
+    replay() {unlocked=true; speak(greeting,{repeat:true});},
     pause() {callPause = true; try {synth?.cancel();} catch (_) {}},
     resume() {callPause = false;}};
 

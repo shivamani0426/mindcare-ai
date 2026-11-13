@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% block title %}My settings{% endblock %}
+{% extends 'base.html' %}{% block title %}{{ tr('settings') }}{% endblock %}
 {% block content %}
 <section class="patient-space settings-page">
 <a class="back-link" href="{{ url_for('dashboard') }}">← {{ tr('overview') }}</a>
@@ -8,6 +8,7 @@
  <label class="input-label">{{ tr('language') }}
  <select name="language" id="interface-language">{% for code, label in LANGUAGES.items() %}<option value="{{ code }}" {{ 'selected' if (preferences.language if preferences else 'en') == code else '' }}>{{ label }}</option>{% endfor %}</select></label>
  <div class="settings-options">
+ <label class="setting-option"><input type="checkbox" name="simplified_mode" {{ 'checked' if simple_view else '' }}><span>{{ tr('simple_setting') }}<small class="setting-explain">{{ tr('simple_setting_explain') }}</small></span></label>
  <label class="setting-option"><input type="checkbox" name="large_text" {{ 'checked' if preferences and preferences.large_text else '' }}><span>{{ tr('large_text') }}</span></label>
  <label class="setting-option"><input type="checkbox" name="high_contrast" {{ 'checked' if preferences and preferences.high_contrast else '' }}><span>{{ tr('high_contrast') }}</span></label>
  <label class="setting-option"><input type="checkbox" name="reduced_motion" {{ 'checked' if preferences and preferences.reduced_motion else '' }}><span>{{ tr('reduced_motion') }}</span></label>

@@ -143,3 +143,18 @@ A wellbeing 'Need support' selection is **not an emergency alert** and does **no
 New PostgreSQL tables: `wellbeing_check`, `emergency_contact`, `patient_preference`. Startup `db.create_all()` adds missing tables without modifying existing family photos, accounts, games, reminders, or care links.
 
 Notifications while the website is closed **remain a separate future feature**, requiring a push subscription/service worker/notification worker plus explicit opt-in; browser voice reminders still require an open tab. The caregiver dashboard has not been modified in this phase.
+
+
+## Patient Dashboard 2.1 — Accessibility completion
+
+**Simple View:** Patients can use the dashboard shortcut or Settings to opt into a low-distraction home screen (four large actions: next reminder, play, contact family on WhatsApp, family photos). The preference is persisted in the new \`patient_view_mode\` table, so production databases do not require an ALTER TABLE migration. "Show full dashboard" is always visible. Important unfinished reminders are retained on the next-step tile.
+
+**Need support:** The wellbeing check-in is still a self-report, **not an automatically sent alert**. When "Need support" is selected and saved, the dashboard shows explicit Help & contacts / trusted-person WhatsApp actions. A WhatsApp link only opens the person's chat. The patient must tap WhatsApp's call icon. India emergency 112 continues to use the phone dialer.
+
+**Edit instead of delete:** Contact cards and reminder cards have native, keyboard-accessible Edit disclosures. POST handlers validate CSRF, patient ownership, phone numbers, reminder date/time and length; rescheduling resets only today's previously checked tick.
+
+**Optional browser alerts:** The reminder page has an Enable browser alerts button. Notifications ask permission only after a click, apply to that browser/device, can be turned off, show due reminders (with a 15-minute grace period) and deduplicate on the device. They require MindCare to remain open: **not Web Push**, not a system alarm and not guaranteed after the browser closes. The existing spoken reminders likewise need the browser open and audio permission. Hindi/Kannada voices are used when installed; otherwise speech falls back to English rather than reading non-English text incorrectly.
+
+**Translations:** Expanded Hindi/Kannada UI for patient dashboard, reminders, help, family and game instructions, with dynamic in-game labels and native-voice capability detection. User-provided contact names, family names and reminder text are never translated automatically; fallback to English is used for unsupported text.
+
+**QA:** CI checks Python syntax, Flask API tests, app JS and patient-specific scripts. End-to-end browser, screen reader, real device and caregiver acceptance testing remain essential before using the app for independent daily care.

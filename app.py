@@ -21,6 +21,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
+from patient_labels import PATIENT_LABELS
 
 app = Flask(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///mindcare_local.db")
@@ -130,6 +131,12 @@ class PatientPreference(db.Model):
     reduced_motion = db.Column(db.Boolean, nullable=False, default=False)
 
 
+class PatientViewMode(db.Model):
+    """Separate table avoids modifying existing production preference columns."""
+    patient_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
+    simplified = db.Column(db.Boolean, nullable=False, default=False)
+
+
 class VideoCall(db.Model):
     """Short-lived private WebRTC signaling session. No audio/video is stored."""
     id = db.Column(db.String(64), primary_key=True)
@@ -188,7 +195,7 @@ PATIENT_TEXT = {
         "settings_title": "Make MindCare comfortable", "settings_sub": "Choose what is easiest for you to see and use.",
         "language": "Dashboard language", "large_text": "Larger text", "high_contrast": "Higher contrast",
         "reduced_motion": "Reduce animations", "save_settings": "Save my settings",
-        "language_note": "Translation is currently available for the new patient panels and main navigation. Games, reminders, and spoken guidance are still mainly in English.",
+        "language_note": "Patient pages and core game instructions are available in English, Hindi and Kannada. Spoken voices depend on your device.",
         "quick_help": "I need help", "view_today": "My day", "open_settings": "Display settings"
     },
     "hi": {
@@ -211,7 +218,7 @@ PATIENT_TEXT = {
         "settings_title":"माइंडकेयर को आरामदायक बनाएं","settings_sub":"पढ़ने और उपयोग करने की सुविधा चुनें।",
         "language":"डैशबोर्ड की भाषा","large_text":"बड़े अक्षर","high_contrast":"अधिक कंट्रास्ट",
         "reduced_motion":"कम एनिमेशन","save_settings":"सेटिंग सहेजें",
-        "language_note":"अभी नए पैनल और मुख्य मेनू अनुवादित हैं। खेल, रिमाइंडर और आवाज़ मुख्यतः अंग्रेज़ी में हैं।",
+        "language_note":"मरीज के पेज और खेल के मुख्य निर्देश हिन्दी में उपलब्ध हैं। आवाज़ आपके डिवाइस पर निर्भर करती है।",
         "quick_help":"मुझे मदद चाहिए","view_today":"मेरा दिन","open_settings":"दिखावट बदलें"
     },
     "kn": {
@@ -234,7 +241,7 @@ PATIENT_TEXT = {
         "settings_title":"ಮೈಂಡ್‌ಕೇರ್ ಬಳಸಲು ಸುಲಭವಾಗಲಿ","settings_sub":"ನಿಮಗೆ ಸುಲಭವಾದ ಆಯ್ಕೆಗಳನ್ನು ಆರಿಸಿ.",
         "language":"ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಭಾಷೆ","large_text":"ದೊಡ್ಡ ಅಕ್ಷರ","high_contrast":"ಹೆಚ್ಚು ಕಾಂಟ್ರಾಸ್ಟ್",
         "reduced_motion":"ಕಡಿಮೆ ಚಲನೆ","save_settings":"ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಿ",
-        "language_note":"ಹೊಸ ಪ್ಯಾನೆಲ್‌ಗಳು ಮತ್ತು ಮುಖ್ಯ ಮೆನು ಅನುವಾದಗೊಂಡಿವೆ. ಆಟಗಳು ಮತ್ತು ಧ್ವನಿ ಇನ್ನೂ ಮುಖ್ಯವಾಗಿ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿವೆ.",
+        "language_note":"ರೋಗಿಯ ಪುಟಗಳು ಮತ್ತು ಆಟದ ಪ್ರಮುಖ ಸೂಚನೆಗಳು ಕನ್ನಡದಲ್ಲಿವೆ. ಧ್ವನಿ ನಿಮ್ಮ ಸಾಧನದ ಲಭ್ಯತೆಯನ್ನು ಅವಲಂಬಿಸಿದೆ.",
         "quick_help":"ನನಗೆ ಸಹಾಯ ಬೇಕು","view_today":"ನನ್ನ ದಿನ","open_settings":"ಪ್ರದರ್ಶನ ಸೆಟ್ಟಿಂಗ್‌ಗಳು"
     },
 }
@@ -246,10 +253,19 @@ def patient_preferences(user):
     return db.session.get(PatientPreference, user.id)
 
 
+def is_simple_view(user):
+    if not user or user.role != "patient":
+        return False
+    mode = db.session.get(PatientViewMode, user.id)
+    return bool(mode and mode.simplified)
+
+
 def t_for(preference):
     lang = preference.language if preference and preference.language in LANGUAGE_LABELS else "en"
     lexicon = PATIENT_TEXT[lang]
-    return lambda key: lexicon.get(key, PATIENT_TEXT["en"].get(key, key))
+    extra = PATIENT_LABELS[lang]
+    english_extra = PATIENT_LABELS["en"]
+    return lambda key: lexicon.get(key, extra.get(key, PATIENT_TEXT["en"].get(key, english_extra.get(key, key))))
 
 
 def now_utc():
@@ -402,7 +418,8 @@ def inject_common():
     prefs = patient_preferences(current_user())
     return dict(me=current_user(), csrf_token=session.get("csrf_token"), GAMES=GAMES,
                 CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES,
-                patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS)
+                patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS,
+                simple_view=is_simple_view(current_user()))
 
 
 @app.after_request
@@ -513,11 +530,39 @@ def dashboard():
     checkin = WellbeingCheck.query.filter_by(patient_id=current_user().id, checked_date=today_local()).first()
     family_faces = FamilyMember.query.filter_by(patient_id=current_user().id).order_by(FamilyMember.name).limit(3).all()
     current_minute = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
-    next_reminder = next((r for r in reminders if not r["done"] and r["item"].scheduled_time >= current_minute), None)
-    return render_template("dashboard.html", stats=stats, reminders=reminders, recent=recent,
-                           checkin=checkin, family_faces=family_faces, next_reminder=next_reminder,
-                           today_pretty=today_local().strftime("%A, %d %B %Y"),
-                           suggested=list(GAMES.items())[:5], pending_links=pending_links, approved_links=approved_links)
+    # Never hide an unfinished morning reminder just because its scheduled time passed.
+    # Show the next upcoming item or the earliest missed, unfinished item.
+    next_reminder = next((r for r in reminders if not r["done"] and r["item"].scheduled_time >= current_minute),
+                         next((r for r in reminders if not r["done"]), None))
+    trusted = EmergencyContact.query.filter_by(patient_id=current_user().id).order_by(EmergencyContact.id).all()
+    support_contact = next((contact for contact in trusted if whatsapp_chat_url(contact.phone)), None)
+    support_url = whatsapp_chat_url(support_contact.phone) if support_contact else ""
+    context = dict(stats=stats, reminders=reminders, recent=recent,
+                   checkin=checkin, family_faces=family_faces, next_reminder=next_reminder,
+                   today_pretty=today_local().strftime("%A, %d %B %Y"),
+                   now_minute=current_minute,
+                   suggested=list(GAMES.items())[:5], pending_links=pending_links,
+                   approved_links=approved_links, support_contact=support_contact, support_url=support_url)
+    if is_simple_view(current_user()):
+        return render_template("dashboard_simple.html", **context)
+    return render_template("dashboard.html", **context)
+
+
+
+@app.route("/patient/view-mode", methods=["POST"])
+@require_login("patient")
+def patient_view_mode():
+    """Opt-in low-distraction dashboard; switching back is always visible."""
+    requested = request.form.get("simplified")
+    if requested not in ("1", "0"):
+        abort(400, "Choose a valid view mode.")
+    mode = db.session.get(PatientViewMode, current_user().id)
+    if not mode:
+        mode = PatientViewMode(patient_id=current_user().id)
+        db.session.add(mode)
+    mode.simplified = requested == "1"
+    db.session.commit()
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/wellbeing/check-in", methods=["POST"])
@@ -538,9 +583,9 @@ def wellbeing_checkin():
         record.checked_at = now_utc()
     db.session.commit()
     if feeling == "need_help":
-        flash("Your check-in was saved. It does not send an alert. Use Help & contacts to call someone now.", "info")
+        flash(t_for(patient_preferences(current_user()))("flash_support"), "info")
     else:
-        flash("Thank you. Today's check-in was saved.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_checkin"), "success")
     return redirect(url_for("dashboard", _anchor="wellbeing"))
 
 
@@ -592,7 +637,25 @@ def contact_add():
     db.session.add(EmergencyContact(patient_id=current_user().id, name=name,
                                     relation=relation, phone=normalized))
     db.session.commit()
-    flash("Trusted contact added. Use Call to open your phone's dialer.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_contact_add"), "success")
+    return redirect(url_for("patient_help"))
+
+
+
+@app.route("/help/contacts/<int:contact_id>/edit", methods=["POST"])
+@require_login("patient")
+def contact_edit(contact_id):
+    contact = db.session.get(EmergencyContact, contact_id)
+    if not contact or contact.patient_id != current_user().id:
+        abort(404)
+    name = request.form.get("name", "").strip()
+    relation = request.form.get("relation", "").strip()
+    phone = re.sub(r"[\s().-]", "", request.form.get("phone", "").strip())
+    if not 2 <= len(name) <= 90 or not 2 <= len(relation) <= 55 or not re.fullmatch(r"\+?[0-9]{10,15}", phone):
+        abort(400, "Enter a valid contact name, relationship and phone number.")
+    contact.name, contact.relation, contact.phone = name, relation, phone
+    db.session.commit()
+    flash(t_for(patient_preferences(current_user()))("flash_contact_edit"), "success")
     return redirect(url_for("patient_help"))
 
 
@@ -604,7 +667,7 @@ def contact_delete(contact_id):
         abort(404)
     db.session.delete(contact)
     db.session.commit()
-    flash("Trusted contact removed.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_contact_removed"), "success")
     return redirect(url_for("patient_help"))
 
 
@@ -623,8 +686,13 @@ def patient_settings():
         prefs.large_text = request.form.get("large_text") == "on"
         prefs.high_contrast = request.form.get("high_contrast") == "on"
         prefs.reduced_motion = request.form.get("reduced_motion") == "on"
+        mode = db.session.get(PatientViewMode, current_user().id)
+        if not mode:
+            mode = PatientViewMode(patient_id=current_user().id)
+            db.session.add(mode)
+        mode.simplified = request.form.get("simplified_mode") == "on"
         db.session.commit()
-        flash("Your display settings have been saved.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_settings_saved"), "success")
         return redirect(url_for("patient_settings"))
     return render_template("patient_settings.html", preferences=prefs)
 
@@ -712,8 +780,39 @@ def reminder_create():
         db.session.add(Reminder(patient_id=p.id, created_by=current_user().id, title=title,
                                 category=category, scheduled_time=when, on_date=on_date, notes=request.form.get("notes", "").strip()[:240]))
         db.session.commit()
-        flash("Reminder added. Keep the app open to hear browser announcements.", "success")
+        flash(t_for(patient_preferences(current_user()))("flash_reminder_added"), "success")
     return redirect(url_for("reminders_page", patient_id=p.id))
+
+
+
+@app.route("/reminders/<int:reminder_id>/edit", methods=["POST"])
+@require_login()
+def reminder_edit(reminder_id):
+    reminder = db.session.get(Reminder, reminder_id)
+    if not reminder or not reminder.active or not allowed_patient(reminder.patient_id):
+        abort(404)
+    title = request.form.get("title", "").strip()
+    category = request.form.get("category", "")
+    scheduled_time = request.form.get("scheduled_time", "")
+    notes = request.form.get("notes", "").strip()
+    raw_date = request.form.get("on_date", "").strip()
+    try:
+        on_date = date.fromisoformat(raw_date) if raw_date else None
+    except ValueError:
+        abort(400, "Enter a valid reminder date.")
+    if (not 1 <= len(title) <= 110 or category not in CATEGORIES
+        or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", scheduled_time)
+        or len(notes) > 240 or (on_date is not None and on_date < today_local())):
+        abort(400, "Enter valid reminder details and a date that is not in the past.")
+    changed_schedule = reminder.scheduled_time != scheduled_time or reminder.on_date != on_date
+    reminder.title, reminder.category = title, category
+    reminder.scheduled_time, reminder.on_date, reminder.notes = scheduled_time, on_date, notes
+    if changed_schedule:
+        # A rescheduled reminder should not inherit the earlier completion tick.
+        ReminderCheck.query.filter_by(reminder_id=reminder.id, checked_date=today_local()).delete()
+    db.session.commit()
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_edit"), "success")
+    return redirect(url_for("reminders_page", patient_id=reminder.patient_id))
 
 
 @app.route("/reminders/<int:reminder_id>/check", methods=["POST"])
@@ -727,7 +826,7 @@ def reminder_check(reminder_id):
     if not ReminderCheck.query.filter_by(reminder_id=reminder_id, checked_date=today_local()).first():
         db.session.add(ReminderCheck(reminder_id=reminder_id, checked_date=today_local()))
         db.session.commit()
-    flash("Marked as done for today. This is a self-report, not verification of medicine intake.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_done"), "success")
     return redirect(request.form.get("next") if request.form.get("next") in ("/dashboard", "/reminders") else url_for("reminders_page"))
 
 
@@ -739,7 +838,7 @@ def reminder_delete(reminder_id):
         abort(404)
     reminder.active = False
     db.session.commit()
-    flash("Reminder removed.", "success")
+    flash(t_for(patient_preferences(current_user()))("flash_reminder_removed"), "success")
     return redirect(url_for("reminders_page", patient_id=reminder.patient_id))
 
 

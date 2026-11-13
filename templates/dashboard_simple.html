@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}{{ tr('simple_dashboard_title') }}{% endblock %}
+{% block content %}
+<section class="simple-dashboard patient-space" aria-labelledby="simple-title" data-patient-today data-language="{{ patient_prefs.language if patient_prefs else 'en' }}">
+  <div class="simple-banner">
+    <div>
+      <span class="eyebrow">{{ tr('simple_welcome') }}</span>
+      <h1 id="simple-title">{{ tr('simple_hello') }}, {{ me.name.split(' ')[0] }} 👋</h1>
+      <p>{{ tr('simple_take_time') }}</p>
+      <p class="simple-date" data-ist-date>{{ today_pretty }}</p>
+      <p class="simple-clock"><span aria-hidden="true">🕒</span> <span data-ist-time>--:-- IST</span></p>
+    </div>
+    <span class="simple-flower" aria-hidden="true">🌻</span>
+  </div>
+  <div class="simple-actions" aria-label="{{ tr('simple_choose_action') }}">
+    <article class="simple-action-card simple-routine">
+      <span class="simple-card-icon" aria-hidden="true">🔔</span>
+      <h2>{{ tr('simple_today_task') }}</h2>
+      {% if next_reminder %}
+      {% if next_reminder.item.scheduled_time < now_minute %}<p class="simple-missed">{{ tr('simple_missed') }}</p>{% endif %}
+      <p class="simple-next-time">{{ next_reminder.item.scheduled_time }}</p>
+      <p class="simple-task">{{ next_reminder.item.title }}</p>
+      {% else %}
+      <p>{{ tr('no_next_step') }}</p>
+      {% endif %}
+      <a class="button button-primary button-lg" href="{{ url_for('reminders_page') }}">{{ tr('simple_my_reminders') }} →</a>
+    </article>
+    <article class="simple-action-card simple-game">
+      <span class="simple-card-icon" aria-hidden="true">🧩</span>
+      <h2>{{ tr('simple_play_game') }}</h2>
+      <p>{{ tr('simple_play_hint') }}</p>
+      <a class="button button-primary button-lg" href="{{ url_for('games') }}">{{ tr('simple_start_playing') }} →</a>
+    </article>
+    <article class="simple-action-card simple-family">
+      <span class="simple-card-icon" aria-hidden="true">💛</span>
+      <h2>{{ tr('simple_call_family') }}</h2>
+      <p>{{ tr('simple_call_hint') }}</p>
+      {% if support_url %}
+      <a class="button whatsapp-open-button button-lg" href="{{ support_url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ tr('simple_open_whatsapp_for') }} {{ support_contact.name }}">💬 {{ tr('simple_open_whatsapp') }} →</a>
+      <p class="simple-footnote">{{ tr('simple_whatsapp_instruction') }}</p>
+      {% else %}
+      <a class="button button-primary button-lg" href="{{ url_for('patient_help') }}">{{ tr('help') }} →</a>
+      {% endif %}
+    </article>
+    <article class="simple-action-card simple-photos">
+      <span class="simple-card-icon" aria-hidden="true">📷</span>
+      <h2>{{ tr('simple_family_photos') }}</h2>
+      {% if family_faces %}
+      <div class="simple-people">{% for person in family_faces[:2] %}<img src="{{ url_for('family_photo', member_id=person.id) }}" alt="{{ person.name }}" loading="lazy">{% endfor %}</div>
+      {% else %}<p>{{ tr('no_people') }}</p>{% endif %}
+      <a class="button button-primary button-lg" href="{{ url_for('family_page') }}">{{ tr('simple_see_photos') }} →</a>
+    </article>
+  </div>
+  <section class="simple-checkin panel" id="wellbeing">
+    <h2>{{ tr('checkin') }}</h2>
+    <p>{{ tr('checkin_sub') }}</p>
+    <form method="post" action="{{ url_for('wellbeing_checkin') }}" class="simple-checkin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="simple-feelings">
+        {% for value, emoji, key in [('happy','😊','happy'),('okay','🙂','okay'),('tired','😴','tired'),('need_help','🫶','need_help')] %}
+        <label class="simple-feeling"><input type="radio" name="feeling" value="{{ value }}" required {{ 'checked' if checkin and checkin.feeling == value else '' }}><span><span aria-hidden="true">{{ emoji }}</span>{{ tr(key) }}</span></label>
+        {% endfor %}
+      </div>
+      <button class="button button-primary button-lg" type="submit">{{ tr('save_checkin') }}</button>
+    </form>
+    {% if checkin and checkin.feeling == 'need_help' %}
+    <div class="support-help-box" role="status"><strong>{{ tr('support_next_step') }}</strong><p>{{ tr('support_not_alert') }}</p>
+      {% if support_url %}<a class="button whatsapp-open-button button-lg" href="{{ support_url }}" rel="noopener noreferrer" target="_blank">💬 {{ tr('support_contact_whatsapp') }}: {{ support_contact.name }}</a>{% endif %}
+      <a href="{{ url_for('patient_help') }}" class="button button-outline button-lg">{{ tr('help') }}</a>
+    </div>
+    {% endif %}
+  </section>
+  <div class="simple-bottom-actions">
+    <a href="{{ url_for('patient_help') }}" class="button button-danger button-lg">☎ {{ tr('quick_help') }}</a>
+    <a href="tel:112" class="button button-outline button-lg">{{ tr('india_emergency') }} 112</a>
+    <form action="{{ url_for('patient_view_mode') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="simplified" value="0">
+      <button class="button button-outline button-lg" type="submit">{{ tr('simple_full_view') }}</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

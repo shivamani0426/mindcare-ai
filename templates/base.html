@@ -10,11 +10,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-today.js') }}" defer></script>{% endif %}
+  {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-notifications.js') }}" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='voice.js') }}" defer></script>
   {% if me %}<script src="{{ url_for('static', filename='calls.js') }}" defer></script>{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
+<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }} {{ 'simple-view' if simple_view else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
     <header class="site-header">
@@ -32,11 +33,11 @@
         {% endif %}
         </nav>
         <div class="nav-right">
-        {% if me and me.role == 'patient' %}<button type="button" id="voice-replay" class="voice-replay" title="Hear the gentle voice again" aria-label="Hear the gentle voice again">🔊 <span id="voice-status">Gentle voice is on</span></button>{% endif %}
+        {% if me and me.role == 'patient' %}<button type="button" id="voice-replay" class="voice-replay" title="{{ tr('nav_voice_replay') }}" aria-label="{{ tr('nav_voice_replay') }}">🔊 <span id="voice-status">{{ tr('nav_voice_on') }}</span></button>{% endif %}
         <button type="button" class="font-toggle" id="font-toggle" aria-label="Toggle larger text" title="Toggle larger text">A+</button>
         {% if me %}
           <span class="user-pill" title="Signed in as {{ me.name }}"><span class="avatar-mini">{{ me.name[0]|upper }}</span><span class="user-name">{{ me.name.split(' ')[0] }}</span></span>
-          <form action="{{ url_for('logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="nav-logout" type="submit">Sign out</button></form>
+          <form action="{{ url_for('logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="nav-logout" type="submit">{{ tr('nav_signout') }}</button></form>
         {% else %}
           <a class="text-link" href="{{ url_for('login') }}">Sign in</a><a class="button button-primary nav-join" href="{{ url_for('register') }}">Get started <span aria-hidden="true">↗</span></a>
         {% endif %}
@@ -50,7 +51,7 @@
       </div>{% endif %}{% endwith %}
       {% block content %}{% endblock %}
     </main>
-    <footer class="site-footer"><div class="footer-inner"><div><span class="footer-brand">✦ mindcare.ai</span><p>Moments of connection, one day at a time.</p></div><p>Support tool only, not a dementia diagnosis or medical treatment. In an emergency, contact local medical services.</p><span>Built with care for the North Eastern Region of India</span></div></footer>
+    <footer class="site-footer"><div class="footer-inner"><div><span class="footer-brand">✦ mindcare.ai</span><p>{{ tr('footer_quote') }}</p></div><p>{{ tr('footer_disclaimer') }}</p><span>Built with care for the North Eastern Region of India</span></div></footer>
   </div>
   {% if me %}<aside class="incoming-call" id="incoming-call" role="alert" aria-live="assertive" hidden>
     <div class="incoming-call-icon" aria-hidden="true">📹</div>
