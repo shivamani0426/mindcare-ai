@@ -113,6 +113,19 @@ class WellbeingCheck(db.Model):
     __table_args__ = (UniqueConstraint("patient_id", "checked_date", name="uq_patient_daily_wellbeing"),)
 
 
+class CaregiverSupportReview(db.Model):
+    """Private caregiver acknowledgement of a patient's voluntary need-help check-in.
+
+    This is NOT a delivered notification, emergency response, or clinical assessment.
+    Acknowledging does not message or notify the patient.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    caregiver_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    checkin_id = db.Column(db.Integer, db.ForeignKey("wellbeing_check.id"), nullable=False, index=True)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (UniqueConstraint("caregiver_id", "checkin_id", name="uq_caregiver_support_review"),)
+
+
 class EmergencyContact(db.Model):
     """Patient-controlled dial shortcuts. The service does not call or SMS anyone."""
     id = db.Column(db.Integer, primary_key=True)
@@ -513,14 +526,89 @@ def logout():
     return redirect(url_for("home"))
 
 
+def caregiver_care_overview(patients):
+    """Summaries are strictly limited to patients who approved this caregiver."""
+    today = today_local()
+    since = today - timedelta(days=6)
+    patient_ids = [p.id for p in patients]
+    if not patient_ids:
+        return {
+            "summaries": [], "support_queue": [],
+            "counts": {"patients": 0, "checkins": 0, "support": 0,
+                       "overdue": 0, "no_checkin": 0},
+            "today_date": today,
+        }
+    checkins = (WellbeingCheck.query
+                .filter(WellbeingCheck.patient_id.in_(patient_ids),
+                        WellbeingCheck.checked_date >= since,
+                        WellbeingCheck.checked_date <= today)
+                .order_by(WellbeingCheck.checked_date.desc(), WellbeingCheck.checked_at.desc())
+                .all())
+    by_patient = defaultdict(list)
+    for checkin in checkins:
+        by_patient[checkin.patient_id].append(checkin)
+    support_checkins = [c for c in checkins if c.feeling == "need_help"]
+    seen = set()
+    if support_checkins:
+        seen = {review.checkin_id for review in CaregiverSupportReview.query.filter(
+            CaregiverSupportReview.caregiver_id == current_user().id,
+            CaregiverSupportReview.checkin_id.in_([c.id for c in support_checkins])
+        ).all()}
+    clock = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
+    summaries = []
+    queue = []
+    total_overdue = 0
+    checked_today = 0
+    for patient in patients:
+        recent = by_patient[patient.id]
+        today_checkin = next((c for c in recent if c.checked_date == today), None)
+        if today_checkin:
+            checked_today += 1
+        reminders = reminders_for(patient.id)
+        overdue = sum(1 for row in reminders if not row["done"]
+                      and row["item"].scheduled_time < clock)
+        total_overdue += overdue
+        completed = sum(1 for row in reminders if row["done"])
+        upcoming = next((row for row in reminders if not row["done"]
+                         and row["item"].scheduled_time >= clock), None)
+        pending_support = [c for c in recent if c.feeling == "need_help" and c.id not in seen]
+        for checkin in pending_support:
+            queue.append({"patient": patient, "checkin": checkin})
+        summaries.append({
+            "patient": patient,
+            "stats": performance(patient.id),
+            "reminders": reminders,
+            "done_count": completed,
+            "overdue_count": overdue,
+            "upcoming": upcoming,
+            "checkin": today_checkin,
+            "latest_checkin": recent[0] if recent else None,
+            "pending_support": len(pending_support),
+            "family_count": FamilyMember.query.filter_by(patient_id=patient.id).count(),
+        })
+    queue.sort(key=lambda row: (row["checkin"].checked_date,
+                               row["checkin"].checked_at or datetime.min.replace(tzinfo=timezone.utc)),
+               reverse=True)
+    return {
+        "summaries": summaries,
+        "support_queue": queue,
+        "counts": {
+            "patients": len(patients), "checkins": checked_today,
+            "support": len(queue), "overdue": total_overdue,
+            "no_checkin": len(patients) - checked_today,
+        },
+        "today_date": today,
+    }
+
+
 @app.route("/dashboard")
 @require_login()
 def dashboard():
     if current_user().role == "caregiver":
         patients = caregiver_patients()
-        summaries = [{"patient": p, "stats": performance(p.id), "reminders": reminders_for(p.id)} for p in patients]
+        overview = caregiver_care_overview(patients)
         pending = [{"link": link, "patient": db.session.get(User, link.patient_id)} for link in CareLink.query.filter_by(caregiver_id=current_user().id, status="pending").all()]
-        return render_template("caregiver.html", summaries=summaries, pending=pending)
+        return render_template("caregiver.html", pending=pending, **overview)
     stats = performance(current_user().id)
     reminders = reminders_for(current_user().id)
     pending_links = [{"link": link, "caregiver": db.session.get(User, link.caregiver_id)} for link in CareLink.query.filter_by(patient_id=current_user().id, status="pending").all()]
@@ -578,6 +666,10 @@ def wellbeing_checkin():
         record = WellbeingCheck(patient_id=current_user().id, checked_date=today, feeling=feeling, note=note)
         db.session.add(record)
     else:
+        # A new or changed request for support must reappear for approved
+        # caregivers even if they reviewed an earlier version today.
+        if feeling == "need_help" and (record.feeling != "need_help" or record.note != note):
+            CaregiverSupportReview.query.filter_by(checkin_id=record.id).delete(synchronize_session=False)
         record.feeling = feeling
         record.note = note
         record.checked_at = now_utc()
@@ -957,14 +1049,42 @@ def caregiver_revoke(link_id):
     return redirect(url_for("dashboard"))
 
 
+@app.route("/caregiver/support/<int:checkin_id>/review", methods=["POST"])
+@require_login("caregiver")
+def caregiver_support_review(checkin_id):
+    """Review means 'seen in dashboard', never 'patient was contacted'."""
+    checkin = db.session.get(WellbeingCheck, checkin_id)
+    if not checkin or checkin.feeling != "need_help" or not allowed_patient(checkin.patient_id):
+        abort(404)
+    existing = CaregiverSupportReview.query.filter_by(
+        caregiver_id=current_user().id, checkin_id=checkin.id
+    ).first()
+    if not existing:
+        db.session.add(CaregiverSupportReview(
+            caregiver_id=current_user().id, checkin_id=checkin.id
+        ))
+        db.session.commit()
+    flash("Marked as reviewed on your dashboard. This does not contact the patient.", "success")
+    if request.form.get("return_to") == "patient":
+        return redirect(url_for("caregiver_detail", patient_id=checkin.patient_id, _anchor="wellbeing"))
+    return redirect(url_for("dashboard", _anchor="support-requests"))
+
+
 @app.route("/caregiver/patient/<int:patient_id>")
 @require_login("caregiver")
 def caregiver_detail(patient_id):
     p = patient_or_403(patient_id)
     stats = performance(patient_id)
     results = GameResult.query.filter_by(patient_id=patient_id).order_by(GameResult.id.desc()).limit(20).all()
+    checks = (WellbeingCheck.query.filter_by(patient_id=patient_id)
+              .order_by(WellbeingCheck.checked_date.desc()).limit(14).all())
+    reviewed = {row.checkin_id for row in CaregiverSupportReview.query.filter(
+        CaregiverSupportReview.caregiver_id == current_user().id,
+        CaregiverSupportReview.checkin_id.in_([c.id for c in checks])
+    ).all()} if checks else set()
     return render_template("patient_detail.html", patient=p, stats=stats, results=results,
-                           reminders=reminders_for(patient_id))
+                           reminders=reminders_for(patient_id), recent_checkins=checks,
+                           reviewed_support=reviewed)
 
 
 
