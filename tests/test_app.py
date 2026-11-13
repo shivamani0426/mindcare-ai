@@ -368,3 +368,49 @@ def test_help_phone_links_explain_device_limitations_and_allow_copy(client):
     assert b'href="tel:+919876543210"' in response.data
     assert b'data-phone-number="+919876543210"' in response.data
     assert b'aria-label="Copy phone number for Priya"' in response.data
+
+
+def test_whatsapp_contact_chat_links_are_patient_only_and_preserve_phone_call_options(client):
+    register(client, "Leela", "leela-wa@example.org", "patient")
+    page = client.get("/help")
+    assert page.status_code == 200
+    assert b"Call family on WhatsApp" in page.data
+    assert b"tel:112" in page.data
+    assert b"wa.me/112" not in page.data
+    assert b"tap the phone icon" in page.data
+
+    t = token(client, "/help")
+    response = client.post("/help/contacts/add", data={
+        "csrf_token": t, "name": "Priya", "relation": "Daughter",
+        "phone": "9876543210",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'href="https://wa.me/919876543210"' in response.data
+    assert b'href="tel:9876543210"' in response.data
+    assert b'target="_blank" rel="noopener noreferrer external"' in response.data
+    assert b"Then tap" in response.data
+    assert b"wa.me/112" not in response.data
+
+    logout(client)
+    register(client, "Other Patient", "other-wa@example.org", "patient")
+    assert b"wa.me/919876543210" not in client.get("/help").data
+    logout(client)
+    register(client, "Caregiver", "care-wa@example.org", "caregiver")
+    assert client.get("/help").status_code == 403
+
+
+@pytest.mark.parametrize("phone, expected", [
+    ("9876543210", "https://wa.me/919876543210"),
+    ("919876543210", "https://wa.me/919876543210"),
+    ("+919876543210", "https://wa.me/919876543210"),
+    ("+14155552671", "https://wa.me/14155552671"),
+    ("112", ""),
+    ("javascript:alert(1)", ""),
+    ("+01987654321", ""),
+    ("09876543210", ""),
+    ("14155552671", ""),
+    ("", ""),
+])
+def test_whatsapp_chat_url_does_not_guess_non_indian_country_code(phone, expected):
+    from app import whatsapp_chat_url
+    assert whatsapp_chat_url(phone) == expected
