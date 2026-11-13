@@ -11,6 +11,7 @@
   const base = '/api/guest-voice/' + id;
   const statusNode = document.getElementById('guest-voice-status-text');
   const startBtn = document.getElementById('guest-voice-start');
+  const declineBtn = document.getElementById('guest-voice-decline');
   const muteBtn = document.getElementById('guest-voice-mute');
   const hearBtn = document.getElementById('guest-voice-hear');
   const endBtn = document.getElementById('guest-voice-end');
@@ -79,6 +80,19 @@
     try { await api(base + '/end', 'POST'); } catch (_) {}
   }
   endBtn?.addEventListener('click', endCall);
+  declineBtn?.addEventListener('click', async () => {
+    if (ended) return;
+    declineBtn.disabled = true;
+    try {
+      await api(base + '/decline', 'POST', {invite_token:token});
+      stopLocally();
+      status('You chose not to answer this call. You can close this page.');
+    } catch (error) {
+      status(error.message || 'This invitation is no longer available.');
+      declineBtn.disabled = false;
+    }
+  });
+
   window.addEventListener('pagehide', () => {
     if (ended) return;
     // Keepalive supports CSRF; do not use sendBeacon for this endpoint.
@@ -177,6 +191,7 @@
       if (terminal.has(response.status)) {
         stopLocally();
         status(response.status === 'expired' ? 'This invitation expired. Please start a new call.' :
+          response.status === 'declined' ? 'Your loved one cannot answer right now.' :
           'The other person ended the voice call.');
         return;
       }
