@@ -642,3 +642,159 @@ def test_patient_pref_translation_and_reminder_alert_scripts_remain_available(cl
     assert response.status_code == 200
     assert b"reduced-motion" in client.get("/dashboard").data
     assert "ನನ್ನ ಮುಂದಿನ ಜ್ಞಾಪನೆ" in client.get("/dashboard").get_data(as_text=True)
+
+
+# Caregiver Dashboard 2.0: consent, daily summaries, wellbeing and reviews.
+def setup_caregiver_v2(client):
+    register(client, "Patient Asha", "care2-patient@example.org", "patient")
+    with app.app_context():
+        p = User.query.filter_by(email="care2-patient@example.org").one()
+        patient_id, code = p.id, p.invite_code
+    client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"), "feeling": "need_help",
+        "note": "<script>not executable</script> I need a call"
+    })
+    client.post("/reminders/create", data={
+        "csrf_token": token(client, "/reminders"), "title": "Breakfast",
+        "category": "meal", "scheduled_time": "00:00"
+    })
+    logout(client)
+    register(client, "Caregiver Priya", "care2-helper@example.org", "caregiver")
+    client.post("/caregiver/link", data={
+        "csrf_token": token(client, "/dashboard"), "invite_code": code
+    })
+    with app.app_context():
+        link_id = CareLink.query.filter_by(patient_id=patient_id).one().id
+        checkin_id = WellbeingCheck.query.filter_by(patient_id=patient_id).one().id
+    return patient_id, link_id, checkin_id
+
+
+def test_caregiver_v2_never_exposes_unapproved_patient_checkins(client):
+    patient_id, link_id, checkin_id = setup_caregiver_v2(client)
+    dashboard = client.get("/dashboard")
+    assert dashboard.status_code == 200
+    assert b"caregiver-v2" in dashboard.data
+    assert b"Waiting for approval" in dashboard.data
+    assert b"not executable" not in dashboard.data
+    assert b"caregiver-patient-card" not in dashboard.data
+    assert client.get(f"/caregiver/patient/{patient_id}").status_code == 403
+    csrf = token(client, "/dashboard")
+    assert client.post(f"/caregiver/support/{checkin_id}/review",
+        data={"csrf_token": csrf}).status_code == 404
+    assert client.post(f"/caregiver/support/{checkin_id}/review",
+        data={}).status_code == 400
+    logout(client)
+    login(client, "care2-patient@example.org")
+    client.post(f"/caregiver/approve/{link_id}", data={
+        "csrf_token": token(client, "/dashboard")})
+    logout(client)
+    login(client, "care2-helper@example.org")
+    dashboard = client.get("/dashboard")
+    assert b"caregiver-patient-card" in dashboard.data
+    assert b"Caregiver Dashboard" not in dashboard.data or b"caregiver-v2" in dashboard.data
+    assert b"&lt;script&gt;not executable&lt;/script&gt;" in dashboard.data
+    assert b'<script>not executable</script>' not in dashboard.data
+    assert b"Caregiver Priya" not in dashboard.data or b"caregiver-v2" in dashboard.data
+    assert b"Support check-ins" in dashboard.data
+    assert b"Past-due reminders" in dashboard.data
+    assert b"data-care-support=\"1\"" in dashboard.data
+    assert b"patient-notifications.js" not in dashboard.data
+    assert client.get("/static/caregiver-dashboard.js").status_code == 200
+
+
+def test_caregiver_v2_support_review_is_private_idempotent_and_reopened(client):
+    patient_id, link_id, checkin_id = setup_caregiver_v2(client)
+    logout(client)
+    login(client, "care2-patient@example.org")
+    client.post(f"/caregiver/approve/{link_id}", data={
+        "csrf_token": token(client, "/dashboard")})
+    # Patient isn't authorized to mark a caregiver review.
+    assert client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": token(client, "/dashboard")}).status_code == 403
+    logout(client)
+    login(client, "care2-helper@example.org")
+    csrf = token(client, "/dashboard")
+    reviewed = client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": csrf, "return_to": "patient"}, follow_redirects=True)
+    assert reviewed.status_code == 200
+    assert b"You marked this entry reviewed" in reviewed.data
+    assert b"caregiver-wellbeing-entry" in reviewed.data
+    assert client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": csrf}).status_code == 302
+    with app.app_context():
+        from app import CaregiverSupportReview
+        assert CaregiverSupportReview.query.filter_by(checkin_id=checkin_id).count() == 1
+    assert b"caregiver-support-item" not in client.get("/dashboard").data
+    logout(client)
+    login(client, "care2-patient@example.org")
+    client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"), "feeling": "need_help",
+        "note": "Please call soon"
+    })
+    with app.app_context():
+        from app import CaregiverSupportReview
+        assert CaregiverSupportReview.query.filter_by(checkin_id=checkin_id).count() == 0
+    logout(client)
+    login(client, "care2-helper@example.org")
+    assert b"Please call soon" in client.get("/dashboard").data
+    assert b"caregiver-support-item" in client.get("/dashboard").data
+    assert b"caregiver-support-item" in client.get(f"/caregiver/patient/{patient_id}").data or b"caregiver-wellbeing-entry" in client.get(f"/caregiver/patient/{patient_id}").data
+    # A revoked link immediately blocks the detail and review action.
+    logout(client)
+    login(client, "care2-patient@example.org")
+    client.post(f"/caregiver/revoke/{link_id}", data={
+        "csrf_token": token(client, "/dashboard")})
+    logout(client)
+    login(client, "care2-helper@example.org")
+    assert client.get(f"/caregiver/patient/{patient_id}").status_code == 403
+    assert client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": token(client, "/dashboard")}).status_code == 404
+    assert b"Please call soon" not in client.get("/dashboard").data
+
+
+def test_caregiver_v2_multiple_patients_have_independent_states(client):
+    patient_id, link_id, checkin_id = setup_caregiver_v2(client)
+    logout(client)
+    register(client, "Patient Leela", "care2-other@example.org", "patient")
+    with app.app_context():
+        other = User.query.filter_by(email="care2-other@example.org").one()
+        other_id, other_code = other.id, other.invite_code
+    client.post("/wellbeing/check-in", data={
+        "csrf_token": token(client, "/dashboard"), "feeling": "happy", "note": "Lovely day"
+    })
+    logout(client)
+    login(client, "care2-helper@example.org")
+    client.post("/caregiver/link", data={
+        "csrf_token": token(client, "/dashboard"), "invite_code": other_code
+    })
+    with app.app_context():
+        other_link = CareLink.query.filter_by(patient_id=other_id).one().id
+    logout(client)
+    login(client, "care2-patient@example.org")
+    client.post(f"/caregiver/approve/{link_id}", data={
+        "csrf_token": token(client, "/dashboard")})
+    logout(client)
+    login(client, "care2-helper@example.org")
+    assert b"Patient Leela" not in client.get("/dashboard").data or b"Waiting for approval" in client.get("/dashboard").data
+    assert client.get(f"/caregiver/patient/{other_id}").status_code == 403
+    logout(client)
+    login(client, "care2-other@example.org")
+    client.post(f"/caregiver/approve/{other_link}", data={
+        "csrf_token": token(client, "/dashboard")})
+    logout(client)
+    login(client, "care2-helper@example.org")
+    dash = client.get("/dashboard").data
+    assert dash.count(b'data-care-patient') == 2
+    assert b"Lovely day" in dash
+    assert b"Support check-ins" in dash
+    assert b"data-care-support=\"1\"" in dash
+    assert b"data-care-support=\"0\"" in dash
+    assert client.get(f"/caregiver/patient/{other_id}").status_code == 200
+    assert client.get(f"/caregiver/patient/{patient_id}").status_code == 200
+    # A caregiver cannot access patients not connected to that caregiver.
+    logout(client)
+    register(client, "Unrelated Helper", "care2-unrelated@example.org", "caregiver")
+    assert client.get(f"/caregiver/patient/{patient_id}").status_code == 403
+    assert b"Lovely day" not in client.get("/dashboard").data
+    assert client.post(f"/caregiver/support/{checkin_id}/review", data={
+        "csrf_token": token(client, "/dashboard")}).status_code == 404
