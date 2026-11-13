@@ -145,6 +145,9 @@
   // Translate just the game UI, never the trusted contact's stored names or answer keys.
   function updateNode(node) {
     if (node.nodeType === Node.TEXT_NODE) {
+      // A family member's saved name or relationship is their personal data,
+      // not a UI word. Do not translate family-game answer choices.
+      if (root.dataset.game === 'family' && node.parentElement?.closest('[data-answer]')) return;
       const translated = translate(node.nodeValue);
       if (node.nodeValue !== translated) node.nodeValue = translated;
       return;
