@@ -625,6 +625,10 @@ def security_headers(response):
     response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
+    elif request.endpoint in ("login", "register", "auth_complete"):
+        response.headers["Cache-Control"] = "no-store"
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=15552000"
     return response
 
 
@@ -882,6 +886,11 @@ def register():
     if current_user():
         return redirect(url_for("dashboard"))
     if request.method == "POST":
+        registration_bucket = ((_auth_bucket("register-ip", _auth_client_ip()), REGISTER_LIMIT_PER_IP),)
+        retry_after = _auth_retry_after(registration_bucket, REGISTER_WINDOW_SECONDS)
+        if retry_after:
+            return _auth_rate_limited(retry_after)
+        _record_auth_attempts(registration_bucket, REGISTER_WINDOW_SECONDS)
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
@@ -920,13 +929,23 @@ def login():
         return redirect(url_for("dashboard"))
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
+        buckets = _login_buckets(email)
+        retry_after = _auth_retry_after(buckets, LOGIN_WINDOW_SECONDS)
+        if retry_after:
+            return _auth_rate_limited(retry_after)
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password_hash, request.form.get("password", "")):
+            # The per-IP total remains in place to deter credential stuffing.
+            # Only the account and IP/account counters reset on successful login.
+            AuthAttempt.query.filter(AuthAttempt.bucket_hash.in_(
+                [buckets[0][0], buckets[2][0]])).delete(synchronize_session=False)
+            db.session.commit()
             session.clear()
             session["uid"] = user.id
             session.permanent = True
             flash("Welcome back!", "success")
             return redirect(url_for("dashboard"))
+        _record_auth_attempts(buckets, LOGIN_WINDOW_SECONDS)
         flash("Email or password was not recognised.", "error")
     return render_template("auth.html", mode="login")
 
