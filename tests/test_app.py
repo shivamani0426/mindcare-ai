@@ -1221,3 +1221,108 @@ def test_patient_simple_view_preserves_support_emergency_and_dark_ui(client):
     assert b'app-world.css' in toggled.data
     assert b'data-quick-support-button' in toggled.data
     assert b'href="tel:112"' in toggled.data
+
+
+# v1.0.0 security hardening: safe, disposable SQLite auth-throttle regressions.
+def test_failed_login_is_rate_limited_with_retry_after_and_no_plain_identifiers(client):
+    from app import AuthAttempt, LOGIN_LIMIT_PER_IP_ACCOUNT
+    register(client,"Patient Security","security-login@example.org","patient")
+    logout(client)
+    for _ in range(LOGIN_LIMIT_PER_IP_ACCOUNT):
+        response = client.post("/login",data={
+            "csrf_token":token(client,"/login"),
+            "email":"security-login@example.org","password":"incorrect password"
+        })
+        assert response.status_code == 200
+        assert b"Email or password was not recognised." in response.data
+    limited = client.post("/login",data={
+        "csrf_token":token(client,"/login"),
+        "email":"security-login@example.org","password":"incorrect password"
+    })
+    assert limited.status_code == 429
+    assert 1 <= int(limited.headers["Retry-After"]) <= 900
+    assert "no-store" in limited.headers.get("Cache-Control","")
+    with app.app_context():
+        rows = AuthAttempt.query.all()
+        assert len(rows) == 3
+        assert all(len(row.bucket_hash) == 64 for row in rows)
+        assert all("@" not in row.bucket_hash and "." not in row.bucket_hash for row in rows)
+
+
+def test_login_limit_is_shared_per_account_and_wrong_client_cannot_reset_it(client):
+    from app import AuthAttempt, LOGIN_LIMIT_PER_ACCOUNT
+    register(client,"Patient Security","security-shared@example.org","patient")
+    logout(client)
+    for index in range(LOGIN_LIMIT_PER_ACCOUNT):
+        ip = f"198.51.100.{index+1}"
+        response = client.post("/login",environ_overrides={"REMOTE_ADDR":ip},
+            data={"csrf_token":token(client,"/login"),
+                  "email":"security-shared@example.org","password":"wrong"})
+        assert response.status_code == 200
+    response = client.post("/login",environ_overrides={"REMOTE_ADDR":"203.0.113.30"},
+        data={"csrf_token":token(client,"/login"),
+              "email":"security-shared@example.org","password":"wrong"})
+    assert response.status_code == 429
+    # A forgotten-password/provider setup can be a future account-recovery
+    # escape hatch. Never permanently lock the user or modify their password.
+    with app.app_context():
+        assert AuthAttempt.query.count() > 0
+        assert User.query.filter_by(email="security-shared@example.org").one().password_hash
+
+
+def test_valid_login_after_wrong_attempt_restores_session_and_does_not_erase_ip_limit(client):
+    from app import AuthAttempt, _login_buckets
+    register(client,"Patient Security","security-good@example.org","patient")
+    logout(client)
+    csrf=token(client,"/login")
+    bad=client.post("/login",data={"csrf_token":csrf,"email":"security-good@example.org",
+                                   "password":"invalid"})
+    assert bad.status_code == 200
+    with app.test_request_context("/login",environ_overrides={"REMOTE_ADDR":"127.0.0.1"}):
+        buckets=_login_buckets("security-good@example.org")
+    good=client.post("/login",data={"csrf_token":csrf,"email":"security-good@example.org",
+                                    "password":"very-long-demo-password"},follow_redirects=True)
+    assert good.status_code == 200
+    assert b"Hello, Patient" in good.data
+    with app.app_context():
+        assert db.session.get(AuthAttempt,buckets[0][0]) is None
+        assert db.session.get(AuthAttempt,buckets[2][0]) is None
+        assert db.session.get(AuthAttempt,buckets[1][0]).attempts >= 1
+
+
+def test_registration_throttle_expires_and_does_not_create_users(client):
+    from app import AuthAttempt, REGISTER_LIMIT_PER_IP, REGISTER_WINDOW_SECONDS
+    for _ in range(REGISTER_LIMIT_PER_IP):
+        response=client.post("/register",data={
+            "csrf_token":token(client,"/register"),
+            "name":"X","email":"invalid","password":"none","role":"patient"})
+        assert response.status_code == 200
+    limited=client.post("/register",data={
+        "csrf_token":token(client,"/register"),"name":"Valid User",
+        "email":"security-signup@example.org","password":"very-long-demo-password",
+        "role":"patient"})
+    assert limited.status_code == 429
+    with app.app_context():
+        assert User.query.count() == 0
+        for row in AuthAttempt.query.all():
+            row.last_failure_epoch -= REGISTER_WINDOW_SECONDS + 5
+        db.session.commit()
+    success=register(client,"Valid User","security-signup@example.org","patient")
+    assert success.status_code == 200
+    with app.app_context():
+        assert User.query.filter_by(email="security-signup@example.org").count() == 1
+
+
+def test_local_ignored_spoofed_forwarded_ip_and_https_cache_headers(client):
+    from app import AuthAttempt, _auth_bucket
+    client.post("/login",headers={"X-Forwarded-For":"192.0.2.66"},
+        data={"csrf_token":token(client,"/login"),
+              "email":"missing@example.org","password":"wrong"})
+    with app.app_context():
+        assert db.session.get(AuthAttempt,_auth_bucket("login-ip","127.0.0.1")) is not None
+        assert db.session.get(AuthAttempt,_auth_bucket("login-ip","192.0.2.66")) is None
+    normal=client.get("/login")
+    assert normal.headers["Cache-Control"] == "no-store"
+    secure=client.get("/login",base_url="https://mindcare.example")
+    assert secure.headers["Strict-Transport-Security"] == "max-age=15552000"
+    assert "Strict-Transport-Security" not in normal.headers
