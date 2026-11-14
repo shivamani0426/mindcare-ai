@@ -31,6 +31,7 @@ jobs:
           node --check static/caregiver-dashboard.js
           node --check static/auth-ui.js
           node --check static/auth-phone.js
+          node --check static/milo.js
 
   browser:
     runs-on: ubuntu-latest

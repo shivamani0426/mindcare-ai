@@ -610,3 +610,71 @@ body.high-contrast .simple-action-card .simple-missed{color:#56310c;background:#
 @media(max-width:780px){.auth-v2{grid-template-columns:minmax(0,1fr);border-radius:23px;margin:18px auto 35px}.auth-v2-story{padding:26px 26px 20px}.auth-story-main{padding:22px 0 8px}.auth-story-main>h1{font-size:35px;max-width:460px}.auth-story-main>p{max-width:540px;margin:0}.auth-story-preview,.auth-story-bottom,.auth-story-decoration{display:none}.auth-v2-form-panel{padding:28px 25px 34px}.auth-form-topline{margin-bottom:22px}.account-security-methods{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:480px){.mindcare-auth-route .main-container{padding:0 13px}.auth-v2{border-radius:18px;margin:13px 0 28px}.auth-v2-story{padding:24px 19px 21px}.auth-story-label{font-size:10px;white-space:normal}.auth-story-main>h1{font-size:32px}.auth-story-main>p{font-size:13px;line-height:1.6}.auth-v2-form-panel{padding:25px 18px 32px}.auth-form-inner h2{font-size:30px}.auth-form-topline{margin-bottom:24px}.auth-role-selector{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.auth-patient-fields{grid-template-columns:1fr}.auth-method-tab{font-size:12px}.auth-separator{font-size:11px}.account-security-page{margin:25px auto}.account-security-method{padding:19px}.auth-recaptcha{overflow-x:auto}}
 @media(prefers-reduced-motion:reduce){.auth-google-button,.auth-role-choice>span,.auth-submit-button{transition:none}}
+
+
+/* Milo 1.0 — friendly roaming visual guide, drawn in CSS, no external assets */
+.milo-roamer{position:fixed;top:0;left:0;width:94px;height:126px;z-index:49;pointer-events:none;transform:translate3d(calc(100vw - 110px),calc(100vh - 145px),0);transition:transform var(--milo-travel-time,0s) linear;will-change:transform}
+.milo-roamer[hidden],.milo-help-panel[hidden],.milo-tip[hidden],.milo-speak[hidden]{display:none!important}
+.milo-character{width:94px;height:126px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;border:0;background:transparent;padding:0 3px 5px;margin:0;cursor:pointer;pointer-events:auto;position:relative;isolation:isolate}
+.milo-character:focus-visible{outline:3px solid #b77b42;outline-offset:2px;border-radius:20px}
+.milo-stage{width:88px;height:98px;position:relative;display:block;flex:none}
+.milo-shadow{position:absolute;z-index:0;left:15px;bottom:2px;width:61px;height:12px;background:rgba(44,87,56,.18);filter:blur(4px);border-radius:50%}
+.milo-creature{position:absolute;z-index:1;left:6px;top:4px;width:77px;height:91px;transform-origin:50% 82%}
+.milo-body{position:absolute;z-index:4;left:7px;top:25px;width:64px;height:63px;border:2px solid #3d9063;border-bottom:3px solid #307a51;border-radius:49% 49% 43% 43% / 50% 50% 46% 46%;background:radial-gradient(circle at 33% 25%,#e7fee9 0,#a9e8bd 55%,#72ca98 100%);box-shadow:inset -6px -7px 0 rgba(43,134,79,.10),0 5px 12px #336a4929}
+.milo-eye{position:absolute;width:7px;height:11px;background:#245039;border-radius:50%;top:18px;z-index:2;animation:milo-blink 7.3s infinite;transform-origin:center}
+.milo-eye-left{left:17px}.milo-eye-right{right:17px;animation-delay:.05s}
+.milo-cheek{position:absolute;top:32px;width:12px;height:7px;background:#f4a4ab80;border-radius:50%}
+.milo-cheek-left{left:7px}.milo-cheek-right{right:7px}
+.milo-mouth{position:absolute;left:27px;top:33px;width:10px;height:7px;border-bottom:2.5px solid #336446;border-radius:0 0 100% 100%}
+.milo-belly{position:absolute;left:21px;bottom:5px;width:22px;height:20px;border-radius:50%;display:grid;place-items:center;background:#e8fff0a8;color:#d78f99;font-size:12px;line-height:1}
+.milo-sprout{position:absolute;z-index:2;left:35px;top:6px;height:30px;width:5px;background:#3a945b;border-radius:5px;transform:rotate(-5deg);transform-origin:bottom}
+.milo-leaf{position:absolute;width:25px;height:13px;background:#72c88b;border:2px solid #3e985d;box-shadow:inset 1px 2px #bff2c9}
+.milo-leaf-left{left:-24px;top:-2px;border-radius:100% 0 100% 18%;transform:rotate(18deg)}
+.milo-leaf-right{left:2px;top:0;border-radius:0 100% 18% 100%;transform:rotate(-12deg)}
+.milo-arm{position:absolute;z-index:3;top:48px;width:16px;height:29px;border:2px solid #469a6e;background:#9edfb1;border-radius:65% 65% 55% 55%;transform-origin:top}
+.milo-arm-left{left:-2px;transform:rotate(29deg)}
+.milo-arm-right{right:-2px;transform:rotate(-29deg)}
+.milo-foot{position:absolute;z-index:2;bottom:-1px;width:24px;height:15px;background:#66b787;border:2px solid #348456;border-radius:40% 50% 53% 49%;transform-origin:top}
+.milo-foot-left{left:12px}.milo-foot-right{right:12px}
+.milo-character-name{display:inline-flex;align-items:center;justify-content:center;min-width:60px;min-height:22px;padding:2px 12px;background:#ffffffee;border:1px solid #d3e7d7;border-radius:50px;color:#2f6747;font-size:11px;font-weight:900;letter-spacing:.03em;box-shadow:0 3px 8px #285a3920;line-height:1.25;position:relative;z-index:3}
+.milo-character:hover .milo-arm-right,.milo-character:focus-visible .milo-arm-right{animation:milo-wave .8s ease-in-out 2}
+.milo-walking .milo-creature{animation:milo-walk-bob .48s ease-in-out infinite}
+.milo-walking .milo-foot-left{animation:milo-step-left .48s ease-in-out infinite}
+.milo-walking .milo-foot-right{animation:milo-step-right .48s ease-in-out infinite}
+.milo-walking .milo-shadow{animation:milo-shadow-step .48s ease-in-out infinite}
+.milo-roamer.milo-facing-left .milo-creature{scale:-1 1}
+.milo-roamer.milo-facing-left .milo-creature .milo-belly{scale:-1 1}
+.milo-roamer:not(.milo-walking) .milo-creature{animation:milo-rest 5.6s ease-in-out infinite}
+.milo-nav-toggle{background:#e7f4e9;border:1px solid #c9e1cf;min-height:38px;min-width:57px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border-radius:12px;color:#286743;font-size:12px;font-weight:850;white-space:nowrap}
+.milo-nav-toggle:hover,.milo-nav-toggle:focus-visible{background:#d7eedc}
+.milo-nav-toggle[aria-pressed=false]{background:#f0f2ee;border-color:#d3dfd4;color:#63786a}
+.milo-help-panel{position:fixed;right:114px;bottom:16px;z-index:51;width:min(360px,calc(100vw - 32px));max-height:min(605px,calc(100dvh - 45px));overflow:auto;background:#fffefa;border:1px solid #d7e8d9;border-radius:24px;padding:18px;box-shadow:0 22px 70px #284f3445,0 2px 9px #32513f12}
+.milo-panel-heading{display:flex;align-items:flex-start;gap:10px}
+.milo-panel-icon{width:42px;height:42px;flex:none;display:grid;place-items:center;background:#dff2e4;border-radius:14px;font-size:22px}
+.milo-panel-heading>div{flex:1;min-width:0}
+.milo-panel-heading h2{font-size:20px;line-height:1.2;margin:2px 0 7px;color:#2c5d40}
+.milo-panel-heading p{font-size:13px;line-height:1.55;color:#567663;margin:0 0 15px}
+.milo-panel-close{width:36px;height:36px;min-width:36px;display:grid;place-items:center;background:#f1f6f1;border:0;border-radius:11px;font-size:24px;color:#446852}
+.milo-action{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #d3e6d6;border-radius:12px;background:#f0f8f1;color:#2f6342;font-size:14px;font-weight:850;line-height:1.45;padding:11px 13px;min-height:48px;width:100%;text-align:center;margin:6px 0 10px}
+.milo-primary-action{background:#2e745a;color:#fff;border-color:#2e745a}
+.milo-primary-action:hover{background:#205741}
+.milo-tip{font-size:14px;line-height:1.65;color:#365744;margin:7px 0;padding:13px 14px;border-radius:13px;background:#e9f5ea;border:1px solid #cfe9d5;white-space:normal}
+.milo-speak{background:#fffdf7}
+.milo-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px 0}
+.milo-shortcuts a{font-weight:750;font-size:12px;line-height:1.35;display:flex;align-items:center;justify-content:center;min-height:49px;text-align:center;padding:9px;border-radius:12px;background:#f3f8f4;border:1px solid #dce8dd;color:#38634a}
+.milo-shortcuts a:hover{background:#e5f3e8}
+.milo-settings-row{border-top:1px solid #e6ede6;padding-top:14px;display:flex;gap:9px}
+.milo-settings-button{flex:1;min-width:0;min-height:42px;border:1px solid #dae6dc;background:#fff;color:#4c6656;border-radius:11px;padding:8px 10px;font-size:12px;font-weight:700;line-height:1.3}
+.milo-settings-button:hover{background:#f2f8f3}
+.milo-settings-button:disabled{opacity:.55;cursor:default}
+@keyframes milo-blink{0%,44%,46%,70%,72%,100%{transform:scaleY(1)}45%,71%{transform:scaleY(.12)}}
+@keyframes milo-rest{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(1deg)}}
+@keyframes milo-walk-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+@keyframes milo-step-left{0%,100%{transform:rotate(24deg)}50%{transform:rotate(-22deg)}}
+@keyframes milo-step-right{0%,100%{transform:rotate(-24deg)}50%{transform:rotate(22deg)}}
+@keyframes milo-shadow-step{0%,100%{transform:scaleX(1);opacity:.8}50%{transform:scaleX(.83);opacity:.55}}
+@keyframes milo-wave{0%,100%{transform:rotate(-29deg)}50%{transform:rotate(-86deg)}}
+@media(max-width:1100px){.milo-nav-toggle{min-width:38px;padding:6px}.milo-nav-toggle>span{display:none}}
+@media(max-width:600px){.milo-help-panel{right:12px;bottom:141px;width:calc(100vw - 24px);max-height:min(480px,calc(100dvh - 180px));padding:15px;border-radius:20px}.milo-character{height:121px}.milo-shortcuts a{font-size:12px}.milo-nav-toggle{height:38px;min-height:38px;width:38px;min-width:38px;padding:0}}
+@media(prefers-reduced-motion:reduce){.milo-roamer{transition:none!important;will-change:auto}.milo-roamer *{animation:none!important;transition:none!important}}
+body.reduced-motion .milo-roamer,body.reduced-motion .milo-roamer *{animation:none!important;transition:none!important;will-change:auto}

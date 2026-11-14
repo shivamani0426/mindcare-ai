@@ -207,3 +207,17 @@ Firebase phone sign-in needs an active Firebase Auth project and can incur charg
 5. Verified new users choose Patient or Caregiver. A previously registered user can connect a verified phone from **Account security** without recreating their patient records. For cost-free QA, Firebase supports fictional test numbers that never send real SMS.
 
 **Security and operational cautions:** Firebase charges for eligible real SMS; a phone number may be reassigned or SIM-swapped, making phone-only sign-in weaker than password+MFA. Configure spend controls, throttling, account recovery, log audit and professional security/privacy review before real clinical use. No password-reset email or automatic SMS alert is implemented. The existing WhatsApp trusted-contact feature, patient/caregiver roles, consent checks and emergency 112 dialer are unchanged. Account linking is deliberate and never based on phone/email similarity alone.
+
+
+## Milo 1.0 — roaming companion
+
+Milo is an optional, cute green plant companion rendered with CSS and controlled by JavaScript on **signed-in patient pages only**. No paid AI, behavioural tracking, external services, patient interaction logging or emergency alerts are involved.
+
+- When browser motion is allowed, Milo walks autonomously between clear places near the edges/bottom of the screen, rests, blinks and waves on hover. It avoids intentionally stopping on interactive controls.
+- Tapping Milo stops walking and opens a help panel with page-specific instructions, optional user-triggered voice playback, and links to Games, Reminders, Family and Help & contacts. It does not play games for the patient or make medical claims.
+- The Milo button in the navigation bar allows patients to Hide and Show the character. The panel has a Pause/Resume control. Both settings persist on that device in local browser storage.
+- Respects the system reduced-motion preference and patient-specific reduced motion. Milo stays stationary on game-play pages, during interaction with the help panel and while entering information.
+- Help labels and explanations are localized into English, Hindi and Kannada. Spoken help availability depends on the user's browser.
+- If safe roaming positions are unavailable, Milo prefers remaining still rather than deliberately standing over a form control.
+
+Existing WhatsApp, 112, consent, authentication, database, games, reminders and caregiver workflows are unaffected. Browser QA covers ordinary and reduced motion, access isolation, help, hide/pause persistence, and responsive layouts.
