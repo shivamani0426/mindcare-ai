@@ -319,6 +319,12 @@ try:
 
 
         verify(page.locator("#milo-roamer").count() == 1, "Milo appears on signed-in patient pages")
+        verify(page.locator(".milo-hood .milo-mask-eye").count() == 2,
+               "Milo now wears a friendly superhero-penguin eye mask")
+        verify(page.locator(".milo-web-shooter").count() == 2,
+               "Milo has two decorative web-shooter flippers")
+        verify(page.locator("#milo-web-overlay line").count() == 1,
+               "Milo web-swing line exists in the patient dashboard")
         verify(page.locator("#milo-nav-toggle").count() == 1, "Milo show/hide control remains accessible")
         page.locator("#milo-character").click()
         verify(page.locator("#milo-panel").is_visible(), "Tap Milo to open friendly contextual guidance")
@@ -326,6 +332,8 @@ try:
         verify(page.locator("#milo-tip").is_visible(), "Milo explains the current page on request")
         verify(page.locator("#milo-speak").is_visible(), "Read-aloud button appears only after requesting guidance")
         verify(page.locator("#milo-motion-toggle").is_disabled(), "Reduced-motion preference prevents autonomous roaming")
+        verify(not page.locator("#milo-web-overlay").evaluate("(el) => el.classList.contains('is-visible')"),
+               "Reduced-motion patients do not see moving web lines")
         page.locator("#milo-hide").click()
         verify(page.locator("#milo-roamer").is_hidden(), "Patient can hide Milo")
         verify(page.locator("#milo-nav-toggle").get_attribute("aria-pressed") == "false",
@@ -514,10 +522,16 @@ try:
           timeout=24000
         )
         verify(walking_tab.locator("#milo-roamer").get_attribute("data-milo-state") == "walking",
-               "Milo autonomously walks between clear spots on the patient dashboard")
+               "Milo autonomously travels between clear spots on the patient dashboard")
+        verify(walking_tab.locator("#milo-roamer").get_attribute("data-milo-motion") == "web-swing",
+               "Milo travels on a curved web-swing animation")
+        verify(walking_tab.locator("#milo-web-overlay").evaluate("(el) => el.classList.contains('is-visible')"),
+               "The web thread is visible while Milo swings")
         walking_tab.locator("#milo-character").dispatch_event("click")
         verify(walking_tab.locator("#milo-panel").is_visible(),
                "Milo stops roaming when the patient asks for help")
+        verify(not walking_tab.locator("#milo-web-overlay").evaluate("(el) => el.classList.contains('is-visible')"),
+               "Opening help retracts the swinging web immediately")
         walking_tab.locator("#milo-motion-toggle").click()
         verify(walking_tab.locator("#milo-motion-toggle").get_attribute("aria-pressed") == "true",
                "Pause walking is an explicit patient control")
