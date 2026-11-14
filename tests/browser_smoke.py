@@ -286,6 +286,35 @@ try:
                    f"{route} uses actual new app theme")
             verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
                    f"{route} dark background is actually rendered")
+        page.goto(base + "/games")
+        verify(page.locator(".games-catalog[data-bounce-stack]").count() == 1,
+               "Games catalog participates in floating card stack")
+        verify(page.locator(".games-catalog > .catalog-card").count() == 6,
+               "All six brain game cards remain present")
+        page.set_viewport_size({"width": 1280, "height": 860})
+        page.emulate_media(reduced_motion="no-preference")
+        page.reload()
+        page.wait_for_function("""() => document.querySelector('.games-catalog')?.dataset.stackState === 'stacked'""")
+        verify(page.locator(".games-catalog .dashboard-stack-open").is_visible(),
+               "Games catalog provides a clear spread-cards button")
+        verify(page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
+               "Game links are protected while the cards overlap")
+        page.locator(".games-catalog .dashboard-stack-open").click()
+        verify(page.locator(".games-catalog").get_attribute("data-stack-state") == "expanded",
+               "All game cards fly back into their original grid positions")
+        verify(not page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
+               "Play now links are accessible after cards spread")
+        verify(page.locator(".games-catalog a[href*='/games/']").count() >= 5,
+               "Playable games remain linked to their original destinations")
+        page.emulate_media(reduced_motion="reduce")
+        page.reload()
+        verify(page.locator(".games-catalog").get_attribute("data-stack-state") != "stacked",
+               "Reduced-motion patients see the normal games grid")
+        for width in (320, 375, 768):
+            page.set_viewport_size({"width": width, "height": 820})
+            page.wait_for_timeout(100)
+            no_horizontal_scroll(page, width)
+        page.set_viewport_size({"width": 1280, "height": 860})
         page.goto(base + "/dashboard")
 
 
