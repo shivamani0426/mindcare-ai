@@ -155,6 +155,20 @@ try:
         verify(page.locator(".auth-v2-story .auth-story-main p").count() == 1,
                "MindCare artwork includes a concise care-focused caption")
 
+        glow = page.locator(".auth-v2-form-panel").evaluate("""(el) => ({
+            before: getComputedStyle(el, '::before').backgroundImage,
+            animation: getComputedStyle(el, '::before').animationName,
+            pointerEvents: getComputedStyle(el, '::before').pointerEvents,
+            after: getComputedStyle(el, '::after').backgroundImage
+        })""")
+        verify("radial-gradient" in glow["before"] and "radial-gradient" in glow["after"],
+               "Original CSS blue bloom decorates both auth layouts")
+        verify(glow["pointerEvents"] == "none",
+               "Animated glow cannot intercept login or registration interactions")
+        verify(glow["animation"] == "none",
+               "Reduced-motion preference stops the atmospheric animation")
+
+
         verify(page.locator('link[href*="auth-world.css"]').count() == 1,
                "Real registration screen loads the matching dark visual theme")
         verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
