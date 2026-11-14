@@ -1327,3 +1327,108 @@ def test_local_ignored_spoofed_forwarded_ip_and_https_cache_headers(client):
     secure=client.get("/login",base_url="https://mindcare.example")
     assert secure.headers["Strict-Transport-Security"] == "max-age=15552000"
     assert "Strict-Transport-Security" not in normal.headers
+
+
+# Auth recovery: synthetic accounts and mocked transport (never send real mail).
+def test_recovery_request_is_generic_and_does_not_enumerate_accounts(client, monkeypatch):
+    import app as mindcare
+    monkeypatch.setattr(mindcare, "_recovery_mail_ready", lambda: True)
+    sent = []
+    monkeypatch.setattr(mindcare, "_send_recovery_mail",
+                        lambda email, code: sent.append((email, code)) or True)
+    register(client, "Recovery Patient", "recover-test@example.org", "patient")
+    logout(client)
+    def request_reset(email):
+        return client.post("/forgot-password", data={
+            "csrf_token": token(client, "/forgot-password"), "email": email
+        }, follow_redirects=True)
+    missing = request_reset("missing-test@example.org")
+    real = request_reset("recover-test@example.org")
+    assert missing.status_code == real.status_code == 200
+    assert b"If this address belongs to an email/password account" in real.data
+    assert b"If this address belongs to an email/password account" in missing.data
+    assert len(sent) == 1 and sent[0][0] == "recover-test@example.org"
+    assert len(sent[0][1]) == 43
+    with app.app_context():
+        assert mindcare.PasswordRecovery.query.count() == 1
+        assert sent[0][1] not in mindcare.PasswordRecovery.query.first().code_hash
+
+
+def test_recovery_reset_is_single_use_and_revokes_existing_sessions(client, monkeypatch):
+    import app as mindcare
+    monkeypatch.setattr(mindcare, "_recovery_mail_ready", lambda: True)
+    sent = []
+    monkeypatch.setattr(mindcare, "_send_recovery_mail",
+                        lambda email, code: sent.append(code) or True)
+    register(client, "Recovery Patient", "recover-session@example.org", "patient")
+    # Existing session is authenticated before recovery.
+    other_session = app.test_client()
+    existing = login(other_session, "recover-session@example.org")
+    assert existing.status_code == 200
+    logout(client)
+    client.post("/forgot-password", data={
+        "csrf_token": token(client, "/forgot-password"),
+        "email": "recover-session@example.org",
+    })
+    code = sent[0]
+    assert client.post("/reset-password", data={
+        "csrf_token": token(client, "/reset-password"),
+        "email": "recover-session@example.org",
+        "code": code, "password": "new-unique-recovery-password"
+    }, follow_redirects=True).status_code == 200
+    # Old credential cannot authenticate and previously issued session is invalid.
+    assert other_session.get("/dashboard").status_code == 302
+    assert b"Email or password was not recognised." in login(client, "recover-session@example.org").data
+    # A replay must fail without changing the new password.
+    replay = client.post("/reset-password", data={
+        "csrf_token": token(client, "/reset-password"),
+        "email": "recover-session@example.org",
+        "code": code, "password": "replay-password-should-not-work"
+    }, follow_redirects=True)
+    assert b"Invalid or expired recovery details" in replay.data
+    valid = client.post("/login", data={
+        "csrf_token": token(client, "/login"),
+        "email": "recover-session@example.org",
+        "password": "new-unique-recovery-password"
+    }, follow_redirects=True)
+    assert valid.status_code == 200 and b"Hello, Recovery" in valid.data
+
+
+def test_recovery_expired_codes_are_rejected(client, monkeypatch):
+    import app as mindcare
+    from datetime import timedelta
+    monkeypatch.setattr(mindcare, "_recovery_mail_ready", lambda: True)
+    sent = []
+    monkeypatch.setattr(mindcare, "_send_recovery_mail",
+                        lambda email, code: sent.append(code) or True)
+    register(client, "Recovery Expired", "recovery-expired@example.org", "patient")
+    logout(client)
+    client.post("/forgot-password", data={
+        "csrf_token": token(client, "/forgot-password"),
+        "email": "recovery-expired@example.org"
+    })
+    with app.app_context():
+        row = mindcare.PasswordRecovery.query.one()
+        row.expires_at = mindcare.now_utc() - timedelta(seconds=5)
+        db.session.commit()
+    response = client.post("/reset-password", data={
+        "csrf_token": token(client, "/reset-password"),
+        "email": "recovery-expired@example.org",
+        "code": sent[0], "password": "new-secure-password-123"
+    }, follow_redirects=True)
+    assert b"Invalid or expired recovery details" in response.data
+    assert login(client, "recovery-expired@example.org").status_code == 200
+
+
+def test_recovery_is_unavailable_without_mail_configuration(client, monkeypatch):
+    import app as mindcare
+    monkeypatch.setattr(mindcare, "_recovery_mail_ready", lambda: False)
+    register(client, "Recovery Off", "recovery-off@example.org", "patient")
+    logout(client)
+    response = client.post("/forgot-password", data={
+        "csrf_token": token(client, "/forgot-password"),
+        "email": "recovery-off@example.org"
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert mindcare.PasswordRecovery.query.count() == 0
