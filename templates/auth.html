@@ -7,30 +7,26 @@
 {% endblock %}
 {% block content %}
 <section class="auth-v2" aria-labelledby="auth-title">
-  <aside class="auth-v2-story">
-    <div class="auth-story-top"><span class="auth-story-label"><span class="auth-story-dot"></span> A calmer space for families</span><div class="auth-story-decoration" aria-hidden="true">✧</div></div>
-    <div class="auth-story-main">
-      <span class="auth-story-overline">MINDCARE · STAY CONNECTED</span>
-      <h1>Every little moment <em>matters.</em></h1>
-      <p>Care, routine and familiar faces, all in one gentle place for patients and the people who love them.</p>
-      <div class="auth-story-preview" aria-label="MindCare highlights">
-        <div class="auth-preview-heading"><span class="auth-preview-icon">✦</span><div><strong>A lovely day ahead</strong><small>One step at a time</small></div><span class="auth-preview-sun" aria-hidden="true">☀️</span></div>
-        <div class="auth-preview-list">
-          <div><span class="auth-preview-emoji" aria-hidden="true">🔔</span><span><strong>Daily reminders</strong><small>Simple little nudges</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
-          <div><span class="auth-preview-emoji" aria-hidden="true">🧩</span><span><strong>Gentle brain games</strong><small>Play at your own pace</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
-          <div><span class="auth-preview-emoji" aria-hidden="true">💛</span><span><strong>People who care</strong><small>Stay close to family</small></span><span class="auth-preview-check" aria-hidden="true">✓</span></div>
-        </div>
-      </div>
+  <aside class="auth-v2-story" aria-label="MindCare world illustration">
+    <div class="auth-story-top">
+      <span class="auth-story-label"><span class="auth-story-dot"></span> A SPACE FOR EVERYONE</span>
+      <span class="auth-story-decoration" aria-hidden="true">✳</span>
     </div>
-    <div class="auth-story-bottom"><span>♡ Built for meaningful connection</span><span>Calm · Accessible · Private</span></div>
+    <div class="auth-story-main">
+      <span class="auth-story-overline">SMALL MOMENTS. MEANINGFUL CONNECTIONS.</span>
+      <p>Feel closer to familiar faces, comforting routines and the people who care.</p>
+    </div>
+    <div class="auth-story-bottom">
+      <span>✦ A little care goes a long way.</span>
+      <span>MindCareAI · Made for connection</span>
+    </div>
   </aside>
-
   <div class="auth-v2-form-panel">
     <div class="auth-form-inner">
-      <div class="auth-form-topline"><span class="auth-form-logo" aria-hidden="true">✦</span><span>MINDCARE ACCOUNT</span><span class="auth-form-topline-right">01 / 01</span></div>
-      <span class="auth-form-eyebrow">{{ 'START YOUR JOURNEY' if mode == 'register' else 'WELCOME BACK' }}</span>
-      <h2 id="auth-title">{{ 'Create your MindCare account' if mode == 'register' else 'Good to see you again.' }}</h2>
-      <p class="auth-form-intro">{{ 'Join as a patient or caregiver. Your care circle begins with trust.' if mode == 'register' else 'Choose the sign-in method that feels easiest for you.' }}</p>
+      <div class="auth-form-topline"><span class="auth-form-logo" aria-hidden="true">✦</span><span>MINDCARE<span class="auth-brand-accent">AI</span></span><span class="auth-form-topline-right">A CARE SPACE FOR ALL</span></div>
+      <h1 id="auth-title" class="auth-you-matter">YOU MATTER<span class="auth-heading-period" aria-hidden="true">.</span></h1>
+      <p class="auth-form-intro">{{ 'Create your safe space for daily care, play and staying connected with family.' if mode == 'register' else 'Your space for care, connection and brighter days.' }}</p>
+      <p class="auth-form-eyebrow">{{ 'CREATE YOUR ACCOUNT' if mode == 'register' else 'SIGN IN TO MINDCARE' }}</p>
 
       {% if google_login_ready %}
       <a class="auth-google-button" href="{{ url_for('google_auth_start') }}" aria-label="Continue securely with your Google account">
@@ -89,7 +85,9 @@
         {% endif %}
       </div>
 
-      <div class="auth-form-bottom"><p>{{ 'Already have a MindCare account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in instead →' if mode == 'register' else 'Create your account →' }}</a></p><p class="auth-trust-caption">🔒 Patient information is shared only with caregivers you approve.</p></div>
+      {% if mode == 'login' %}<p class="auth-forgot-link"><a href="{{ url_for('forgot_password') }}">Forgot your password?</a></p>{% endif %}
+
+      <div class="auth-form-bottom"><p>{{ 'Already have a MindCare account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in instead →' if mode == 'register' else 'Create your account →' }}</a></p><p class="auth-trust-caption"><span aria-hidden="true">◈</span> Your information stays private and is shared only with caregivers you approve.</p></div>
     </div>
   </div>
 </section>
