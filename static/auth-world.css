@@ -195,12 +195,12 @@ body.mindcare-auth-route .auth-onboard-icon{background:#d7f36a;color:#14241a}
    Inspired by a clean two-column editorial login layout, adapted using
    MindCare's original illustration and existing account controls. */
 body.mindcare-auth-route{
-  background:#101111;
+  background:#0a0a0a;
   background-image:none;
   color:#f5f5f0
 }
 body.mindcare-auth-route .site-header{
-  background:#101111;border-bottom:0;
+  background:#0a0a0a;border-bottom:0;
   padding:12px 0
 }
 body.mindcare-auth-route .site-header .main-nav,
