@@ -103,6 +103,23 @@ try:
         page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
+
+        verify(page.locator("#milo-roamer").count() == 1, "Milo appears on signed-in patient pages")
+        verify(page.locator("#milo-nav-toggle").count() == 1, "Milo show/hide control remains accessible")
+        page.locator("#milo-character").click()
+        verify(page.locator("#milo-panel").is_visible(), "Tap Milo to open friendly contextual guidance")
+        page.locator("#milo-explain").click()
+        verify(page.locator("#milo-tip").is_visible(), "Milo explains the current page on request")
+        verify(page.locator("#milo-speak").is_visible(), "Read-aloud button appears only after requesting guidance")
+        verify(page.locator("#milo-motion-toggle").is_disabled(), "Reduced-motion preference prevents autonomous roaming")
+        page.locator("#milo-hide").click()
+        verify(page.locator("#milo-roamer").is_hidden(), "Patient can hide Milo")
+        verify(page.locator("#milo-nav-toggle").get_attribute("aria-pressed") == "false",
+               "Milo is recoverable using a visible navigation control")
+        page.reload()
+        verify(page.locator("#milo-roamer").is_hidden(), "Hide preference survives refresh on same device")
+        page.locator("#milo-nav-toggle").click()
+        verify(page.locator("#milo-roamer").is_visible(), "Patient can restore Milo")
         verify(page.locator("[data-quick-support-button]").count() == 1, "Full dashboard has a prominent Need Support button")
         verify(page.get_by_text("Your activity", exact=True).count() == 1, "Full dashboard loads activity")
 
@@ -219,6 +236,37 @@ try:
                    "Dashboard renders under simulated slow connection")
         except Exception as exc:
             results.append("Slow connection simulation unsupported: " + str(exc)[:160])
+
+        # A separate, ordinary-motion tab proves Milo really travels by itself.
+        walking_tab = ctx.new_page()
+        walking_tab.emulate_media(reduced_motion="no-preference")
+        walking_tab.goto(base + "/dashboard")
+        walking_tab.evaluate("""() => {
+          localStorage.setItem('mindcare-milo-hidden-v1','0');
+          localStorage.setItem('mindcare-milo-paused-v1','0');
+        }""")
+        walking_tab.reload()
+        verify(walking_tab.locator("#milo-roamer").is_visible(), "Milo is visible with standard motion")
+        walking_tab.wait_for_function(
+          "() => document.getElementById('milo-roamer')?.dataset.miloState === 'walking'",
+          timeout=24000
+        )
+        verify(walking_tab.locator("#milo-roamer").get_attribute("data-milo-state") == "walking",
+               "Milo autonomously walks between clear spots on the patient dashboard")
+        walking_tab.locator("#milo-character").dispatch_event("click")
+        verify(walking_tab.locator("#milo-panel").is_visible(),
+               "Milo stops roaming when the patient asks for help")
+        walking_tab.locator("#milo-motion-toggle").click()
+        verify(walking_tab.locator("#milo-motion-toggle").get_attribute("aria-pressed") == "true",
+               "Pause walking is an explicit patient control")
+        walking_tab.locator("#milo-close").click()
+        walking_tab.reload()
+        verify(walking_tab.locator("#milo-motion-toggle").get_attribute("aria-pressed") == "true",
+               "Pause walking preference persists across refresh")
+        verify(walking_tab.locator("#milo-roamer").get_attribute("data-milo-state") == "resting",
+               "Paused Milo remains stationary")
+        walking_tab.close()
+
         print(json.dumps({"status": "passed", "checks": len(results), "details": results}, ensure_ascii=False))
         browser.close()
 finally:
