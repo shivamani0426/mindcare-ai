@@ -58,7 +58,7 @@ body.mc-app-shell [data-bounce-stack] .dashboard-stack-open:focus-visible {
 }
 @media(min-width:900px) and (prefers-reduced-motion:no-preference) {
   body.mc-app-shell:not(.reduced-motion):not(.high-contrast)
-  :is(.welcome-banner,.caregiver-hero) {
+  :is(.welcome-banner,.caregiver-hero,.simple-banner) {
     animation:mindcare-greeting-float-in 900ms cubic-bezier(.17,1.1,.35,1) both;
   }
 }
@@ -67,13 +67,11 @@ body.mc-app-shell [data-bounce-stack] .dashboard-stack-open:focus-visible {
     transition:none!important;transform:none!important;filter:none!important;
   }
   body.mc-app-shell [data-bounce-stack] .dashboard-stack-open {display:none!important}
-  body.mc-app-shell :is(.welcome-banner,.caregiver-hero) {animation:none!important}
+  body.mc-app-shell :is(.welcome-banner,.caregiver-hero,.simple-banner) {animation:none!important}
 }
 body.mc-app-shell.reduced-motion [data-bounce-stack] > [data-bounce-card],
-body.mc-app-shell.simple-view [data-bounce-stack] > [data-bounce-card],
 body.mc-app-shell.high-contrast [data-bounce-stack] > [data-bounce-card] {
   transition:none!important;transform:none!important;filter:none!important;
 }
 body.mc-app-shell.reduced-motion [data-bounce-stack] .dashboard-stack-open,
-body.mc-app-shell.simple-view [data-bounce-stack] .dashboard-stack-open,
 body.mc-app-shell.high-contrast [data-bounce-stack] .dashboard-stack-open {display:none!important}

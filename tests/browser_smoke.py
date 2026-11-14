@@ -307,10 +307,37 @@ try:
         verify(page.locator("#milo-roamer").is_visible(), "Patient can restore Milo")
         verify(page.locator("[data-quick-support-button]").count() == 1, "Full dashboard has a prominent Need Support button")
         verify(page.get_by_text("Your activity", exact=True).count() == 1, "Full dashboard loads activity")
+        verify(page.locator(".stats-row .stat-card").count() == 3,
+               "Patient activity totals remain visible")
+        verify(page.locator(".trend-chart, .empty-chart").count() == 0,
+               "Activity-over-time graph and empty placeholder are removed")
+        verify(page.get_by_text("Activity over time", exact=True).count() == 0,
+               "Patient dashboard omits complex activity-over-time heading")
 
         page.locator(".patient-mode-shortcut button").click()
         page.wait_for_selector(".simple-dashboard")
         verify(page.locator(".simple-action-card").count() == 4, "Simple View has four action cards")
+        verify(page.locator(".simple-actions[data-bounce-stack]").count() == 1,
+               "Simple View action cards use the bounce stack")
+        page.set_viewport_size({"width": 1280, "height": 860})
+        page.emulate_media(reduced_motion="no-preference")
+        page.reload()
+        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'stacked'""")
+        verify(page.locator(".simple-actions .dashboard-stack-open").is_visible(),
+               "Simple View shows the touch-to-spread control")
+        verify(page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
+               "Simple View stacked controls are not accidentally interactive")
+        page.locator(".simple-actions .dashboard-stack-open").click()
+        verify(page.locator(".simple-actions").get_attribute("data-stack-state") == "expanded",
+               "Simple View cards spring back to their original positions")
+        verify(not page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
+               "Simple View cards are usable after expanding")
+        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
+               "Simple View expand control disappears after use")
+        page.emulate_media(reduced_motion="reduce")
+        page.reload()
+        verify(page.locator(".simple-actions").get_attribute("data-stack-state") != "stacked",
+               "Reduced-motion Simple View retains a static, accessible layout")
         verify(page.locator(".simple-banner .mc-app-hero-art").count() == 1,
                "Simplified dashboard has the original illustrated hero")
         verify(page.locator(".simple-game").evaluate(

@@ -1,7 +1,7 @@
 /* MindCare dashboard bounce stacks — native HTML + CSS, no React dependency.
    Cards remain in document flow, retaining original links, forms and permissions.
    A clearly labelled button fans out each stack; no hidden card is actionable.
-   Motion is disabled for reduced-motion, simple view and narrow screens. */
+   Motion is disabled for reduced-motion and narrow screens; Simple View can animate. */
 (() => {
   'use strict';
   const groups = [...document.querySelectorAll('[data-bounce-stack]')];
@@ -10,7 +10,6 @@
   const wide = window.matchMedia('(min-width: 900px)');
   const enabled = () => wide.matches && !reduced.matches &&
     !document.body.classList.contains('reduced-motion') &&
-    !document.body.classList.contains('simple-view') &&
     !document.body.classList.contains('high-contrast');
 
   groups.forEach(group => {
