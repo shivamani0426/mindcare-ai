@@ -1,6 +1,6 @@
 {% extends 'base.html' %}{% block title %}{{ tr('dash_page_title') }}{% endblock %}
 {% block content %}
-<section class="welcome-banner"><div><span class="eyebrow">{{ tr('dash_eyebrow') }}</span><h1>{{ tr('dash_hello') }}, {{ me.name.split(' ')[0] }} <span>👋</span></h1><p>{{ tr('dash_intro') }}</p><div class="welcome-actions"><a class="button button-primary" href="{{ url_for('games') }}">{{ tr('dash_play') }} →</a><a class="button button-outline" href="{{ url_for('reminders_page') }}">{{ tr('dash_routine') }}</a></div></div><div class="welcome-flower">🌻</div></section>
+<section class="welcome-banner"><div><span class="eyebrow">{{ tr('dash_eyebrow') }}</span><h1>{{ tr('dash_hello') }}, {{ me.name.split(' ')[0] }} <span>👋</span></h1><p>{{ tr('dash_intro') }}</p><div class="welcome-actions"><a class="button button-primary" href="{{ url_for('games') }}">{{ tr('dash_play') }} →</a><a class="button button-outline" href="{{ url_for('reminders_page') }}">{{ tr('dash_routine') }}</a></div></div><img class="mc-app-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" aria-hidden="true" loading="eager"><div class="mc-app-hero-sticker" aria-hidden="true">✳ MINDCARE WORLD / 01</div></section>
 <section class="patient-support-quick" aria-labelledby="patient-support-quick-title" data-quick-support-panel>
   <div class="patient-support-quick-content">
     <span class="patient-support-quick-icon" aria-hidden="true">🤝</span>
