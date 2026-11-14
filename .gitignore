@@ -8,3 +8,11 @@ instance/
 .pytest_cache/
 .venv/
 .DS_Store
+
+# Patient data backups and encryption identities must never be committed.
+backups/
+*.dump
+*.dump.age
+*.agekey
+backup-identity.txt
+.pgpass
