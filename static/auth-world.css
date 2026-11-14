@@ -476,7 +476,7 @@ body.mindcare-auth-route .auth-v2-form-panel::after{
   border-radius:50%;
 }
 body.mindcare-auth-route .auth-v2-form-panel::before{
-  inset:8% -19% 4%;
+  inset:8% 0 4%;
   background:radial-gradient(
     ellipse 53% 47% at 50% 49%,
     rgba(37,76,207,.48) 0%,
@@ -490,7 +490,7 @@ body.mindcare-auth-route .auth-v2-form-panel::before{
   animation:mindcare-blue-bloom 9s ease-in-out infinite;
 }
 body.mindcare-auth-route .auth-v2-form-panel::after{
-  inset:13% -9% 18%;
+  inset:13% 0 18%;
   background:radial-gradient(
     ellipse 34% 34% at 47% 45%,
     rgba(78,111,225,.17) 0%,
@@ -514,12 +514,12 @@ body.mindcare-auth-route .auth-form-inner{
 }
 @media(max-width:780px){
   body.mindcare-auth-route .auth-v2-form-panel::before{
-    inset:0 -10%;
+    inset:0;
     opacity:.56;
     filter:blur(24px);
   }
   body.mindcare-auth-route .auth-v2-form-panel::after{
-    inset:0 -5% 8%;opacity:.42;
+    inset:0 0 8%;opacity:.42;
   }
 }
 @media(prefers-reduced-motion:reduce){
