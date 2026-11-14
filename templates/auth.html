@@ -89,6 +89,8 @@
         {% endif %}
       </div>
 
+      {% if mode == 'login' %}<p class="auth-forgot-link"><a href="{{ url_for('forgot_password') }}">Forgot your password?</a></p>{% endif %}
+
       <div class="auth-form-bottom"><p>{{ 'Already have a MindCare account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in instead →' if mode == 'register' else 'Create your account →' }}</a></p><p class="auth-trust-caption">🔒 Patient information is shared only with caregivers you approve.</p></div>
     </div>
   </div>
