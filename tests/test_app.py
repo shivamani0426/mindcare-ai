@@ -1109,3 +1109,57 @@ def test_milo_patient_guidance_uses_patient_language(client,lang,translated):
     html = client.get("/dashboard").get_data(as_text=True)
     assert translated in html
     assert 'data-milo-language="'+lang+'"' in html
+
+
+def test_public_landing_world_has_original_art_accessible_sections_and_real_entry_links(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "mc-world-hero" in html
+    assert "mc-world-nav" in html
+    assert "MINDCARE" in html
+    assert "landing-world.css" in html and "landing-world.js" in html
+    assert "mindcare-world.svg" in html
+    for anchor in ('id="overview"', 'id="capabilities"', 'id="discover"', 'id="access"'):
+        assert anchor in html
+    for selector in ('role="tablist"', 'role="tabpanel"', 'data-mc-slide="0"',
+                     'data-mc-slide="1"', 'mc-gallery-row-offset', 'mc-world-footer'):
+        assert selector in html
+    assert html.count('class="mc-gallery-card ') == 6
+    assert 'href="/register"' in html
+    assert 'href="/login"' in html
+    assert 'screen images simulated' not in html.lower()
+    assert "simulated" in html.lower()
+    assert "non-diagnostic" in html.lower()
+    # Public landing supplies its own header, sticky nav and footer, with no duplicate.
+    assert 'class="site-header"' not in html
+    assert 'class="site-footer"' not in html
+    assert 'id="milo-roamer"' not in html
+    assert client.get("/static/mindcare-world.svg").status_code == 200
+    assert client.get("/static/landing-world.css").status_code == 200
+    assert client.get("/static/landing-world.js").status_code == 200
+
+
+def test_dark_landing_does_not_replace_private_patient_caregiver_or_auth_ui(client):
+    register(client, "Patient Tia", "world-patient@example.org", "patient")
+    patient = client.get("/dashboard")
+    assert patient.status_code == 200
+    assert b"patient-mode-shortcut" in patient.data
+    assert b'id="milo-roamer"' in patient.data
+    assert b'data-quick-support-button' in patient.data
+    assert b'landing-world.js' not in patient.data
+    assert b'class="site-header"' in patient.data
+    assert client.get("/").location.endswith("/dashboard")
+    logout(client)
+    login_form = client.get("/login")
+    assert login_form.status_code == 200
+    assert b"auth-v2" in login_form.data
+    assert b'class="site-header"' in login_form.data
+    logout_response = client.get("/")
+    assert logout_response.status_code == 200
+    register(client, "Caregiver Ritu", "world-caregiver@example.org", "caregiver")
+    caregiver = client.get("/dashboard")
+    assert caregiver.status_code == 200
+    assert b"caregiver-v2" in caregiver.data
+    assert b"landing-world.css" not in caregiver.data
+    assert b'id="milo-roamer"' not in caregiver.data
