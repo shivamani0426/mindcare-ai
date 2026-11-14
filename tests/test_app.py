@@ -1069,3 +1069,43 @@ def test_account_link_and_new_google_role_selection_never_override_existing_user
         assert User.query.one().invite_code
     logout(client)
     assert client.get("/auth/complete").location.endswith("/login")
+
+
+# Milo is an optional, nonmedical visual guide only, not a backend agent.
+@pytest.mark.parametrize("path", ["/dashboard","/games","/reminders","/family","/help","/settings"])
+def test_milo_is_available_only_on_patient_pages_without_changing_care_data(client, path):
+    register(client, "Patient Milo", "milo-patient@example.org", "patient")
+    response = client.get(path)
+    assert response.status_code == 200
+    assert b'id="milo-roamer"' in response.data
+    assert b'id="milo-character"' in response.data
+    assert b'id="milo-nav-toggle"' in response.data
+    assert b'id="milo-panel"' in response.data
+    assert b'milo.js' in response.data
+    assert b"milo-motion-toggle" in response.data
+    assert b"milo-hide" in response.data
+    assert b"need_help" not in response.data or b"quick_support" in response.data or path != "/dashboard"
+    assert client.get("/static/milo.js").status_code == 200
+    assert client.get("/static/styles.css").status_code == 200
+    with app.app_context():
+        assert WellbeingCheck.query.count() == 0
+    logout(client)
+    register(client, "Caregiver Maya", "milo-caregiver@example.org", "caregiver")
+    assert b'id="milo-roamer"' not in client.get("/dashboard").data
+    assert b'milo.js' not in client.get("/dashboard").data
+    logout(client)
+
+
+@pytest.mark.parametrize("lang,translated",[
+    ("en", "Hi, I&#39;m Milo!"), ("hi","नमस्ते, मैं मिलो हूँ!"),
+    ("kn","ನಮಸ್ಕಾರ, ನಾನು ಮಿಲೋ!")
+])
+def test_milo_patient_guidance_uses_patient_language(client,lang,translated):
+    register(client, "Patient Milo",f"milo-{lang}@example.org","patient")
+    response = client.post("/settings",data={
+        "csrf_token":token(client,"/settings"),"language":lang,
+    },follow_redirects=True)
+    assert response.status_code == 200
+    html = client.get("/dashboard").get_data(as_text=True)
+    assert translated in html
+    assert 'data-milo-language="'+lang+'"' in html
