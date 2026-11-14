@@ -530,3 +530,108 @@ body.mindcare-auth-route .auth-form-inner{
     opacity:.50;
   }
 }
+
+/* Wide blue aura (roughly 78% of the desktop auth stage), with a
+   decorative spider-web corner. CSS only; no login/OTP JS changes. */
+body.mindcare-auth-route .auth-v2 {
+  position:relative;
+  isolation:isolate;
+  overflow:clip;
+}
+body.mindcare-auth-route .auth-v2::before,
+body.mindcare-auth-route .auth-v2::after {
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:0;
+}
+body.mindcare-auth-route .auth-v2::before {
+  width:78%;
+  height:95%;
+  left:-3%;
+  top:2%;
+  background:radial-gradient(
+    ellipse 66% 64% at 49% 50%,
+    rgba(69,124,255,.86) 0%,
+    rgba(42,93,241,.67) 26%,
+    rgba(28,68,192,.40) 47%,
+    rgba(15,33,103,.16) 67%,
+    transparent 83%
+  );
+  filter:blur(26px);
+  opacity:.94;
+  animation:mindcare-large-bloom 11s ease-in-out infinite;
+}
+body.mindcare-auth-route .auth-v2::after {
+  width:62%;
+  height:72%;
+  left:3%;
+  top:12%;
+  background:radial-gradient(
+    ellipse 56% 55% at 52% 46%,
+    rgba(137,181,255,.35) 0%,
+    rgba(72,125,250,.18) 45%,
+    transparent 77%
+  );
+  filter:blur(28px);
+  opacity:.85;
+  animation:mindcare-small-bloom 13s ease-in-out infinite;
+}
+body.mindcare-auth-route .auth-v2-form-panel,
+body.mindcare-auth-route .auth-v2-story {
+  position:relative;
+  z-index:1;
+}
+body.mindcare-auth-route .auth-v2-form-panel::before {
+  background:radial-gradient(
+    ellipse 66% 60% at 50% 49%,
+    rgba(65,120,255,.62) 0%,
+    rgba(33,82,231,.47) 33%,
+    rgba(20,48,143,.20) 60%,
+    transparent 85%
+  );
+  opacity:1;
+}
+body.mindcare-auth-route .auth-v2-story::before {
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  width:clamp(140px,18vw,240px);
+  aspect-ratio:1;
+  background:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIiBmaWxsPSJub25lIj4KICA8ZyBzdHJva2U9InJnYmEoMjIwLDIzNSwyNTUsMC45KSIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC45MiI+CiAgICA8cGF0aCBkPSJNMjM4IDJMMTIwIDEyMCIvPgogICAgPHBhdGggZD0iTTIzOCAyTDIzOCA5OCIvPgogICAgPHBhdGggZD0iTTIzOCAyTDE0MiAyIi8+CiAgICA8cGF0aCBkPSJNMjE2IDI0QzE4OCA0MyAxNjQgNjcgMTQ0IDk1Ii8+CiAgICA8cGF0aCBkPSJNMTk0IDQ2QzE3MCA2MiAxNDkgODQgMTMyIDEwNiIvPgogICAgPHBhdGggZD0iTTE3MiA2OEMxNTEgODIgMTM0IDEwMCAxMTkgMTE5Ii8+CiAgICA8cGF0aCBkPSJNMjM4IDMwQzIwNCAzOCAxNzMgNTUgMTQ3IDgwIi8+CiAgICA8cGF0aCBkPSJNMjM4IDU4QzIxMCA2NCAxODQgNzcgMTYxIDk3Ii8+CiAgICA8cGF0aCBkPSJNMjM4IDg2QzIxNiA5MCAxOTUgMTAwIDE3NiAxMTYiLz4KICAgIDxwYXRoIGQ9Ik0yMTAgMkMyMDIgMzYgMTg1IDY3IDE2MCA5NCIvPgogICAgPHBhdGggZD0iTTE4MiAyQzE3NiAyOSAxNjMgNTQgMTQ1IDc2Ii8+CiAgICA8cGF0aCBkPSJNMTU0IDJDMTUwIDIyIDE0MCA0MSAxMjYgNTgiLz4KICA8L2c+Cjwvc3ZnPgo=") top right / contain no-repeat;
+  pointer-events:none;
+  z-index:1;
+  opacity:.72;
+  filter:drop-shadow(0 0 11px rgba(136,174,255,.34));
+}
+@keyframes mindcare-large-bloom {
+  0%,100%{transform:translate3d(-1%,2%,0) scale(.97);opacity:.82}
+  50%{transform:translate3d(2%,-1%,0) scale(1.07);opacity:1}
+}
+@keyframes mindcare-small-bloom {
+  0%,100%{transform:translate3d(1%,-1%,0) scale(.98);opacity:.72}
+  50%{transform:translate3d(-1%,2%,0) scale(1.09);opacity:.94}
+}
+@media(max-width:780px) {
+  body.mindcare-auth-route .auth-v2::before {
+    width:100%;height:45%;left:0;top:0;
+  }
+  body.mindcare-auth-route .auth-v2::after {
+    width:100%;height:33%;left:0;top:4%;
+  }
+  body.mindcare-auth-route .auth-v2-story::before {
+    width:145px;opacity:.62;
+  }
+}
+@media(max-width:480px) {
+  body.mindcare-auth-route .auth-v2-story::before {width:112px}
+}
+@media(prefers-reduced-motion:reduce) {
+  body.mindcare-auth-route .auth-v2::before,
+  body.mindcare-auth-route .auth-v2::after {
+    animation:none!important;
+    transform:none!important;
+  }
+}
