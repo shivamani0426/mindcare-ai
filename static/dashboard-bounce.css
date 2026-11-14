@@ -1,0 +1,79 @@
+
+/* Interactive bouncing card groups on patient and caregiver dashboards.
+   Functional links, forms and emergency controls keep their native markup. */
+body.mc-app-shell [data-bounce-stack] {
+  position:relative;
+  isolation:isolate;
+}
+body.mc-app-shell [data-bounce-stack] > [data-bounce-card] {
+  position:relative;
+  transition:transform 960ms cubic-bezier(.18,1.36,.32,1),
+             box-shadow 450ms ease, filter 450ms ease;
+  transition-delay:var(--bounce-delay,0ms);
+  transform:translate3d(0,0,0) rotate(0) scale(1);
+  will-change:transform;
+}
+body.mc-app-shell [data-bounce-stack][data-stack-state="stacked"] > [data-bounce-card] {
+  transform:translate3d(var(--bounce-x,0px),var(--bounce-y,0px),0)
+    rotate(var(--bounce-tilt,0deg)) scale(.82);
+  box-shadow:0 20px 70px rgba(0,0,0,.47);
+  filter:saturate(.92);
+}
+body.mc-app-shell [data-bounce-stack][data-stack-state="expanded"] > [data-bounce-card] {
+  z-index:auto!important;
+}
+body.mc-app-shell [data-bounce-stack] .dashboard-stack-open {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  z-index:40;
+  min-height:54px;
+  min-width:215px;
+  max-width:min(90%,360px);
+  padding:13px 19px;
+  color:#172115;
+  background:#d7f36a;
+  border:2px solid #141b13;
+  border-radius:999px;
+  box-shadow:0 12px 38px rgba(0,0,0,.45);
+  font:800 14px/1.5 ui-sans-serif,system-ui,sans-serif;
+  cursor:pointer;
+}
+body.mc-app-shell [data-bounce-stack] .dashboard-stack-open[hidden] {
+  display:none!important;
+}
+body.mc-app-shell [data-bounce-stack] .dashboard-stack-open:focus-visible {
+  outline:3px solid white;outline-offset:4px;
+}
+@media(hover:hover) and (pointer:fine) {
+  body.mc-app-shell [data-bounce-stack][data-stack-state="expanded"] > [data-bounce-card]:hover {
+    transform:translate3d(0,-7px,0) scale(1.015);
+    box-shadow:0 20px 42px rgba(0,0,0,.3);
+  }
+}
+@keyframes mindcare-greeting-float-in {
+  0% {opacity:.86;transform:translate3d(0,20px,0) scale(.985)}
+  100% {opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@media(min-width:900px) and (prefers-reduced-motion:no-preference) {
+  body.mc-app-shell:not(.reduced-motion):not(.high-contrast)
+  :is(.welcome-banner,.caregiver-hero) {
+    animation:mindcare-greeting-float-in 900ms cubic-bezier(.17,1.1,.35,1) both;
+  }
+}
+@media(max-width:899px), (prefers-reduced-motion:reduce) {
+  body.mc-app-shell [data-bounce-stack] > [data-bounce-card] {
+    transition:none!important;transform:none!important;filter:none!important;
+  }
+  body.mc-app-shell [data-bounce-stack] .dashboard-stack-open {display:none!important}
+  body.mc-app-shell :is(.welcome-banner,.caregiver-hero) {animation:none!important}
+}
+body.mc-app-shell.reduced-motion [data-bounce-stack] > [data-bounce-card],
+body.mc-app-shell.simple-view [data-bounce-stack] > [data-bounce-card],
+body.mc-app-shell.high-contrast [data-bounce-stack] > [data-bounce-card] {
+  transition:none!important;transform:none!important;filter:none!important;
+}
+body.mc-app-shell.reduced-motion [data-bounce-stack] .dashboard-stack-open,
+body.mc-app-shell.simple-view [data-bounce-stack] .dashboard-stack-open,
+body.mc-app-shell.high-contrast [data-bounce-stack] .dashboard-stack-open {display:none!important}

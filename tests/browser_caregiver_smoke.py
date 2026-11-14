@@ -98,6 +98,20 @@ try:
         register(caregiver, "caregiver", "Caregiver Maya", "qa-maya-caregiver@example.org")
         verify(caregiver.locator(".caregiver-v2").count() == 1,
                "Caregiver 2.0 overview loads")
+        verify(caregiver.locator("[data-bounce-stack]").count() >= 2,
+               "Caregiver dashboard has centered card stack groups")
+        caregiver.emulate_media(reduced_motion="no-preference")
+        caregiver.reload()
+        caregiver.wait_for_function("""() => document.querySelector('.caregiver-stats')?.dataset.stackState === 'stacked'""")
+        verify(caregiver.locator(".caregiver-stats .dashboard-stack-open").is_visible(),
+               "Caregiver overview cards display accessible expand button")
+        caregiver.locator(".caregiver-stats .dashboard-stack-open").click()
+        verify(caregiver.locator(".caregiver-stats").get_attribute("data-stack-state") == "expanded",
+               "Caregiver cards fly back to their original positions")
+        caregiver.emulate_media(reduced_motion="reduce")
+        caregiver.reload()
+        verify(caregiver.locator(".caregiver-stats").get_attribute("data-stack-state") != "stacked",
+               "Reduced-motion caregivers get the original card layout")
 
         verify("mc-app-shell" in caregiver.locator("body").get_attribute("class"),
                "Real caregiver dashboard uses the new design system")
