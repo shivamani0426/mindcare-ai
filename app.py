@@ -14,6 +14,9 @@ import random
 import re
 import secrets
 import json
+import smtplib
+import ssl
+from email.message import EmailMessage
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
@@ -105,6 +108,17 @@ class AuthAttempt(db.Model):
     bucket_hash = db.Column(db.String(64), primary_key=True)
     attempts = db.Column(db.Integer, nullable=False, default=0)
     last_failure_epoch = db.Column(db.BigInteger, nullable=False)
+
+
+class PasswordRecovery(db.Model):
+    """Short-lived, single-use codes; raw codes are never persisted."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    code_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    consumed_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
 
 class ExternalIdentity(db.Model):
@@ -450,6 +464,64 @@ def _auth_rate_limited(retry_after):
     return response
 
 
+def _password_session_stamp(user):
+    """Bound to the password hash so a reset invalidates other login sessions."""
+    key = app.config["SECRET_KEY"].encode("utf-8")
+    return hmac.new(key, (str(user.id) + ":" + user.password_hash).encode(),
+                    hashlib.sha256).hexdigest()
+
+
+def _sign_in_user(user):
+    session.clear()
+    session["uid"] = user.id
+    session["auth_stamp"] = _password_session_stamp(user)
+    session.permanent = True
+
+
+def _recovery_code_hash(code):
+    return hmac.new(app.config["SECRET_KEY"].encode("utf-8"),
+                    ("recovery:" + code).encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _recovery_mail_ready():
+    return all(os.getenv(key) for key in
+               ("SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD",
+                "SMTP_FROM"))
+
+
+def _send_recovery_mail(destination, code):
+    """Require SMTP TLS; never log message contents, code or credentials."""
+    if not _recovery_mail_ready():
+        return False
+    msg = EmailMessage()
+    msg["From"] = os.environ["SMTP_FROM"]
+    msg["To"] = destination
+    msg["Subject"] = "MindCare password recovery code"
+    msg.set_content(
+        "A password reset was requested for your MindCare account.\\n\\n"
+        "Recovery code: " + code + "\\n\\n"
+        "Enter this code at the MindCare Reset password page. "
+        "It expires in 15 minutes and works only once. "
+        "If you did not request this, ignore this email.\\n")
+    port = int(os.environ["SMTP_PORT"])
+    if port not in (465, 587):
+        raise ValueError("SMTP must use port 465 (TLS) or 587 (STARTTLS)")
+    context = ssl.create_default_context()
+    if port == 465:
+        with smtplib.SMTP_SSL(os.environ["SMTP_HOST"], port, timeout=10,
+                              context=context) as smtp:
+            smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+            smtp.send_message(msg)
+    else:
+        with smtplib.SMTP(os.environ["SMTP_HOST"], port, timeout=10) as smtp:
+            smtp.ehlo()
+            smtp.starttls(context=context)
+            smtp.ehlo()
+            smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+            smtp.send_message(msg)
+    return True
+
+
 def current_user():
     return getattr(g, "user", None)
 
@@ -578,6 +650,12 @@ def reminders_for(patient_id):
 @app.before_request
 def load_user_and_csrf():
     g.user = db.session.get(User, session["uid"]) if isinstance(session.get("uid"), int) else None
+    if g.user and not hmac.compare_digest(
+            str(session.get("auth_stamp", "")), _password_session_stamp(g.user)):
+        # Stale sessions, including sessions from before this security rollout,
+        # must authenticate again after deployment or password recovery.
+        session.clear()
+        g.user = None
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_urlsafe(32)
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -656,9 +734,7 @@ AUTH_PENDING_SECONDS = 600
 
 
 def external_login_session(user):
-    session.clear()
-    session["uid"] = user.id
-    session.permanent = True
+    _sign_in_user(user)
 
 
 def make_phone_account_email():
@@ -915,9 +991,7 @@ def register():
                         invite_code=invite, password_hash=generate_password_hash(password))
             db.session.add(user)
             db.session.commit()
-            session.clear()
-            session["uid"] = user.id
-            session.permanent = True
+            _sign_in_user(user)
             flash("Your MindCare space is ready!", "success")
             return redirect(url_for("dashboard"))
     return render_template("auth.html", mode="register")
@@ -940,14 +1014,104 @@ def login():
             AuthAttempt.query.filter(AuthAttempt.bucket_hash.in_(
                 [buckets[0][0], buckets[2][0]])).delete(synchronize_session=False)
             db.session.commit()
-            session.clear()
-            session["uid"] = user.id
-            session.permanent = True
+            _sign_in_user(user)
             flash("Welcome back!", "success")
             return redirect(url_for("dashboard"))
         _record_auth_attempts(buckets, LOGIN_WINDOW_SECONDS)
         flash("Email or password was not recognised.", "error")
     return render_template("auth.html", mode="login")
+
+
+
+RECOVERY_EXPIRY_MINUTES = 15
+RECOVERY_REQUEST_LIMIT = 4
+RECOVERY_VERIFY_LIMIT = 10
+RECOVERY_WINDOW_SECONDS = 3600
+RECOVERY_GENERIC_MESSAGE = (
+    "If this address belongs to an email/password account and recovery "
+    "is enabled, a recovery code will be sent. Check your inbox."
+)
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()[:180]
+        buckets = (
+            (_auth_bucket("recovery-request-ip", _auth_client_ip()), RECOVERY_REQUEST_LIMIT),
+            (_auth_bucket("recovery-request-account", email), RECOVERY_REQUEST_LIMIT),
+        )
+        delay = _auth_retry_after(buckets, RECOVERY_WINDOW_SECONDS)
+        if delay:
+            return _auth_rate_limited(delay)
+        _record_auth_attempts(buckets, RECOVERY_WINDOW_SECONDS)
+        # Never reveal existence, provider or delivery status. Internal phone
+        # identities cannot receive an email recovery code.
+        user = User.query.filter(func.lower(User.email) == email).first()
+        if (user and not email.endswith("@internal.mindcare.invalid")
+                and _recovery_mail_ready()):
+            code = secrets.token_urlsafe(32)
+            db.session.add(PasswordRecovery(
+                user_id=user.id, code_hash=_recovery_code_hash(code),
+                expires_at=now_utc() + timedelta(minutes=RECOVERY_EXPIRY_MINUTES)))
+            db.session.commit()
+            try:
+                _send_recovery_mail(email, code)
+            except (OSError, smtplib.SMTPException, ValueError) as exc:
+                # Do not leak the code, address or SMTP credentials to logs.
+                app.logger.warning("Recovery mail transport failed: %s",
+                                   type(exc).__name__)
+        flash(RECOVERY_GENERIC_MESSAGE, "info")
+        return redirect(url_for("reset_password"))
+    return render_template("password_recovery.html", mode="request",
+                           configured=_recovery_mail_ready())
+
+
+@app.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()[:180]
+        code = request.form.get("code", "").strip()
+        new_password = request.form.get("password", "")
+        buckets = (
+            (_auth_bucket("recovery-verify-ip", _auth_client_ip()), RECOVERY_VERIFY_LIMIT),
+            (_auth_bucket("recovery-verify-account", email), RECOVERY_VERIFY_LIMIT),
+        )
+        delay = _auth_retry_after(buckets, RECOVERY_WINDOW_SECONDS)
+        if delay:
+            return _auth_rate_limited(delay)
+        _record_auth_attempts(buckets, RECOVERY_WINDOW_SECONDS)
+        if not 10 <= len(new_password) <= 128:
+            flash("Choose a new password between 10 and 128 characters.", "error")
+        elif not re.fullmatch(r"[^\\s@]+@[^\\s@]+\\.[^\\s@]+", email) or len(code) != 43:
+            flash("Invalid or expired recovery details. Request a new code.", "error")
+        else:
+            user = User.query.filter(func.lower(User.email) == email).first()
+            recovery = (PasswordRecovery.query.filter_by(
+                code_hash=_recovery_code_hash(code), user_id=user.id).first()
+                if user else None)
+            if recovery:
+                expiry = recovery.expires_at
+                expiry = expiry.replace(tzinfo=timezone.utc) if expiry.tzinfo is None else expiry
+                if recovery.consumed_at is None and expiry > now_utc():
+                    used = (db.session.query(PasswordRecovery)
+                        .filter(PasswordRecovery.id == recovery.id,
+                                PasswordRecovery.consumed_at.is_(None),
+                                PasswordRecovery.expires_at > now_utc())
+                        .update({"consumed_at": now_utc()}, synchronize_session=False))
+                    if used == 1:
+                        user.password_hash = generate_password_hash(new_password)
+                        (PasswordRecovery.query.filter(
+                            PasswordRecovery.user_id == user.id,
+                            PasswordRecovery.consumed_at.is_(None))
+                            .update({"consumed_at": now_utc()}, synchronize_session=False))
+                        db.session.commit()
+                        session.clear()
+                        flash("Password updated. Sign in again on all devices.", "success")
+                        return redirect(url_for("login"))
+            flash("Invalid or expired recovery details. Request a new code.", "error")
+    return render_template("password_recovery.html", mode="reset",
+                           configured=_recovery_mail_ready())
 
 
 @app.route("/logout", methods=["POST"])
