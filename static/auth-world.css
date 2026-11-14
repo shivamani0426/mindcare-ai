@@ -459,3 +459,74 @@ body.mindcare-auth-route :is(a,button):focus-visible{
     transition-duration:.01ms!important
   }
 }
+
+
+/* MindCare blue bloom — a quiet, Gemini-like animated atmospheric glow.
+   Local CSS only: no network requests, particles, scripts, or form overlays. */
+body.mindcare-auth-route .auth-v2-form-panel{
+  position:relative;
+  isolation:isolate;
+}
+body.mindcare-auth-route .auth-v2-form-panel::before,
+body.mindcare-auth-route .auth-v2-form-panel::after{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+  z-index:0;
+  border-radius:50%;
+}
+body.mindcare-auth-route .auth-v2-form-panel::before{
+  inset:8% 0 4%;
+  background:radial-gradient(
+    ellipse 53% 47% at 50% 49%,
+    rgba(37,76,207,.48) 0%,
+    rgba(28,60,170,.30) 34%,
+    rgba(20,38,108,.15) 57%,
+    rgba(10,10,10,0) 83%
+  );
+  filter:blur(19px);
+  opacity:.86;
+  transform:scale(.96);
+  animation:mindcare-blue-bloom 9s ease-in-out infinite;
+}
+body.mindcare-auth-route .auth-v2-form-panel::after{
+  inset:13% 0 18%;
+  background:radial-gradient(
+    ellipse 34% 34% at 47% 45%,
+    rgba(78,111,225,.17) 0%,
+    rgba(41,81,175,.07) 49%,
+    transparent 80%
+  );
+  filter:blur(25px);
+  animation:mindcare-blue-bloom-secondary 12s ease-in-out infinite;
+}
+body.mindcare-auth-route .auth-form-inner{
+  position:relative;
+  z-index:1;
+}
+@keyframes mindcare-blue-bloom{
+  0%,100%{transform:translate3d(-1%,2%,0) scale(.93);opacity:.64}
+  50%{transform:translate3d(2%,-2%,0) scale(1.09);opacity:1}
+}
+@keyframes mindcare-blue-bloom-secondary{
+  0%,100%{transform:translate3d(2%,-2%,0) scale(1);opacity:.62}
+  50%{transform:translate3d(-3%,3%,0) scale(1.12);opacity:.98}
+}
+@media(max-width:780px){
+  body.mindcare-auth-route .auth-v2-form-panel::before{
+    inset:0;
+    opacity:.56;
+    filter:blur(24px);
+  }
+  body.mindcare-auth-route .auth-v2-form-panel::after{
+    inset:0 0 8%;opacity:.42;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.mindcare-auth-route .auth-v2-form-panel::before,
+  body.mindcare-auth-route .auth-v2-form-panel::after{
+    animation:none!important;
+    transform:none!important;
+    opacity:.50;
+  }
+}
