@@ -34,6 +34,12 @@
   let hidden = false;
   let paused = false;
   let hovering = false;
+  const web = document.getElementById('milo-web-overlay');
+  const thread = document.getElementById('milo-web-thread');
+  const anchorDot = document.getElementById('milo-web-anchor');
+  let swingAnimation = null;
+  let webFrame = null;
+  let webAnchor = null;
 
   function readPreference(key) {
     try { return window.localStorage.getItem(key) === '1'; } catch (_) { return false; }
@@ -59,9 +65,25 @@
   function clamp(value, lower, upper) {
     return Math.max(lower, Math.min(upper, value));
   }
+  function retractWeb() {
+    if (webFrame !== null) window.cancelAnimationFrame(webFrame);
+    webFrame = null;
+    webAnchor = null;
+    web?.classList.remove('is-visible');
+    roamer.classList.remove('milo-swinging');
+  }
   function stopTimer() {
     window.clearTimeout(timer);
     timer = null;
+    if (swingAnimation) {
+      const rect = roamer.getBoundingClientRect();
+      swingAnimation.cancel();
+      swingAnimation = null;
+      roamer.style.transition = 'none';
+      place(rect.left, rect.top, 0);
+      roamer.style.removeProperty('transition');
+    }
+    retractWeb();
     roamer.classList.remove('milo-walking');
     walking = false;
   }
@@ -74,6 +96,61 @@
     walking = seconds > 0;
     roamer.classList.toggle('milo-walking', walking);
     roamer.dataset.miloState = walking ? 'walking' : 'resting';
+    if (!walking) roamer.dataset.miloMotion = 'rest';
+  }
+
+  function drawWeb() {
+    if (!webAnchor || !web || !thread || !anchorDot) return;
+    const rect = roamer.getBoundingClientRect();
+    const footX = rect.left + rect.width * .78;
+    const footY = rect.top + rect.height * .52;
+    thread.setAttribute('x1', String(webAnchor.x));
+    thread.setAttribute('y1', String(webAnchor.y));
+    thread.setAttribute('x2', String(footX));
+    thread.setAttribute('y2', String(footY));
+    anchorDot.setAttribute('cx', String(webAnchor.x));
+    anchorDot.setAttribute('cy', String(webAnchor.y));
+    webFrame = window.requestAnimationFrame(drawWeb);
+  }
+  function swingTo(nx, ny, seconds) {
+    // Three-position curved arc; the visible thread tracks Milo on every frame.
+    // All selected destinations already pass the existing collision checks.
+    const limit = bounds();
+    const tx = clamp(Math.round(nx), 10, limit.maxX);
+    const ty = clamp(Math.round(ny), 75, limit.maxY);
+    if (!roamer.animate || !web || !thread || !anchorDot) {
+      place(tx, ty, seconds);
+      return;
+    }
+    const originX = x, originY = y;
+    const midX = (originX + tx) / 2;
+    const midY = clamp((originY + ty) / 2 - Math.min(105, Math.abs(tx-originX)*.14 + 28),75,limit.maxY);
+    const duration = Math.round(seconds * 1000);
+    webAnchor = {
+      x: clamp(Math.round((originX+tx)/2 + BOX_W*.48),12,window.innerWidth-12),
+      y: clamp(Math.round(Math.min(originY, ty, midY) - 55),20,Math.max(20,window.innerHeight*.24))
+    };
+    web.classList.add('is-visible');
+    roamer.classList.add('milo-swinging','milo-walking');
+    roamer.dataset.miloState = 'walking'; // stable for existing end-user tests
+    roamer.dataset.miloMotion = 'web-swing';
+    walking = true;
+    roamer.style.transition = 'none';
+    swingAnimation = roamer.animate([
+      {transform: 'translate3d('+originX+'px,'+originY+'px,0)',offset:0},
+      {transform: 'translate3d('+midX+'px,'+midY+'px,0) rotate(-8deg)',offset:.5},
+      {transform: 'translate3d('+tx+'px,'+ty+'px,0)',offset:1}
+    ], {duration,easing:'ease-in-out',fill:'forwards'});
+    drawWeb();
+    swingAnimation.onfinish = () => {
+      if (!swingAnimation) return;
+      swingAnimation.cancel();
+      swingAnimation = null;
+      place(tx,ty,0);
+      roamer.style.removeProperty('transition');
+      roamer.dataset.miloMotion = 'rest';
+      retractWeb();
+    };
   }
 
   function importantTargets() {
@@ -128,17 +205,21 @@
       if (!canMove()) {stopTimer(); return;}
       const target = chooseTarget();
       if (!target) {planNext(4200);return;}
-      // Slow steps (70–115 px/s), then a clear resting pause.
+      // A gentle swinging arc with a visible decorative web, followed by rest.
       const distance = Math.hypot(target.cx-x,target.cy-y);
-      const seconds = clamp(distance/100,3.2,7.7);
+      const seconds = clamp(distance/145,3.2,6.6);
       roamer.classList.toggle('milo-facing-left',target.cx < x);
-      place(target.cx,target.cy,seconds);
+      swingTo(target.cx,target.cy,seconds);
       timer = window.setTimeout(() => {
+        if (swingAnimation) {
+          const active = swingAnimation;
+          active.finish();
+        }
         roamer.classList.remove('milo-walking');
         walking = false;
         roamer.dataset.miloState = 'resting';
         planNext(5500 + Math.random()*4200);
-      }, seconds*1000 + 100);
+      }, seconds*1000 + 140);
     }, delay);
   }
   function dock() {
