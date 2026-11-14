@@ -1058,6 +1058,11 @@ def forgot_password():
             try:
                 _send_recovery_mail(email, code)
             except (OSError, smtplib.SMTPException, ValueError) as exc:
+                # Failed-delivery codes must not remain usable.
+                PasswordRecovery.query.filter_by(
+                    code_hash=_recovery_code_hash(code), consumed_at=None
+                ).update({"consumed_at": now_utc()}, synchronize_session=False)
+                db.session.commit()
                 # Do not leak the code, address or SMTP credentials to logs.
                 app.logger.warning("Recovery mail transport failed: %s",
                                    type(exc).__name__)
