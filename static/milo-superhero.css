@@ -1,0 +1,106 @@
+/* Original superhero-penguin Milo. Friendly red-and-blue web-inspired costume,
+   no licensed logos, external images, tracking or animation libraries. */
+.milo-roamer { z-index:49; }
+.milo-creature {
+  filter:drop-shadow(0 5px 7px rgba(3,18,44,.23));
+}
+.milo-hood {
+  position:absolute;z-index:6;top:3px;left:14px;width:51px;height:52px;
+  border-radius:49% 49% 43% 43%;
+  border:3px solid #0d254c;
+  background:
+    linear-gradient(45deg,transparent 47%,rgba(13,41,86,.37) 48%,rgba(13,41,86,.37) 50%,transparent 51%) 0 0/18px 18px,
+    linear-gradient(-45deg,transparent 47%,rgba(13,41,86,.26) 48%,rgba(13,41,86,.26) 50%,transparent 51%) 0 0/18px 18px,
+    radial-gradient(circle at 32% 24%,#ff8380,#e43d52 65%,#bd253d);
+  box-shadow:inset -5px -3px rgba(64,14,47,.22),0 2px 4px #09132922;
+}
+.milo-mask-eye {
+  position:absolute;top:18px;width:17px;height:16px;
+  border:3px solid #10244b;background:#fbffff;
+  border-radius:78% 15% 76% 25%;
+  transform:rotate(-17deg);
+  box-shadow:inset 0 0 2px #a7daff;
+}
+.milo-mask-eye.left{left:5px}
+.milo-mask-eye.right{right:5px;transform:scaleX(-1) rotate(-17deg)}
+.milo-beak {
+  position:absolute;bottom:4px;left:21px;width:8px;height:6px;
+  border-radius:50% 50% 65% 65%;background:#fbb44c;
+  box-shadow:0 1px #d5812c;
+}
+.milo-roamer .milo-body {
+  z-index:4;top:36px;left:8px;width:62px;height:53px;
+  border:3px solid #132c5a;border-radius:45% 45% 46% 46%;
+  background:
+    linear-gradient(90deg,transparent 44%,rgba(6,33,78,.28) 47%,rgba(6,33,78,.28) 53%,transparent 56%),
+    linear-gradient(145deg,#3889dd 0%,#1f5eb1 56%,#183a7b 100%);
+  box-shadow:inset -5px -6px #0e387537,0 4px 10px #0003;
+}
+.milo-roamer .milo-belly {
+  left:16px;bottom:4px;width:26px;height:31px;
+  border-radius:50%;font-size:13px;
+  color:#ed4459;
+  background:#ecf8ff;border:1px solid #bfddfa;
+}
+.milo-roamer .milo-arm {
+  z-index:3;top:48px;height:32px;width:18px;
+  background:linear-gradient(#e8455c 0 32%,#2567bd 33% 100%);
+  border:2px solid #112c5b;
+}
+.milo-roamer .milo-arm-left{left:0;transform:rotate(32deg)}
+.milo-roamer .milo-arm-right{right:0;transform:rotate(-32deg)}
+.milo-web-shooter {
+  position:absolute;z-index:6;width:9px;height:8px;
+  border-radius:45%;background:#e4f5ff;border:2px solid #143766;
+  top:69px;
+}
+.milo-web-shooter.left{left:1px}
+.milo-web-shooter.right{right:1px}
+.milo-roamer .milo-foot {
+  z-index:5;bottom:0;width:25px;height:13px;
+  border:2px solid #172b53;background:#f1a744;border-radius:46% 52% 47% 50%;
+}
+.milo-roamer .milo-character-name {
+  background:#f3f8ff;color:#173c7b;border-color:#a7c9fc;
+}
+.milo-roamer.milo-swinging .milo-creature {
+  animation:milo-penguin-swing .92s ease-in-out infinite alternate;
+  transform-origin:50% 5%;
+}
+.milo-roamer.milo-swinging .milo-arm-right {animation:milo-shoot-arm .8s ease-in-out infinite alternate}
+.milo-roamer.milo-swinging .milo-shadow{opacity:.3}
+.milo-roamer.milo-swinging .milo-foot-left {animation:milo-swing-feet .8s ease-in-out infinite alternate}
+.milo-roamer.milo-swinging .milo-foot-right {animation:milo-swing-feet .8s ease-in-out infinite alternate-reverse}
+.milo-web-overlay {
+  position:fixed;left:0;top:0;width:100vw;height:100dvh;
+  pointer-events:none;z-index:48;overflow:visible;opacity:0;
+  transition:opacity .22s ease;
+}
+.milo-web-overlay.is-visible {opacity:1}
+.milo-web-overlay line {
+  stroke:#b9dcff;stroke-width:2;stroke-linecap:round;
+  filter:drop-shadow(0 0 2px #3479cf);
+  stroke-dasharray:4 5;
+}
+.milo-web-overlay .milo-web-anchor {
+  fill:#e5f5ff;stroke:#528de1;stroke-width:1.5;
+}
+@keyframes milo-penguin-swing {
+  0%{transform:rotate(-15deg) translateY(0)}
+  100%{transform:rotate(15deg) translateY(-6px)}
+}
+@keyframes milo-shoot-arm {
+  from{transform:rotate(-48deg)}to{transform:rotate(-94deg)}
+}
+@keyframes milo-swing-feet {
+  from{transform:rotate(-18deg)}to{transform:rotate(28deg)}
+}
+@media(prefers-reduced-motion:reduce) {
+  .milo-web-overlay {display:none!important;transition:none!important}
+  .milo-roamer.milo-swinging * {animation:none!important}
+}
+body.reduced-motion .milo-web-overlay,
+body.reduced-motion .milo-roamer.milo-swinging * {
+  animation:none!important;transition:none!important;
+}
+body.reduced-motion .milo-web-overlay {display:none!important}
