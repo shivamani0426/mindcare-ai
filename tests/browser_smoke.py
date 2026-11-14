@@ -183,6 +183,19 @@ try:
                "Bright decorative bloom cannot block auth inputs")
         verify(expanded["motion"] == "none",
                "Expanded bloom respects reduced motion")
+        page.emulate_media(reduced_motion="no-preference")
+        animated_aura = page.locator(".auth-v2").evaluate("""(el) => ({
+            name: getComputedStyle(el, '::before').animationName,
+            duration: getComputedStyle(el, '::before').animationDuration,
+            pointerEvents: getComputedStyle(el, '::before').pointerEvents
+        })""")
+        verify(animated_aura["name"] == "mindcare-aura-expand" and
+               animated_aura["duration"] == "22s",
+               "Blue aura expands continuously over a slow 22-second cycle")
+        verify(animated_aura["pointerEvents"] == "none",
+               "Expanding blue animation cannot block the login form")
+        page.emulate_media(reduced_motion="reduce")
+
         web_corner = page.locator(".auth-v2-story").evaluate("""(el) => ({
             background: getComputedStyle(el, '::before').backgroundImage,
             pointerEvents: getComputedStyle(el, '::before').pointerEvents
