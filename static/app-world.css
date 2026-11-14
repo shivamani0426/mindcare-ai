@@ -1,0 +1,774 @@
+/* ==========================================================================
+   MINDCARE WORLD / APP EDITION
+   Original dark arcade-inspired authenticated interface, November 2026.
+   Layout & interaction inspiration only; no third-party branding/assets.
+   All rules are scoped to authenticated app pages. Care data, handlers,
+   endpoints, patient consent, voice, calling and emergency 112 are untouched.
+   ========================================================================== */
+body.mc-app-shell {
+  --ink: #f5f5f3;
+  --text: #d4d8db;
+  --muted: #a6adb2;
+  --paper: #0a0a0a;
+  --white: #191b1e;
+  --green: #d7f36a;
+  --green-deep: #c3e05a;
+  --mint: #1a3b31;
+  --peach: #3c2c29;
+  --lavender: #342e48;
+  --lemon: #443924;
+  --sky: #27364b;
+  --pink: #432e3b;
+  --border: #383b3e;
+  --shadow: 0 20px 62px rgba(0,0,0,.34);
+  background: #0a0a0a;
+  background-image: repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(255,255,255,.025) 3px,rgba(255,255,255,.025) 4px);
+  color: #f8f8f7;
+  font-size: 16px;
+  line-height: 1.6;
+}
+body.mc-app-shell .site-shell {background:transparent;min-height:100vh}
+body.mc-app-shell :is(h1,h2,h3,h4){color:#f8f8f7}
+body.mc-app-shell p {color:#c6c9cb}
+body.mc-app-shell .muted {color:#abb2b6}
+body.mc-app-shell .site-header{
+  background:rgba(10,10,10,.95);border-bottom:1px solid #373838;
+  box-shadow:0 6px 25px rgba(0,0,0,.25);backdrop-filter:blur(20px);
+}
+body.mc-app-shell .nav-container{
+  max-width:1480px;min-height:78px;gap:clamp(13px,2vw,34px);
+  padding-left:clamp(16px,3vw,48px);padding-right:clamp(16px,3vw,48px)
+}
+body.mc-app-shell .brand{
+  color:white;font-family:"Lucida Console","Courier New",monospace;
+  font-size:clamp(16px,1.6vw,23px);font-weight:900;letter-spacing:-.07em
+}
+body.mc-app-shell .brand-mark{
+  color:#0a0a0a;background:#fff;border-radius:12px;
+  width:42px;height:42px;font-size:23px
+}
+body.mc-app-shell .brand-ai{color:#d7f36a}
+body.mc-app-shell .brand small{
+  color:#8d9295;letter-spacing:1.5px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:9px
+}
+body.mc-app-shell .main-nav{gap:clamp(10px,1.75vw,25px)}
+body.mc-app-shell .main-nav a{
+  color:#c4c4c4;font-weight:700;font-size:13px;
+  padding:9px 1px;border-bottom:2px solid transparent;
+  transition:border-color .16s,color .16s
+}
+body.mc-app-shell .main-nav a:hover{color:#fff}
+body.mc-app-shell .main-nav a.active{
+  color:#d7f36a;border-bottom-color:#d7f36a
+}
+body.mc-app-shell .nav-right{gap:clamp(7px,1vw,14px)}
+body.mc-app-shell .mc-app-role-tag{
+  border:1px solid #505252;color:#e5e5e5;
+  background:#171819;border-radius:100px;
+  font:800 9px/1.4 "Lucida Console","Courier New",monospace;
+  letter-spacing:.035em;white-space:nowrap;padding:10px 13px
+}
+body.mc-app-shell .nav-logout{color:#ececec;font-size:12px;padding:12px 0}
+body.mc-app-shell .nav-logout:hover{color:#ffbfad}
+body.mc-app-shell .font-toggle{
+  border-radius:50%;background:#1d2020;color:#fff;
+  border:1px solid #515558;min-width:40px;min-height:40px
+}
+body.mc-app-shell .user-pill{
+  color:#fff;border:1px solid #454848;background:#1c1f20;
+  border-radius:99px;padding:5px 10px 5px 5px;
+}
+body.mc-app-shell .user-pill .avatar-mini{
+  background:#d7f36a;color:#0a0a0a;border-radius:50%
+}
+body.mc-app-shell .voice-replay{
+  border-radius:99px;background:#1e2623;border:1px solid #44524b;color:#edf8e9
+}
+body.mc-app-shell .milo-nav-toggle{
+  color:#0c2718;background:#d7f36a;border:1px solid #d7f36a;border-radius:99px
+}
+body.mc-app-shell .main-container{
+  max-width:1370px;padding-left:clamp(16px,3.1vw,46px);
+  padding-right:clamp(16px,3.1vw,46px);min-height:60vh
+}
+body.mc-app-shell .mc-app-breadcrumb{
+  display:flex;gap:9px;align-items:center;
+  padding:24px 0 18px;color:#a4a7ac;
+  font:800 10px/1.5 "Lucida Console","Courier New",monospace;
+  letter-spacing:.065em;text-transform:uppercase
+}
+body.mc-app-shell .mc-app-breadcrumb>span:first-child{color:#d7f36a}
+body.mc-app-shell .mc-app-breadcrumb-right{margin-left:auto;color:#80878b;letter-spacing:.07em}
+body.mc-app-shell .site-footer{
+  background:#090909;border-top:1px solid #343434;margin-top:100px
+}
+body.mc-app-shell .site-footer .footer-inner{max-width:1370px}
+body.mc-app-shell .site-footer :is(p,span){color:#a5a9ac}
+body.mc-app-shell .site-footer .footer-brand{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  font-weight:900;letter-spacing:-.07em
+}
+body.mc-app-shell .eyebrow{
+  color:#d7f36a;font:800 10px/1.5 "Lucida Console","Courier New",monospace;
+  letter-spacing:.09em;text-transform:uppercase
+}
+body.mc-app-shell .eyebrow-dot{background:#d7f36a}
+body.mc-app-shell .section-heading h2,
+body.mc-app-shell .page-heading h1,
+body.mc-app-shell .caregiver-section-heading h2{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  font-weight:900;letter-spacing:-.058em;line-height:1.16
+}
+body.mc-app-shell .page-heading h1{
+  font-size:clamp(31px,4.8vw,59px);max-width:920px;margin:14px 0 20px
+}
+body.mc-app-shell .page-heading{
+  padding:38px clamp(22px,4vw,54px) 42px;
+  margin:10px 0 28px;position:relative;isolation:isolate;overflow:hidden;
+  border:1px solid #34353b;border-radius:30px;
+  background:radial-gradient(circle at 89% 16%,#4c3d70 0,transparent 37%),
+    radial-gradient(circle at 65% 100%,#263f66 0,transparent 40%),#11111a
+}
+body.mc-app-shell .page-heading::after{
+  content:"✳";position:absolute;z-index:-1;right:clamp(12px,6vw,87px);top:-45px;
+  font-size:clamp(150px,21vw,310px);font-family:monospace;
+  color:rgba(233,202,255,.14);line-height:1;pointer-events:none
+}
+body.mc-app-shell .page-heading p{
+  color:#e1e0ed;max-width:790px;font-size:clamp(15px,1.6vw,18px);
+  line-height:1.7;margin-bottom:0
+}
+body.mc-app-shell .back-link{color:#d7f36a;font-weight:750}
+body.mc-app-shell :is(.button,.mc-app-shell .button-primary) {
+  border-radius:99px;min-height:48px;transition:transform .18s ease,background .18s ease,box-shadow .18s ease
+}
+body.mc-app-shell .button-primary{
+  background:#fff;color:#121416;border:1px solid #fff;
+  box-shadow:0 6px 22px rgba(0,0,0,.13)
+}
+body.mc-app-shell .button-primary:hover{background:#e9e9e9;color:#0a0a0a}
+body.mc-app-shell .button-outline{
+  background:#1d1f22;color:#fff;border-color:#666;
+  box-shadow:none
+}
+body.mc-app-shell .button-outline:hover{background:#303236;color:#fff;border-color:#d0d0d0}
+body.mc-app-shell .button-white{background:#fff;color:#0a0a0a}
+body.mc-app-shell :is(.button-danger,.sos-callout .button-danger){
+  color:#fff;background:#a5262c;border-color:#c2383c
+}
+body.mc-app-shell .button-danger:hover{background:#8b1c23}
+body.mc-app-shell .whatsapp-open-button{
+  color:#fff;background:#277e60;border-color:#2d9674
+}
+body.mc-app-shell :is(.button-lg,.patient-support-action){min-height:58px}
+body.mc-app-shell :is(.panel,.stat-card,.connection-card,.caregiver-support-section,
+.caregiver-support-item,.caregiver-connect-panel,.caregiver-guidance-panel,
+.caregiver-patient-card,.caregiver-detail-wellbeing,.caregiver-detail-heading,
+.caregiver-recent-games,.caregiver-detail-empty,.family-card,
+.catalog-card,.reminder-row,.contact-row,.patient-selector){
+  color:#f8f8f7;background:#191b1e;border:1px solid #3c3f41;
+  box-shadow:0 12px 39px rgba(0,0,0,.17);
+  border-radius:22px
+}
+body.mc-app-shell :is(.panel,.stat-card,.connection-card,.caregiver-support-section,
+.caregiver-support-item,.caregiver-connect-panel,.caregiver-guidance-panel,
+.caregiver-patient-card,.caregiver-detail-wellbeing,.caregiver-recent-games,
+.family-card,.catalog-card,.reminder-row,.contact-row) :is(h2,h3,h4,strong,b){color:#f8f8f7}
+body.mc-app-shell :is(.panel,.stat-card,.connection-card,.caregiver-support-section,
+.caregiver-support-item,.caregiver-connect-panel,.caregiver-guidance-panel,
+.caregiver-patient-card,.caregiver-detail-wellbeing,.caregiver-recent-games,
+.family-card,.catalog-card,.reminder-row,.contact-row) :is(p,small){color:#c3c7ca}
+body.mc-app-shell :is(.panel,.stat-card,.connection-card,.caregiver-support-section,
+.caregiver-support-item,.caregiver-connect-panel,.caregiver-guidance-panel,
+.caregiver-patient-card,.caregiver-detail-wellbeing,.caregiver-recent-games,
+.family-card,.catalog-card,.reminder-row,.contact-row) .eyebrow{color:#d7f36a}
+body.mc-app-shell .panel{padding:clamp(19px,2.6vw,31px)}
+body.mc-app-shell .clinical-note{
+  color:#bac0be;background:#222629;border:1px solid #383d40;
+  border-radius:13px;padding:10px 12px;font-size:12px;line-height:1.6
+}
+body.mc-app-shell .soft-label,
+body.mc-app-shell .insight-tag,
+body.mc-app-shell .level-pill{
+  color:#d7f36a;background:#262b21;border:1px solid #67764a;
+  border-radius:99px;font-weight:850
+}
+body.mc-app-shell :is(.input-label,.caregiver-connect-form label){color:#e4e7e4}
+body.mc-app-shell :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  color:#142018;background:#f7f8f5;border:1.5px solid #a0aba3;
+  border-radius:13px;accent-color:#d7f36a
+}
+body.mc-app-shell :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus{
+  outline:3px solid #d7f36a;outline-offset:2px;box-shadow:none
+}
+body.mc-app-shell :is(input[type="checkbox"],input[type="radio"]){accent-color:#d7f36a}
+body.mc-app-shell :is(input,textarea)::placeholder{color:#6c796e}
+body.mc-app-shell .flash-area .flash{
+  border-radius:14px;background:#e7f1c7;color:#153119;border-color:#9bbf6a;
+}
+body.mc-app-shell .flash-area .flash :is(p,strong,span){color:#153119}
+body.mc-app-shell .flash.flash-error{background:#fbe1df;border-color:#d7a39e;color:#74211e}
+
+/* Hero artwork: immersive rather than a generic white dashboard banner. */
+body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero){
+  position:relative;isolation:isolate;overflow:hidden;
+  min-height:clamp(335px,33vw,450px);
+  display:flex;align-items:center;justify-content:space-between;
+  background:radial-gradient(ellipse at 30% 40%,#342348 0,transparent 50%),
+    linear-gradient(120deg,#11152f,#151a37 48%,#15172c);
+  border:1px solid #47475c;border-radius:30px;
+  box-shadow:0 24px 65px rgba(0,0,0,.3);
+  margin-bottom:26px;padding:clamp(27px,4.2vw,60px)
+}
+body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(9,10,23,.94) 0%,rgba(9,10,23,.88) 35%,rgba(10,11,25,.47) 63%,rgba(10,10,20,.14) 100%)
+}
+body.mc-app-shell .mc-app-hero-art{
+  position:absolute;inset:0 0 0 auto;height:100%;width:74%;
+  object-fit:cover;object-position:70% 48%;z-index:0;pointer-events:none;
+  filter:saturate(1.08)
+}
+body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)>div:not(.mc-app-hero-sticker){
+  position:relative;z-index:2;max-width:min(670px,65%);min-width:0
+}
+body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero) h1{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  font-weight:900;text-transform:uppercase;letter-spacing:-.07em;
+  line-height:1.08;font-size:clamp(30px,4.7vw,65px);
+  margin:13px 0 18px;text-shadow:0 4px 25px #05051499
+}
+body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero) p{
+  color:#e8e9f0;max-width:600px;font-size:clamp(15px,1.5vw,18px);
+  line-height:1.7;text-shadow:0 3px 12px #0606116b
+}
+body.mc-app-shell .mc-app-hero-sticker{
+  position:absolute;right:24px;bottom:19px;z-index:2;
+  border:1px solid #ffffff66;border-radius:99px;padding:8px 14px;
+  color:#fff;background:#10132166;font:800 10px/1.4 "Lucida Console","Courier New",monospace;
+  letter-spacing:.06em
+}
+body.mc-app-shell .welcome-actions{gap:12px;flex-wrap:wrap}
+body.mc-app-shell .welcome-actions .button{
+  min-height:57px;padding:13px 25px;font-size:14px;
+}
+body.mc-app-shell .welcome-actions .button-primary{
+  font-family:"Lucida Console","Courier New",monospace;font-weight:900;
+  font-size:12px;letter-spacing:.01em
+}
+body.mc-app-shell .caregiver-hero{min-height:340px}
+body.mc-app-shell .caregiver-hero-copy{z-index:2;max-width:650px}
+body.mc-app-shell .caregiver-hero-art{display:none}
+body.mc-app-shell .caregiver-hero-tags{display:flex;gap:9px;flex-wrap:wrap}
+body.mc-app-shell .caregiver-hero-tags span{
+  color:#fff;border:1px solid #87879c;background:#1d2032bd;
+  border-radius:99px;padding:10px 14px;font-size:12px
+}
+body.mc-app-shell .simple-banner{min-height:325px}
+body.mc-app-shell .simple-banner .simple-date,
+body.mc-app-shell .simple-banner .simple-clock{
+  color:#fff;background:#161829a8;border:1px solid #ffffff55;
+  padding:7px 12px;border-radius:99px;width:max-content;max-width:100%
+}
+body.mc-app-shell .simple-flower,
+body.mc-app-shell .welcome-flower{display:none}
+
+/* Patient dashboard content: calming contrast, vivid cards, no altered logic. */
+body.mc-app-shell .patient-mode-shortcut{
+  color:#d6ddda;background:#1b1e20;border:1px solid #45484a;
+  border-radius:20px;padding:17px 20px
+}
+body.mc-app-shell .patient-mode-shortcut span{color:#d8dfd8}
+body.mc-app-shell .patient-support-quick{
+  background:#ffedca;border:2px solid #f3c975;color:#1b251b;
+  border-radius:24px;box-shadow:0 13px 32px #00000021;
+}
+body.mc-app-shell .patient-support-quick :is(h2,strong,p){color:#253125}
+body.mc-app-shell .patient-support-quick .patient-support-quick-icon{background:#ffe0a3}
+body.mc-app-shell .patient-support-action{
+  background:#19251b;color:#fff;border-color:#19251b;
+  border-radius:99px;font-size:17px;font-weight:900;min-height:64px
+}
+body.mc-app-shell .patient-support-action:hover{background:#2a432f}
+body.mc-app-shell .patient-support-quick .whatsapp-open-button{color:#fff;background:#277e60}
+body.mc-app-shell .patient-support-quick .patient-support-quick-saved{
+  color:#23603b;font-weight:900
+}
+body.mc-app-shell .patient-top-tiles{gap:17px;margin-bottom:39px}
+body.mc-app-shell .patient-top-tiles .panel{
+  background:#1b1d21;border-color:#434446;border-radius:22px;
+  box-shadow:0 16px 38px #0002;padding:clamp(18px,2vw,26px)
+}
+body.mc-app-shell .patient-top-tiles .patient-today{
+  background:radial-gradient(circle at 80% 8%,#41436c,transparent 52%),#1b2438
+}
+body.mc-app-shell .patient-panel-heading h2{font-size:clamp(22px,2.3vw,32px)}
+body.mc-app-shell .today-date{color:#fff}
+body.mc-app-shell .today-facts>div{
+  background:#232d3f;border:1px solid #455069;border-radius:12px
+}
+body.mc-app-shell .today-facts span{color:#b8c6d7}
+body.mc-app-shell .today-facts strong{color:#fff}
+body.mc-app-shell .today-next{
+  background:#d7f36a;border-left:5px solid #9cb936;
+  border-radius:15px;padding:15px
+}
+body.mc-app-shell .today-next :is(strong,span){color:#142411}
+body.mc-app-shell .today-next .eyebrow{color:#1c301b}
+body.mc-app-shell .today-face-grid a{color:#fff}
+body.mc-app-shell .patient-checkin{
+  background:radial-gradient(circle at 95% 0%,#493755,transparent 50%),#201d29!important
+}
+body.mc-app-shell .feeling-choice>span{
+  color:#fff;background:#2b2636;border:1px solid #665978;
+  border-radius:15px;min-height:70px
+}
+body.mc-app-shell .feeling-choice input:checked+span{
+  color:#101d17;background:#d7f36a;border-color:#d7f36a
+}
+body.mc-app-shell .feeling-choice input:checked+span strong{color:#172016}
+body.mc-app-shell .feeling-choice strong{color:#fff}
+body.mc-app-shell .checkin-saved{color:#d7f36a}
+body.mc-app-shell .support-help-box{background:#26211c;border:1px solid #a88756;border-radius:15px}
+body.mc-app-shell .support-help-box :is(p,strong){color:#fff}
+body.mc-app-shell .patient-quick{background:#222523!important}
+body.mc-app-shell .patient-quick .button-danger{background:#b53738;color:#fff}
+body.mc-app-shell .game-shortcuts{gap:15px}
+body.mc-app-shell .game-shortcut{
+  background:#1b1e22;border:1px solid #47484b;
+  border-radius:19px;color:#fff;min-height:164px;
+  box-shadow:0 10px 29px #0003;transition:transform .18s,border-color .18s
+}
+body.mc-app-shell .game-shortcut:hover{
+  border-color:#d7f36a;transform:translateY(-3px)
+}
+body.mc-app-shell .game-shortcut :is(strong,small){color:#f6f6f6}
+body.mc-app-shell .game-shortcut small{color:#bcc2c5}
+body.mc-app-shell .shortcut-icon{border-radius:18px}
+body.mc-app-shell .shortcut-icon.mint{background:linear-gradient(145deg,#bffce0,#70c2a1)}
+body.mc-app-shell .shortcut-icon.peach{background:linear-gradient(145deg,#ffdbba,#e6908b)}
+body.mc-app-shell .shortcut-icon.lavender{background:linear-gradient(145deg,#e4d2ff,#a182da)}
+body.mc-app-shell .shortcut-icon.lemon{background:linear-gradient(145deg,#fff0ad,#e9c568)}
+body.mc-app-shell .shortcut-icon.sky{background:linear-gradient(145deg,#bde7ff,#7c9add)}
+body.mc-app-shell .shortcut-arrow{color:#d7f36a}
+body.mc-app-shell .stats-row{gap:13px}
+body.mc-app-shell .stat-card{
+  background:#1c1f22;border:1px solid #464849;
+  border-radius:19px;box-shadow:none
+}
+body.mc-app-shell .stat-card>span{color:#c9ced1}
+body.mc-app-shell .stat-card>strong{color:#fff;font-size:clamp(25px,3.3vw,39px)}
+body.mc-app-shell .stat-card small{color:#aeb6bb}
+body.mc-app-shell .trend-chart{background:#101316;border:1px solid #373b3d;border-radius:16px}
+body.mc-app-shell .chart-grid{stroke:#535b54}
+body.mc-app-shell .chart-label{fill:#c9d1c9}
+body.mc-app-shell .chart-line{stroke:#d7f36a}
+body.mc-app-shell .chart-point{fill:#d7f36a}
+body.mc-app-shell .empty-chart{background:#161b1c;border:1px dashed #424848;border-radius:16px}
+body.mc-app-shell .empty-chart a{color:#d7f36a}
+body.mc-app-shell .routine-item{
+  color:#f1f2f0;background:#25282b;border:1px solid #3c4143;
+  border-radius:13px
+}
+body.mc-app-shell .routine-time{color:#d7f36a}
+body.mc-app-shell .routine-item strong{color:#fff}
+body.mc-app-shell .routine-item small{color:#b4bbbf}
+body.mc-app-shell .routine-emoji{background:#333b3d}
+body.mc-app-shell .routine-list :is(.done-mark,.tiny-check){color:#c9eb7e}
+body.mc-app-shell .connection-card{
+  background:radial-gradient(circle at 10% 20%,#453958,transparent 60%),#1f1f2b
+}
+body.mc-app-shell .code-share{
+  background:#e8f5d4;border:1px solid #b8db8d;border-radius:15px;
+}
+body.mc-app-shell .code-share :is(strong,button){color:#19321d}
+body.mc-app-shell .code-share button{background:#f8fff5}
+body.mc-app-shell .pending-requests{border-color:#52505b}
+body.mc-app-shell .pending-requests :is(span,strong){color:#fff}
+body.mc-app-shell .copy-code{color:#142e16}
+body.mc-app-shell .call-contact-panel{background:#202b26}
+
+/* Simple mode stays colorful and more legible than the dense app overview. */
+body.mc-app-shell .simple-dashboard{color:#fff}
+body.mc-app-shell .simple-dashboard .simple-actions{gap:18px}
+body.mc-app-shell .simple-action-card{
+  border:2px solid #dcded9;border-radius:26px;
+  padding:clamp(22px,2.5vw,36px);box-shadow:0 13px 36px #0003
+}
+body.mc-app-shell .simple-routine{background:linear-gradient(145deg,#fff3d9,#ffe2b0)}
+body.mc-app-shell .simple-game{background:linear-gradient(145deg,#def8ea,#b1e9d8)}
+body.mc-app-shell .simple-family{background:linear-gradient(145deg,#f2e4fa,#e7d4ff)}
+body.mc-app-shell .simple-photos{background:linear-gradient(145deg,#e1f1ff,#bfdcff)}
+body.mc-app-shell .simple-action-card :is(h2,h3,strong,p,span,small){color:#22332d}
+body.mc-app-shell .simple-action-card h2{font-size:clamp(24px,2.8vw,32px)}
+body.mc-app-shell .simple-card-icon{
+  display:grid;place-items:center;border-radius:20px;
+  width:78px;height:78px;min-width:78px;background:#ffffff94;font-size:41px
+}
+body.mc-app-shell .simple-action-card .button-primary{
+  color:#fff;background:#1c2d22;border-color:#1c2d22
+}
+body.mc-app-shell .simple-action-card .button-primary:hover{background:#344b38;color:#fff}
+body.mc-app-shell .simple-action-card .whatsapp-open-button{color:#fff}
+body.mc-app-shell .simple-action-card .simple-next-time{color:#25472d}
+body.mc-app-shell .simple-checkin{
+  background:#211d2b;border:1px solid #59506b;border-radius:23px
+}
+body.mc-app-shell .simple-feeling>span{
+  background:#302839;color:#fff;border:1px solid #655775;border-radius:18px
+}
+body.mc-app-shell .simple-feeling input:checked+span{
+  color:#1b2417;background:#d7f36a;border-color:#d7f36a
+}
+body.mc-app-shell .simple-bottom-actions{gap:12px}
+body.mc-app-shell .simple-bottom-actions .button{
+  min-height:58px;padding:13px 20px
+}
+body.mc-app-shell .simple-bottom-actions .button-danger{color:#fff}
+body.mc-app-shell .simple-bottom-actions .button-outline{background:#272b30}
+
+/* Caregiver: serious information hierarchy in dark monochrome frames. */
+body.mc-app-shell .caregiver-v2{color:#fff}
+body.mc-app-shell .caregiver-stats{gap:16px}
+body.mc-app-shell .caregiver-stat{
+  background:#1b1f22;border-color:#4b4e50;border-radius:23px;
+  box-shadow:0 13px 34px #0002
+}
+body.mc-app-shell .caregiver-stat :is(strong,h3){color:#fff}
+body.mc-app-shell .caregiver-stat>span:not(.caregiver-stat-icon){color:#ced3d0}
+body.mc-app-shell .caregiver-stat-icon{background:#343c32;border-radius:14px}
+body.mc-app-shell .caregiver-stat small{color:#b3c0bb}
+body.mc-app-shell .caregiver-stat-people{background:#20283a}
+body.mc-app-shell .caregiver-stat-attention{
+  background:#ffead1;border-color:#ffce91
+}
+body.mc-app-shell .caregiver-stat-attention :is(strong,small,span:not(.caregiver-stat-icon)){color:#2e231b}
+body.mc-app-shell .caregiver-stat-attention .caregiver-stat-icon{background:#ffdcac}
+body.mc-app-shell .caregiver-section-heading{margin-bottom:22px}
+body.mc-app-shell .caregiver-section-heading h2{font-size:clamp(26px,3vw,44px)}
+body.mc-app-shell .caregiver-section-heading p{color:#c3c7c9}
+body.mc-app-shell .caregiver-soft-count{background:#2d3126;color:#d7f36a;border-color:#7d9955}
+body.mc-app-shell .caregiver-support-section{
+  padding:clamp(20px,3vw,37px)
+}
+body.mc-app-shell .caregiver-support-item{
+  background:#252529;border-color:#44454a;
+}
+body.mc-app-shell .caregiver-support-item strong{color:#fff}
+body.mc-app-shell .caregiver-support-avatar{background:#d7f36a;color:#1b2415}
+body.mc-app-shell .caregiver-support-empty{
+  background:#213027;border:1px solid #405747;
+  border-radius:18px;color:#e9f8e7
+}
+body.mc-app-shell .caregiver-support-empty :is(strong,p){color:#e9f8e7}
+body.mc-app-shell .caregiver-connect-panel{
+  background:#1d242b;border-radius:23px
+}
+body.mc-app-shell .caregiver-connect-controls input{color:#132013}
+body.mc-app-shell .caregiver-guidance-panel{
+  background:linear-gradient(135deg,#382b49,#27263e);
+  border:1px solid #615476;color:#fff
+}
+body.mc-app-shell .caregiver-guidance-panel :is(h2,p){color:#f8edf9}
+body.mc-app-shell .caregiver-directory-tools{
+  background:#1c1e22;border:1px solid #424749;border-radius:18px;
+  padding:14px
+}
+body.mc-app-shell .caregiver-filter-button{
+  border-color:#56595b;background:#292b2d;color:#e2e6e2;
+  border-radius:99px
+}
+body.mc-app-shell .caregiver-filter-button:hover{border-color:#acb4ad}
+body.mc-app-shell .caregiver-filter-button[aria-pressed=true],
+body.mc-app-shell .caregiver-filter-button.is-active{
+  border-color:#d7f36a;background:#d7f36a;color:#0e160c
+}
+body.mc-app-shell .caregiver-patient-grid{gap:17px}
+body.mc-app-shell .caregiver-patient-card{
+  background:#1d2024;border-color:#43464a;box-shadow:0 12px 31px #0002
+}
+body.mc-app-shell .caregiver-patient-card :is(strong,h3){color:#fff}
+body.mc-app-shell .caregiver-patient-card p{color:#bfc9c8}
+body.mc-app-shell .caregiver-patient-avatar{background:#e9d9ff;color:#332550}
+body.mc-app-shell .caregiver-patient-status{
+  background:#28382d;color:#bde3be;border-color:#5f8265
+}
+body.mc-app-shell .caregiver-patient-status-support{
+  background:#ffdfba;color:#4c2419;border-color:#e8ae72
+}
+body.mc-app-shell .caregiver-patient-metrics{
+  background:#292d31;border:1px solid #454b50;border-radius:14px
+}
+body.mc-app-shell .caregiver-mini-label{color:#b7bdc1}
+body.mc-app-shell .caregiver-patient-metrics strong{color:#fff}
+body.mc-app-shell .caregiver-next-note{color:#e1e9dd}
+body.mc-app-shell .caregiver-detail-heading{
+  position:relative;isolation:isolate;overflow:hidden;
+  background:linear-gradient(120deg,#1c1b31,#312344);
+  border-color:#504864;border-radius:28px;
+  padding:clamp(25px,3vw,42px)
+}
+body.mc-app-shell .caregiver-detail-heading:after{
+  content:"✳";position:absolute;z-index:-1;right:4%;top:-25%;font-size:300px;
+  color:#ffffff12;font-family:monospace
+}
+body.mc-app-shell .caregiver-detail-kpis .stat-card{
+  background:#202227;border-color:#45464b
+}
+body.mc-app-shell .caregiver-wellbeing-entry{
+  background:#25282b;border:1px solid #454950;border-radius:15px
+}
+body.mc-app-shell .caregiver-wellbeing-entry :is(h3,strong){color:#fff}
+body.mc-app-shell .caregiver-wellbeing-entry p{color:#cbd2d0}
+body.mc-app-shell .caregiver-wellbeing-support{
+  border-color:#d9a564;background:#35291e
+}
+body.mc-app-shell .caregiver-reviewed-label{color:#d7f36a}
+body.mc-app-shell .caregiver-recent-games table :is(th,td){color:#eceeef;border-color:#4a4c50}
+body.mc-app-shell .caregiver-recent-games th{background:#282b2c}
+body.mc-app-shell .caregiver-detail-empty{color:#d2ddd7}
+
+/* Games: animated-gallery feel without autoplay or cognitive distractions. */
+body.mc-app-shell .games-intro{
+  background:linear-gradient(105deg,#362d52,#242c4d);
+  border:1px solid #625b81;border-radius:23px;padding:25px;
+  color:#fff
+}
+body.mc-app-shell .games-intro :is(strong,p){color:#fff}
+body.mc-app-shell .games-catalog{gap:20px}
+body.mc-app-shell .catalog-card{
+  background:#191b20;border:1px solid #484950;border-radius:25px;
+  overflow:hidden;box-shadow:0 14px 39px rgba(0,0,0,.23)
+}
+body.mc-app-shell .catalog-art{
+  border-radius:0;min-height:210px;position:relative;
+  isolation:isolate;overflow:hidden
+}
+body.mc-app-shell .catalog-art::before{
+  content:"";position:absolute;right:-35px;top:-35px;width:225px;height:225px;
+  border:17px solid #ffffff36;border-radius:50%;z-index:-1
+}
+body.mc-app-shell .catalog-art::after{
+  content:"✳";font:900 150px/1 "Lucida Console","Courier New",monospace;
+  position:absolute;left:-24px;bottom:-56px;color:#ffffff37;z-index:-1
+}
+body.mc-app-shell .catalog-art.mint{background:linear-gradient(135deg,#4bc6b0,#147d9a 75%,#2b5786)}
+body.mc-app-shell .catalog-art.peach{background:linear-gradient(135deg,#ffbb86,#d76586 75%,#8b5a9b)}
+body.mc-app-shell .catalog-art.lavender{background:linear-gradient(135deg,#c3a3fb,#8266d0 65%,#54489a)}
+body.mc-app-shell .catalog-art.lemon{background:linear-gradient(135deg,#f9e49c,#e8ae66 65%,#d3766c)}
+body.mc-app-shell .catalog-art.sky{background:linear-gradient(135deg,#9fe5ff,#5c9fda 75%,#5962ad)}
+body.mc-app-shell .catalog-art.pink{background:linear-gradient(135deg,#f9c6dd,#db7eb5 70%,#9867b6)}
+body.mc-app-shell .catalog-art>span:first-child{
+  font-size:clamp(85px,9.5vw,138px);filter:drop-shadow(0 11px 16px #0002)
+}
+body.mc-app-shell .catalog-content{padding:23px}
+body.mc-app-shell .catalog-content h2{color:#fff;font-size:clamp(20px,2vw,27px)}
+body.mc-app-shell .catalog-content p{color:#cbd1d1}
+body.mc-app-shell .catalog-content .button-primary{
+  width:100%;min-height:54px;border-radius:99px
+}
+body.mc-app-shell .play-page{color:#f4f4f4}
+body.mc-app-shell .play-header{
+  background:radial-gradient(circle at 88% 10%,#65446e,transparent 40%),#1e233a;
+  padding:clamp(23px,3vw,40px);border:1px solid #55506a;
+  border-radius:26px;margin-bottom:25px
+}
+body.mc-app-shell .play-header h1{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  font-size:clamp(24px,3.3vw,45px);letter-spacing:-.055em
+}
+body.mc-app-shell .play-header p{color:#e3e6e4}
+body.mc-app-shell .game-root{
+  background:#1a1d21;border:1px solid #4a5051;border-radius:26px;
+  padding:clamp(17px,2.5vw,35px);color:#fff
+}
+body.mc-app-shell .game-root :is(h2,h3,strong){color:#fff}
+body.mc-app-shell .game-root :is(p,small){color:#dde0e0}
+body.mc-app-shell .game-start{
+  color:#fff;background:radial-gradient(circle at 50% 20%,#493c61,transparent 63%),#25212f;
+  border-radius:19px;padding:32px
+}
+body.mc-app-shell .game-toolbar{
+  color:#fff;background:#2a2e32;border:1px solid #4c5255;
+  border-radius:14px;padding:12px
+}
+body.mc-app-shell .game-toolbar strong{color:#fff}
+body.mc-app-shell .game-instructions,
+body.mc-app-shell .game-message{
+  background:#2c292f;border:1px solid #5d555f;border-radius:14px;color:#fff
+}
+body.mc-app-shell .game-instructions :is(p,strong,span),
+body.mc-app-shell .game-message :is(p,strong,span){color:#fff}
+body.mc-app-shell .game-root .game-feedback{color:#fff}
+body.mc-app-shell .game-root button{min-height:49px}
+body.mc-app-shell .play-note{background:#262c28;border:1px solid #49584b;border-radius:16px}
+body.mc-app-shell .play-note p{color:#dce8dc}
+
+/* Routine, people, Help and account pages. */
+body.mc-app-shell .reminder-notification-panel{
+  background:#1f2e2a;border-color:#567369
+}
+body.mc-app-shell .reminder-notification-panel :is(h2,p){color:#f2f7f3}
+body.mc-app-shell .reminders-layout{gap:20px}
+body.mc-app-shell .reminder-row{background:#242629;border:1px solid #4a4d50}
+body.mc-app-shell .reminder-row strong{color:#fff}
+body.mc-app-shell .reminder-description>span{color:#d7f36a}
+body.mc-app-shell .reminder-icon{border-radius:16px}
+body.mc-app-shell .reminder-icon.mint{background:#3b7f6f}
+body.mc-app-shell .reminder-icon.peach{background:#805b4b}
+body.mc-app-shell .reminder-icon.lavender{background:#655285}
+body.mc-app-shell .reminder-icon.sky{background:#436b91}
+body.mc-app-shell .reminder-icon.pink{background:#905a77}
+body.mc-app-shell .check-label{color:#d7f36a}
+body.mc-app-shell .reminder-edit-details{color:#e1e4e3}
+body.mc-app-shell .edit-summary{color:#d7f36a}
+body.mc-app-shell .reminder-edit-form,.mc-app-shell .contact-edit-form{
+  background:#282c2c;border:1px solid #4e5554;border-radius:15px;
+  padding:15px
+}
+body.mc-app-shell :is(.reminder-edit-form,.contact-edit-form) label{color:#eee}
+body.mc-app-shell .upcoming-reminders{border-top:1px solid #444}
+body.mc-app-shell .family-layout{gap:20px}
+body.mc-app-shell .family-card{overflow:hidden}
+body.mc-app-shell .family-card>div{padding:17px 18px}
+body.mc-app-shell .family-card h3{color:#fff}
+body.mc-app-shell .family-card p{color:#c8d4d0}
+body.mc-app-shell .family-help{background:#27212d}
+body.mc-app-shell .family-help :is(h3,p){color:#fff}
+body.mc-app-shell .family-photo-trigger{background:#32363b;border-radius:15px}
+body.mc-app-shell .empty-state{
+  background:#212327;border:1px dashed #555b5a;border-radius:24px
+}
+body.mc-app-shell .empty-state :is(h2,h3,p){color:#f1f2f0}
+body.mc-app-shell .patient-help-page{color:#fff}
+body.mc-app-shell .sos-callout{
+  background:#ffebdf;border:2px solid #e3a18a;color:#28211a;border-radius:24px
+}
+body.mc-app-shell .sos-callout :is(h2,h3,strong,p){color:#4a231f}
+body.mc-app-shell .sos-callout .eyebrow{color:#a1312c}
+body.mc-app-shell .sos-callout h2{font-size:clamp(62px,9vw,122px);color:#9d2127}
+body.mc-app-shell .sos-callout .button-outline{
+  background:#fff;color:#6c281f;border-color:#a87b69
+}
+body.mc-app-shell .whatsapp-howto{
+  background:#202f27;border:1px solid #52725c;border-radius:23px
+}
+body.mc-app-shell .whatsapp-howto :is(h2,h3,strong,p,li){color:#f0f8f2}
+body.mc-app-shell .whatsapp-howto .whatsapp-step-number{
+  color:#101d13;background:#d7f36a
+}
+body.mc-app-shell .contact-row{padding:15px}
+body.mc-app-shell .contact-row :is(h3,strong){color:#fff}
+body.mc-app-shell .contact-details p{color:#c9d1cb}
+body.mc-app-shell .contact-avatar{color:#14201a;background:#d7f36a}
+body.mc-app-shell .contact-phone-actions .button-primary{background:#fff;color:#151c16}
+body.mc-app-shell .whatsapp-contact-hint{color:#cddbd0}
+body.mc-app-shell .settings-page .settings-form{background:#1c2022}
+body.mc-app-shell .settings-options{background:#24282b;border:1px solid #41474c;border-radius:18px;padding:12px}
+body.mc-app-shell .setting-option{color:#fff;border-color:#494e4e}
+body.mc-app-shell .setting-option :is(span,small){color:#f1f3f1}
+body.mc-app-shell .account-security-page :is(h1,h2){color:#fff}
+body.mc-app-shell .account-security-page>p{color:#bfc9c3}
+body.mc-app-shell .account-security-summary{
+  background:#222c27;border-color:#4b6353;color:#fff
+}
+body.mc-app-shell .account-security-summary :is(strong,small){color:#fff}
+body.mc-app-shell .account-security-method{
+  background:#1c2021;border:1px solid #454b48;border-radius:23px
+}
+body.mc-app-shell .account-security-method :is(h2,h3){color:#fff}
+body.mc-app-shell .account-security-method p{color:#c5cecb}
+body.mc-app-shell .account-linked-label{
+  background:#253b2b;border-color:#70956a;color:#d7f36a
+}
+
+/* Mobile, safe touch targets, scrollable nav and game layout.
+   Existing patient settings still control simplified view and typography. */
+@media(max-width:1190px) {
+  body.mc-app-shell .mc-app-role-tag{display:none}
+  body.mc-app-shell .main-nav{gap:12px}
+  body.mc-app-shell .nav-container{gap:14px}
+}
+@media(max-width:900px) {
+  body.mc-app-shell .nav-container{
+    flex-wrap:wrap;justify-content:space-between;
+    padding-top:12px;padding-bottom:12px;row-gap:10px
+  }
+  body.mc-app-shell .nav-container>.brand{order:0}
+  body.mc-app-shell .nav-container>.nav-right{order:1;margin-left:auto}
+  body.mc-app-shell .main-nav{
+    order:2;flex-basis:100%;margin:0;
+    overflow-x:auto;overflow-y:hidden;
+    padding:4px 0 0;gap:19px;scrollbar-width:thin;
+    scrollbar-color:#555 transparent;white-space:nowrap
+  }
+  body.mc-app-shell .main-nav a{font-size:14px;flex:none;min-height:42px}
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)>div:not(.mc-app-hero-sticker){max-width:78%}
+  body.mc-app-shell .mc-app-hero-art{width:100%;object-position:70% center;opacity:.7}
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)::before{
+    background:linear-gradient(90deg,rgba(8,10,20,.96),rgba(8,10,20,.7) 66%,rgba(8,10,20,.3))
+  }
+}
+@media(max-width:660px) {
+  body.mc-app-shell .nav-container{padding-left:15px;padding-right:15px}
+  body.mc-app-shell .brand{font-size:18px}
+  body.mc-app-shell .brand-mark{width:35px;height:35px;font-size:20px}
+  body.mc-app-shell .brand small{font-size:7px;letter-spacing:.7px}
+  body.mc-app-shell .nav-right{gap:5px}
+  body.mc-app-shell .user-pill{padding:2px;max-width:43px}
+  body.mc-app-shell .user-pill .user-name{display:none}
+  body.mc-app-shell .font-toggle{min-height:36px;min-width:36px;padding:6px}
+  body.mc-app-shell .nav-logout{font-size:11px;padding:5px}
+  body.mc-app-shell .mc-app-breadcrumb{font-size:9px;padding:17px 0 14px}
+  body.mc-app-shell .mc-app-breadcrumb-right{display:none}
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero){
+    min-height:365px;padding:26px 22px 44px;border-radius:23px
+  }
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)>div:not(.mc-app-hero-sticker){
+    max-width:100%
+  }
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero) h1{
+    font-size:clamp(30px,8vw,45px);letter-spacing:-.075em
+  }
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero) p{font-size:15px;line-height:1.5}
+  body.mc-app-shell .mc-app-hero-art{opacity:.54;object-position:75% center}
+  body.mc-app-shell :is(.welcome-banner,.simple-banner,.caregiver-hero)::before{
+    background:rgba(10,12,27,.76)
+  }
+  body.mc-app-shell .mc-app-hero-sticker{right:12px;bottom:12px;font-size:8px}
+  body.mc-app-shell .page-heading{padding:28px 22px;border-radius:22px}
+  body.mc-app-shell .page-heading h1{font-size:clamp(30px,7vw,44px)}
+  body.mc-app-shell .catalog-art{min-height:170px}
+  body.mc-app-shell .simple-card-icon{width:68px;height:68px;min-width:68px;font-size:36px}
+  body.mc-app-shell .caregiver-hero-tags span{font-size:10px;padding:7px 10px}
+  body.mc-app-shell .caregiver-section-heading h2{font-size:clamp(24px,6.2vw,34px)}
+  body.mc-app-shell .site-footer{margin-top:55px}
+}
+@media(max-width:390px) {
+  body.mc-app-shell .brand{font-size:16px}
+  body.mc-app-shell .brand-mark{width:32px;height:32px}
+  body.mc-app-shell .nav-right{gap:4px}
+  body.mc-app-shell .voice-replay #voice-status{display:none}
+  body.mc-app-shell .nav-logout{font-size:10px}
+  body.mc-app-shell .welcome-actions .button{padding:10px 14px;font-size:12px}
+  body.mc-app-shell .patient-support-action{font-size:15px;min-height:60px}
+  body.mc-app-shell .mc-app-hero-sticker{display:none}
+}
+body.mc-app-shell.large-text{font-size:19px}
+body.mc-app-shell.large-text .main-nav a{font-size:16px}
+body.mc-app-shell.large-text .eyebrow{font-size:12px}
+body.mc-app-shell.high-contrast{
+  --border:#fff;background-color:#050505;color:#fff
+}
+body.mc-app-shell.high-contrast :is(.panel,.stat-card,.catalog-card,.caregiver-patient-card,.reminder-row){
+  border:2px solid #fff
+}
+body.mc-app-shell.high-contrast .main-nav a{color:#fff}
+body.mc-app-shell.high-contrast .main-nav a.active{color:#d7f36a}
+@media(prefers-reduced-motion:reduce) {
+  body.mc-app-shell :is(.button,.catalog-card,.game-shortcut,.main-nav a){transition:none!important;transform:none!important}
+}
+body.mc-app-shell.reduced-motion :is(.button,.catalog-card,.game-shortcut,.main-nav a){
+  transition:none!important;transform:none!important
+}

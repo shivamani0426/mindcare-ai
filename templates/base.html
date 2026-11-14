@@ -8,6 +8,8 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}MindCare AI{% endblock %} · MindCare</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% if me %}<link rel="stylesheet" href="{{ url_for('static', filename='app-world.css') }}">{% endif %}
+  {% if request.endpoint in ('login', 'register', 'auth_complete') %}<link rel="stylesheet" href="{{ url_for('static', filename='auth-world.css') }}">{% endif %}
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-today.js') }}" defer></script>{% endif %}
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-notifications.js') }}" defer></script>{% endif %}
@@ -16,7 +18,7 @@
   {% if me %}<script src="{{ url_for('static', filename='calls.js') }}" defer></script>{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }} {{ 'simple-view' if simple_view else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
+<body class="{% block body_class %}{% endblock %} {{ ('mc-app-shell mc-app-patient' if me.role == 'patient' else 'mc-app-shell mc-app-caregiver') if me else '' }} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }} {{ 'simple-view' if simple_view else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
     {% if request.endpoint != 'home' %}
@@ -35,6 +37,7 @@
         {% endif %}
         </nav>
         <div class="nav-right">
+        {% if me %}<span class="mc-app-role-tag" aria-hidden="true">{{ 'PATIENT' if me.role == 'patient' else 'CAREGIVER' }} / CARE SPACE</span>{% endif %}
         {% if me and me.role == 'patient' %}<button type="button" id="voice-replay" class="voice-replay" title="{{ tr('nav_voice_replay') }}" aria-label="{{ tr('nav_voice_replay') }}">🔊 <span id="voice-status">{{ tr('nav_voice_on') }}</span></button>{% endif %}
         {% if me and me.role == 'patient' %}<button type="button" id="milo-nav-toggle" class="milo-nav-toggle" aria-label="{{ tr('milo_hide') }}" aria-pressed="true" title="{{ tr('milo_hide') }}" data-hide-label="{{ tr('milo_hide') }}" data-show-label="{{ tr('milo_show') }}">🌿 <span>Milo</span></button>{% endif %}
         <button type="button" class="font-toggle" id="font-toggle" aria-label="Toggle larger text" title="Toggle larger text">A+</button>
@@ -49,6 +52,7 @@
     </header>
     {% endif %}
     <main id="main" class="{{ 'mc-world-main' if request.endpoint == 'home' else 'main-container' }}">
+      {% if me %}<div class="mc-app-breadcrumb" aria-hidden="true"><span>✦</span><span>MINDCARE / {{ 'MY WORLD' if me.role == 'patient' else 'CARE CIRCLE' }}</span><span class="mc-app-breadcrumb-right">SMALL MOMENTS. BRIGHTER DAYS.</span></div>{% endif %}
       {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
       <div class="flash-area" role="status" aria-live="polite">
         {% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}<button type="button" class="flash-close" aria-label="Dismiss notification">×</button></div>{% endfor %}

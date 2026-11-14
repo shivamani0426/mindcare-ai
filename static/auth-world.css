@@ -1,0 +1,191 @@
+/* MindCare World sign-in: retro-future visual direction with modern, readable forms.
+   Does not modify authentication, verification, password, or session logic. */
+body.mindcare-auth-route{
+  --paper:#0a0a0a;
+  background:#0a0a0a;
+  background-image:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(255,255,255,.028) 3px,rgba(255,255,255,.028) 4px);
+  color:#fff
+}
+body.mindcare-auth-route .site-header{
+  background:#0c0d0dfa;border-bottom:1px solid #3c3c3c;color:#fff;
+}
+body.mindcare-auth-route .nav-container{max-width:1370px}
+body.mindcare-auth-route .brand{color:#fff}
+body.mindcare-auth-route .brand-mark{background:#fff;color:#0a0a0a}
+body.mindcare-auth-route .brand-ai{color:#d7f36a}
+body.mindcare-auth-route .brand small{color:#adb2b1}
+body.mindcare-auth-route .main-nav a{color:#ddd}
+body.mindcare-auth-route .nav-right .text-link{color:#eee}
+body.mindcare-auth-route .nav-join{
+  color:#0a0a0a;background:#fff;border:1px solid #fff;border-radius:99px
+}
+body.mindcare-auth-route .font-toggle{background:#1f2020;border:1px solid #555;color:#fff}
+body.mindcare-auth-route .main-container{max-width:1380px;padding:0 clamp(13px,3vw,38px)}
+body.mindcare-auth-route .site-footer{background:#0a0a0a;border-top:1px solid #444}
+body.mindcare-auth-route .site-footer :is(p,span){color:#a8aaad}
+body.mindcare-auth-route .site-footer .footer-brand{color:#fff}
+body.mindcare-auth-route .auth-v2{
+  color:#fff;background:#141519;border:1px solid #44444e;
+  border-radius:27px;box-shadow:0 36px 90px #0006;
+  min-height:710px;margin:36px auto 65px
+}
+body.mindcare-auth-route .auth-v2-story{
+  position:relative;isolation:isolate;overflow:hidden;
+  background:linear-gradient(175deg,#0b1019a6,#1117288c 57%,#171021c9),url("./mindcare-world.svg");
+  background-size:cover;background-position:57% center;
+  border-right:1px solid #50515c
+}
+body.mindcare-auth-route .auth-v2-story:after{
+  content:"";position:absolute;inset:0;border-radius:0;width:auto;height:auto;
+  box-shadow:none;background:radial-gradient(circle at 25% 27%,#f6a8f714,transparent 55%);
+  border:0;pointer-events:none;z-index:0
+}
+body.mindcare-auth-route .auth-story-top,
+body.mindcare-auth-route .auth-story-main,
+body.mindcare-auth-route .auth-story-bottom{z-index:1}
+body.mindcare-auth-route .auth-story-label{
+  background:#0b0f15bb;border:1px solid #ffffff84;color:#fff
+}
+body.mindcare-auth-route .auth-story-dot{
+  background:#d7f36a;box-shadow:0 0 0 4px #d7f36a25
+}
+body.mindcare-auth-route .auth-story-overline{
+  color:#d7f36a;font-family:"Lucida Console","Courier New",monospace;
+  font-size:11px;font-weight:900
+}
+body.mindcare-auth-route .auth-story-main>h1{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  text-transform:uppercase;font-size:clamp(34px,4.1vw,61px);
+  font-weight:900;letter-spacing:-.08em;line-height:1.17;
+  text-shadow:0 5px 23px #05050c99
+}
+body.mindcare-auth-route .auth-story-main>h1 em{
+  color:#d7f36a;font-family:inherit;font-style:normal;font-weight:900
+}
+body.mindcare-auth-route .auth-story-main>p{
+  color:#f3f3f3;font-size:16px;line-height:1.7;text-shadow:0 2px 15px #0008
+}
+body.mindcare-auth-route .auth-story-preview{
+  background:#10121cc9;border:1px solid #ffffff5c;
+  border-radius:23px;box-shadow:0 17px 45px #0006;
+  backdrop-filter:blur(16px)
+}
+body.mindcare-auth-route .auth-preview-heading{border-bottom:1px solid #ffffff3f}
+body.mindcare-auth-route .auth-preview-icon{background:#d7f36a;color:#11200f}
+body.mindcare-auth-route .auth-preview-heading strong,
+body.mindcare-auth-route .auth-preview-list strong{color:#fff}
+body.mindcare-auth-route .auth-preview-heading small,
+body.mindcare-auth-route .auth-preview-list small{color:#cbd2da}
+body.mindcare-auth-route .auth-preview-list>div{
+  background:#ffffff13;border:1px solid #ffffff1c
+}
+body.mindcare-auth-route .auth-preview-emoji{background:#edb5d9}
+body.mindcare-auth-route .auth-preview-check{background:#d7f36a;color:#142514}
+body.mindcare-auth-route .auth-story-bottom{color:#ecedf1}
+body.mindcare-auth-route .auth-v2-form-panel{background:#17191d}
+body.mindcare-auth-route .auth-form-topline,
+body.mindcare-auth-route .auth-form-eyebrow{color:#d7f36a}
+body.mindcare-auth-route .auth-form-logo{
+  background:#fff;color:#111;border-radius:9px
+}
+body.mindcare-auth-route .auth-form-topline-right{color:#8f9594}
+body.mindcare-auth-route .auth-form-inner h2{
+  color:#fff;font-family:"Lucida Console","Courier New",monospace;
+  font-weight:900;letter-spacing:-.055em;
+  font-size:clamp(26px,2.9vw,38px);line-height:1.2
+}
+body.mindcare-auth-route .auth-form-intro{color:#c4cacd;font-size:15px}
+body.mindcare-auth-route .auth-google-button{
+  color:#0b1010;background:#fff;border:1px solid #fff;border-radius:99px;
+  min-height:56px;font-weight:850
+}
+body.mindcare-auth-route .auth-google-button:hover{background:#eee;border-color:#fff}
+body.mindcare-auth-route .auth-provider-setup{
+  color:#d5d8d7;background:#232729;border:1px dashed #777a7b
+}
+body.mindcare-auth-route .auth-provider-setup strong{color:#fff}
+body.mindcare-auth-route .auth-provider-setup small{color:#bac5bb}
+body.mindcare-auth-route .auth-separator{color:#aeb4b5}
+body.mindcare-auth-route .auth-separator:before,
+body.mindcare-auth-route .auth-separator:after{background:#53565a}
+body.mindcare-auth-route .auth-method-tabs{
+  background:#25282a;border:1px solid #57595a;border-radius:99px
+}
+body.mindcare-auth-route .auth-method-tab{
+  color:#d8ddda;border-radius:99px;min-height:45px
+}
+body.mindcare-auth-route .auth-method-tab[aria-pressed=true]{
+  background:#d7f36a;color:#141a11;box-shadow:0 3px 16px #0002
+}
+body.mindcare-auth-route .auth-method-tab small{color:#9b9fa2}
+body.mindcare-auth-route .auth-method-tab[aria-pressed=true] small{color:#41522e}
+body.mindcare-auth-route .auth-form-field>label,
+body.mindcare-auth-route .auth-role-selector legend{color:#f1f3f0;font-size:13px}
+body.mindcare-auth-route .auth-form-field input,
+body.mindcare-auth-route .auth-form-field select{
+  color:#142119;background:#f8faf6;border:1.5px solid #b7c4b9;
+  border-radius:13px;min-height:53px
+}
+body.mindcare-auth-route .auth-form-field input:focus,
+body.mindcare-auth-route .auth-form-field select:focus{
+  border-color:#d7f36a;outline:3px solid #d7f36a;outline-offset:2px;box-shadow:none
+}
+body.mindcare-auth-route .auth-password-visibility{
+  background:#1d2821;color:#fff;border-radius:99px
+}
+body.mindcare-auth-route .auth-role-choice>span{
+  background:#25282a;border:1.5px solid #5b605c;border-radius:14px
+}
+body.mindcare-auth-route .auth-role-choice input:checked+span{
+  background:#303d2c;border-color:#d7f36a;box-shadow:0 0 0 1px #d7f36a
+}
+body.mindcare-auth-route .auth-role-choice strong{color:#fff;font-size:13px}
+body.mindcare-auth-route .auth-role-choice small{color:#c0c8c2}
+body.mindcare-auth-route .auth-submit-button{
+  border:1px solid #fff;border-radius:99px;
+  color:#0a0a0a!important;background:#fff!important;
+  box-shadow:0 12px 33px #0003
+}
+body.mindcare-auth-route .auth-submit-button:hover{background:#e7e7e7!important}
+body.mindcare-auth-route .auth-form-bottom{border-top:1px solid #424648}
+body.mindcare-auth-route .auth-form-bottom>p:first-child{color:#d3dad4}
+body.mindcare-auth-route .auth-form-bottom a{color:#d7f36a}
+body.mindcare-auth-route .auth-trust-caption{color:#afb7b1!important}
+body.mindcare-auth-route .auth-phone-not-ready{
+  color:#fff;background:#25292c;border:1px dashed #686d69
+}
+body.mindcare-auth-route .auth-phone-not-ready h3{color:#fff}
+body.mindcare-auth-route .auth-phone-not-ready p{color:#cbd2cf}
+body.mindcare-auth-route .auth-phone-not-ready .button-outline{
+  background:#fff;color:#111;border-radius:99px
+}
+body.mindcare-auth-route .auth-phone-intro,
+body.mindcare-auth-route .auth-fineprint{color:#cbd2cf}
+body.mindcare-auth-route .auth-phone-status{color:#d7f36a}
+body.mindcare-auth-route .auth-phone-again{color:#d7f36a}
+body.mindcare-auth-route .auth-onboard-card{
+  background:#191c20;border:1px solid #494d4b;color:#fff
+}
+body.mindcare-auth-route .auth-onboard :is(h1,h2){color:#fff}
+body.mindcare-auth-route .auth-onboard p{color:#c8d0ca}
+body.mindcare-auth-route .auth-onboard-verified{
+  background:#2b3828;border-color:#69844d;color:#d7f36a
+}
+body.mindcare-auth-route .auth-onboard-icon{background:#d7f36a;color:#14241a}
+@media(max-width:780px){
+  body.mindcare-auth-route .auth-v2{border-radius:23px}
+  body.mindcare-auth-route .auth-v2-story{background-position:64% center;min-height:245px}
+  body.mindcare-auth-route .auth-story-main>h1{font-size:35px}
+  body.mindcare-auth-route .auth-story-preview{display:none}
+}
+@media(max-width:480px){
+  body.mindcare-auth-route .auth-v2{margin:14px 0 30px;border-radius:20px}
+  body.mindcare-auth-route .auth-v2-form-panel{padding:28px 19px}
+  body.mindcare-auth-route .auth-v2-story{padding:27px 20px;min-height:220px}
+  body.mindcare-auth-route .auth-story-main>h1{font-size:32px}
+  body.mindcare-auth-route .auth-form-inner h2{font-size:29px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.mindcare-auth-route .auth-google-button,
+  body.mindcare-auth-route .auth-submit-button{transition:none!important}
+}

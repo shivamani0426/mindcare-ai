@@ -98,6 +98,22 @@ try:
         register(caregiver, "caregiver", "Caregiver Maya", "qa-maya-caregiver@example.org")
         verify(caregiver.locator(".caregiver-v2").count() == 1,
                "Caregiver 2.0 overview loads")
+
+        verify("mc-app-shell" in caregiver.locator("body").get_attribute("class"),
+               "Real caregiver dashboard uses the new design system")
+        verify(caregiver.locator('link[href*="app-world.css"]').count() == 1,
+               "Caregiver loads the app-level redesign stylesheet")
+        verify(caregiver.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
+               "Real caregiver dashboard has dark arcade background")
+        verify(caregiver.locator(".caregiver-hero .mc-app-hero-art").count() == 1,
+               "Caregiver overview includes original illustrated hero")
+        caregiver.wait_for_function(
+            "() => document.querySelector('.caregiver-hero .mc-app-hero-art')?.complete && document.querySelector('.caregiver-hero .mc-app-hero-art')?.naturalWidth > 0"
+        )
+        verify(caregiver.locator(".caregiver-hero h1").evaluate(
+               "(el) => getComputedStyle(el).fontFamily.includes('Courier')"),
+               "Caregiver greeting renders bold display typography")
+
         verify(caregiver.locator(".caregiver-patient-card").count() == 0,
                "No private patient data appears before approval")
         caregiver.locator('#caregiver-invite-code').fill(invite)

@@ -144,6 +144,13 @@ try:
 
         page.goto(base + "/register")
         verify(page.locator(".auth-v2").count() == 1, "Professional registration page renders")
+        verify(page.locator('link[href*="auth-world.css"]').count() == 1,
+               "Real registration screen loads the matching dark visual theme")
+        verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
+               "Real registration page has near-black design background")
+        verify("mindcare-world.svg" in page.locator(".auth-v2-story").evaluate(
+            "(el) => getComputedStyle(el).backgroundImage"),
+            "Real login and registration story uses original illustrated MindCare artwork")
         verify(page.locator(".auth-method-tabs").count() == 1, "Email and phone sign-in tabs visible")
         for width, height in [(320, 780), (375, 812), (768, 1024), (1280, 900)]:
             page.set_viewport_size({"width": width, "height": height})
@@ -169,6 +176,35 @@ try:
         page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
+        verify(page.locator('link[href*="app-world.css"]').count() == 1,
+               "Signed-in patient dashboard loads the new design system")
+        verify("mc-app-shell" in page.locator("body").get_attribute("class"),
+               "New authenticated theme is applied to the actual patient interface")
+        verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
+               "Real patient dashboard has near-black background")
+        verify(page.locator(".mc-app-hero-art").count() == 1,
+               "Patient dashboard contains the illustrated immersive hero")
+        page.wait_for_function("() => document.querySelector('.mc-app-hero-art').complete && document.querySelector('.mc-app-hero-art').naturalWidth > 0")
+        verify(page.locator(".welcome-banner").evaluate(
+               "(el) => getComputedStyle(el).backgroundImage.includes('gradient')"),
+               "Patient welcome card uses the new atmospheric scene treatment")
+        verify(page.locator("[data-quick-support-button]").count() == 1,
+               "Important patient Need Support button survives full visual transformation")
+        for route,selector in [
+            ("/games",".games-catalog"),
+            ("/reminders",".reminders-layout"),
+            ("/family",".family-layout"),
+            ("/help",".sos-callout"),
+            ("/settings",".settings-form")
+        ]:
+            page.goto(base + route)
+            verify(page.locator(selector).count() > 0, f"{route} functionality preserved")
+            verify("mc-app-shell" in page.locator("body").get_attribute("class"),
+                   f"{route} uses actual new app theme")
+            verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
+                   f"{route} dark background is actually rendered")
+        page.goto(base + "/dashboard")
+
 
         verify(page.locator("#milo-roamer").count() == 1, "Milo appears on signed-in patient pages")
         verify(page.locator("#milo-nav-toggle").count() == 1, "Milo show/hide control remains accessible")
@@ -192,6 +228,12 @@ try:
         page.locator(".patient-mode-shortcut button").click()
         page.wait_for_selector(".simple-dashboard")
         verify(page.locator(".simple-action-card").count() == 4, "Simple View has four action cards")
+        verify(page.locator(".simple-banner .mc-app-hero-art").count() == 1,
+               "Simplified dashboard has the original illustrated hero")
+        verify(page.locator(".simple-game").evaluate(
+               "(el) => getComputedStyle(el).backgroundImage.includes('gradient')"),
+               "Simplified patient cards retain vivid high-contrast visual differentiation")
+
         verify(page.locator("[data-quick-support-button]").count() == 1, "Simple View also has a prominent Need Support button")
         verify(page.locator('.simple-bottom-actions a[href="tel:112"]').count() == 1,
                "Simplified view retains emergency 112 dialer")
