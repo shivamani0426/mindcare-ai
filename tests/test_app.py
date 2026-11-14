@@ -1163,3 +1163,61 @@ def test_dark_landing_does_not_replace_private_patient_caregiver_or_auth_ui(clie
     assert b"caregiver-v2" in caregiver.data
     assert b"landing-world.css" not in caregiver.data
     assert b'id="milo-roamer"' not in caregiver.data
+
+
+@pytest.mark.parametrize("role,main_marker",[
+    ("patient",'class="welcome-banner"'),
+    ("caregiver",'class="caregiver-v2"')
+])
+def test_real_logged_in_application_receives_new_visual_design_without_changing_roles(client,role,main_marker):
+    register(client,f"World {role}",f"world-{role}@example.org",role)
+    response=client.get("/dashboard")
+    assert response.status_code == 200
+    html=response.get_data(as_text=True)
+    assert "mc-app-shell" in html
+    assert "app-world.css" in html
+    assert "mindcare-world.svg" in html
+    assert 'class="mc-app-breadcrumb"' in html
+    assert main_marker in html
+    assert 'class="site-header"' in html
+    assert 'class="site-footer"' in html
+    assert "auth-world.css" not in html
+    assert "landing-world.css" not in html
+    if role == "patient":
+        assert 'data-quick-support-button' in html
+        assert 'id="milo-roamer"' in html
+        for path in ("/games","/reminders","/family","/help","/settings"):
+            page=client.get(path)
+            assert page.status_code == 200 and b"app-world.css" in page.data
+    else:
+        assert 'id="milo-roamer"' not in html
+        assert "Support check-ins" in html
+    logout(client)
+
+
+def test_public_and_auth_designs_coexist_without_leaking_private_navigation(client):
+    home=client.get("/")
+    assert home.status_code == 200 and b"landing-world.css" in home.data
+    assert b"app-world.css" not in home.data
+    for route in ("/login","/register"):
+        response=client.get(route)
+        assert response.status_code == 200
+        assert b"auth-world.css" in response.data
+        assert b"app-world.css" not in response.data
+        assert b"mc-app-breadcrumb" not in response.data
+    assert client.get("/static/app-world.css").status_code == 200
+    assert client.get("/static/auth-world.css").status_code == 200
+
+
+def test_patient_simple_view_preserves_support_emergency_and_dark_ui(client):
+    register(client, "World Patient", "world-simple@example.org", "patient")
+    csrf = token(client,"/dashboard")
+    toggled=client.post("/patient/view-mode",data={
+        "csrf_token":csrf,"simplified":"1"
+    },follow_redirects=True)
+    assert toggled.status_code == 200
+    assert b'simple-dashboard' in toggled.data
+    assert b'mc-app-hero-art' in toggled.data
+    assert b'app-world.css' in toggled.data
+    assert b'data-quick-support-button' in toggled.data
+    assert b'href="tel:112"' in toggled.data
