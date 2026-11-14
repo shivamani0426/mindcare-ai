@@ -32,6 +32,7 @@ jobs:
           node --check static/auth-ui.js
           node --check static/auth-phone.js
           node --check static/milo.js
+          node --check static/landing-world.js
 
   browser:
     runs-on: ubuntu-latest
