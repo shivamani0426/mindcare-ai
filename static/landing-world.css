@@ -280,3 +280,15 @@ body.mc-world-page .site-shell>.mc-world-main{width:100%;padding:0;margin:0;max-
 .mc-world-root *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 body.reduced-motion .mc-world-root *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+
+
+/* Keep all four chapter links accessible on narrow 320px phones without
+   expanding the page. The gallery has its own deliberate horizontal scroll. */
+@media(max-width:390px){
+.mc-world-nav{padding:0 7px;gap:4px}
+.mc-world-nav-brand{font-size:10px;gap:4px}
+.mc-world-nav-brand .mc-brand-glyph{width:25px;height:25px;font-size:15px}
+.mc-world-nav-links{gap:5px;min-width:0}
+.mc-world-nav-links a{font-size:9px;letter-spacing:-.02em}
+.mc-world-nav-action{width:26px;min-width:26px;height:26px;font-size:15px}
+}
