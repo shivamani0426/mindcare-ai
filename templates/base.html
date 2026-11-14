@@ -9,6 +9,7 @@
   <title>{% block title %}MindCare AI{% endblock %} · MindCare</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   {% if me %}<link rel="stylesheet" href="{{ url_for('static', filename='app-world.css') }}">{% endif %}
+  {% if request.endpoint in ('login', 'register', 'auth_complete') %}<link rel="stylesheet" href="{{ url_for('static', filename='auth-world.css') }}">{% endif %}
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-today.js') }}" defer></script>{% endif %}
   {% if me and me.role == 'patient' %}<script src="{{ url_for('static', filename='patient-notifications.js') }}" defer></script>{% endif %}
