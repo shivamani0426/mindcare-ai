@@ -13,7 +13,7 @@
     <img class="mc-app-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" aria-hidden="true" loading="eager"><div class="mc-app-hero-sticker" aria-hidden="true">✳ CARE CIRCLE / 02</div>
   </header>
 
-  <section class="caregiver-stats" aria-label="Care circle overview">
+  <section class="caregiver-stats" data-bounce-stack aria-label="Care circle overview">
     <article class="caregiver-stat caregiver-stat-people"><span class="caregiver-stat-icon" aria-hidden="true">👥</span><span>Connected people</span><strong>{{ counts.patients }}</strong><small>Approved connections</small></article>
     <article class="caregiver-stat"><span class="caregiver-stat-icon" aria-hidden="true">💛</span><span>Today's check-ins</span><strong>{{ counts.checkins }} <small>/ {{ counts.patients }}</small></strong><small>Voluntary wellbeing reports</small></article>
     <article class="caregiver-stat {{ 'caregiver-stat-attention' if counts.support else '' }}"><span class="caregiver-stat-icon" aria-hidden="true">🤝</span><span>Support check-ins to review</span><strong>{{ counts.support }}</strong><small>Within the last seven days</small></article>
@@ -51,7 +51,7 @@
     {% endif %}
   </section>
 
-  <div class="caregiver-middle-grid">
+  <div class="caregiver-middle-grid" data-bounce-stack>
     <section class="caregiver-connect-panel panel" aria-labelledby="caregiver-connect-title">
       <span class="eyebrow">GROW YOUR CIRCLE</span>
       <h2 id="caregiver-connect-title">Connect with a loved one</h2>
