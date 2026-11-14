@@ -35,7 +35,7 @@
         </nav>
         <div class="nav-right">
         {% if me and me.role == 'patient' %}<button type="button" id="voice-replay" class="voice-replay" title="{{ tr('nav_voice_replay') }}" aria-label="{{ tr('nav_voice_replay') }}">🔊 <span id="voice-status">{{ tr('nav_voice_on') }}</span></button>{% endif %}
-        {% if me and me.role == 'patient' %}<button type="button" id="milo-nav-toggle" class="milo-nav-toggle" aria-label="{{ tr('milo_hide') }}" aria-pressed="true" title="{{ tr('milo_hide') }}">🌿 <span>Milo</span></button>{% endif %}
+        {% if me and me.role == 'patient' %}<button type="button" id="milo-nav-toggle" class="milo-nav-toggle" aria-label="{{ tr('milo_hide') }}" aria-pressed="true" title="{{ tr('milo_hide') }}" data-hide-label="{{ tr('milo_hide') }}" data-show-label="{{ tr('milo_show') }}">🌿 <span>Milo</span></button>{% endif %}
         <button type="button" class="font-toggle" id="font-toggle" aria-label="Toggle larger text" title="Toggle larger text">A+</button>
         {% if me %}
           <a class="user-pill auth-account-link" href="{{ url_for('account_security') }}" title="Account security for {{ me.name }}" aria-label="Account security for {{ me.name }}"><span class="avatar-mini">{{ me.name[0]|upper }}</span><span class="user-name">{{ me.name.split(' ')[0] }}</span></a>
@@ -102,7 +102,7 @@
     {% elif request.endpoint in ['patient_help'] %}{{ tr('milo_hint_help') }}
     {% else %}{{ tr('milo_hint_other') }}{% endif %}
     </p>
-    <button type="button" id="milo-speak" class="milo-action milo-speak" hidden>🔊 {{ tr('milo_read') }}</button>
+    <button type="button" id="milo-speak" class="milo-action milo-speak" data-unavailable-label="{{ tr('milo_speak_unavailable') }}" hidden>🔊 {{ tr('milo_read') }}</button>
     <div class="milo-shortcuts">
       <a href="{{ url_for('games') }}">🧩 {{ tr('milo_go_games') }}</a>
       <a href="{{ url_for('reminders_page') }}">🔔 {{ tr('milo_go_reminders') }}</a>
