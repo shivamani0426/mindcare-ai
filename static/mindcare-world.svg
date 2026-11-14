@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" role="img" aria-labelledby="title desc">
+<title id="title">MindCare's gentle world of play, routine and connection</title><desc id="desc">An original dreamy night scene with floating memory cards, a bright path through soft hills, a family heart, and a cheerful green plant character called Milo.</desc>
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a091b"/><stop offset=".3" stop-color="#152247"/><stop offset=".65" stop-color="#332350"/><stop offset="1" stop-color="#081a23"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#7b4ab8" stop-opacity=".85"/><stop offset=".5" stop-color="#413eaa" stop-opacity=".45"/><stop offset="1" stop-color="#151a30" stop-opacity="0"/></radialGradient>
+<radialGradient id="sunshine"><stop stop-color="#ee9eac" stop-opacity=".75"/><stop offset=".43" stop-color="#b65fc2" stop-opacity=".35"/><stop offset="1" stop-color="#271038" stop-opacity="0"/></radialGradient>
+<linearGradient id="hill" x1="0" x2=".4" y1="0" y2="1"><stop stop-color="#324f76"/><stop offset=".55" stop-color="#172b4e"/><stop offset="1" stop-color="#0b1325"/></linearGradient>
+<linearGradient id="grass" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4ca486"/><stop offset=".5" stop-color="#326e76"/><stop offset="1" stop-color="#162c49"/></linearGradient>
+<linearGradient id="path" x1=".2" x2=".7" y1="0" y2="1"><stop stop-color="#ffc9a8"/><stop offset=".42" stop-color="#f3a5c8"/><stop offset="1" stop-color="#967de0"/></linearGradient>
+<linearGradient id="milo" x1=".2" x2="1" y1="0" y2="1"><stop stop-color="#d0ffe1"/><stop offset=".48" stop-color="#9be4ad"/><stop offset="1" stop-color="#4ebd8e"/></linearGradient>
+<linearGradient id="cardPink" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#f2adbb"/><stop offset="1" stop-color="#b96fc6"/></linearGradient>
+<linearGradient id="cardBlue" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#b5e6f7"/><stop offset="1" stop-color="#78a8e6"/></linearGradient>
+<filter id="blur"><feGaussianBlur stdDeviation="38"/></filter>
+<filter id="shadow" x="-60%" width="220%" y="-60%" height="240%"><feGaussianBlur in="SourceAlpha" stdDeviation="14"/><feOffset dy="17"/><feComponentTransfer><feFuncA type="linear" slope=".34"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glow"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<rect width="1600" height="920" fill="url(#sky)"/>
+<ellipse cx="820" cy="310" rx="680" ry="390" fill="url(#aura)"/><ellipse cx="1300" cy="210" rx="430" ry="315" fill="url(#sunshine)"/>
+<circle cx="1290" cy="168" r="124" fill="#eca9dc" opacity=".15" filter="url(#blur)"/>
+<circle cx="1290" cy="166" r="82" fill="#e9b4dc" opacity=".8"/><circle cx="1275" cy="152" r="88" fill="#eebcdf" opacity=".14"/>
+<g fill="#e8e9fa" opacity=".75">
+<circle cx="105" cy="105" r="3"/><circle cx="225" cy="186" r="2"/><circle cx="404" cy="84" r="2.2"/><circle cx="603" cy="150" r="3"/><circle cx="798" cy="67" r="2"/><circle cx="941" cy="147" r="1.9"/><circle cx="1119" cy="59" r="2.4"/><circle cx="1464" cy="75" r="3"/><circle cx="1550" cy="260" r="2"/><circle cx="317" cy="262" r="1.5"/><circle cx="78" cy="330" r="2"/><circle cx="1390" cy="357" r="2"/>
+</g>
+<g fill="none" stroke="#fff" stroke-width="3" opacity=".55">
+<path d="M119 254v23M107 265h25"/><path d="M769 188v17M761 196h16"/><path d="M1500 181v17M1492 189h16"/><path d="M542 340v15M535 347h14"/><path d="M1023 251v22M1012 262h22"/>
+</g>
+<!-- floating features near the horizon -->
+<g filter="url(#shadow)" transform="translate(295 284) rotate(-15 95 95)">
+<rect width="185" height="230" rx="30" fill="#f9c9eb" stroke="#fff" stroke-opacity=".65" stroke-width="5"/>
+<rect x="17" y="17" width="151" height="155" rx="22" fill="#a57fd4"/><circle cx="91" cy="88" r="45" fill="#f7df98"/>
+<path d="M93 46l9 26 27 1-21 17 8 25-23-15-23 15 7-26-20-16 26-1z" fill="#fff6ca"/>
+<rect x="45" y="190" width="95" height="10" rx="5" fill="#ae79b9"/>
+</g>
+<g filter="url(#shadow)" transform="translate(477 249) rotate(14 95 95)">
+<rect width="180" height="224" rx="29" fill="#d8eafa" stroke="#fff" stroke-opacity=".7" stroke-width="5"/>
+<rect x="17" y="17" width="146" height="154" rx="21" fill="#84aceb"/><circle cx="88" cy="86" r="42" fill="#d6f6ff"/>
+<path d="M89 48c-19 0-31 16-31 31 0 22 31 43 31 43s31-21 31-43c0-15-12-31-31-31z" fill="#f8a0a8"/>
+<rect x="44" y="189" width="94" height="10" rx="5" fill="#90a8d2"/>
+</g>
+<g transform="translate(1100 340) rotate(9)" filter="url(#shadow)">
+<rect width="200" height="168" rx="32" fill="url(#cardBlue)" stroke="#fff" stroke-opacity=".6" stroke-width="5"/>
+<circle cx="70" cy="68" r="34" fill="#f5e7a6"/><path d="M57 69q14-26 28 0v16H57z" fill="#ef8c86"/><circle cx="65" cy="60" r="4" fill="#49547c"/><circle cx="81" cy="60" r="4" fill="#49547c"/>
+<rect x="32" y="121" width="136" height="13" rx="6" fill="#6f90c6"/><rect x="32" y="143" width="99" height="10" rx="5" fill="#a5c5ed"/>
+</g>
+<!-- colorful floating landscape -->
+<path d="M0 635Q180 493 336 570T675 548Q835 448 1008 545T1346 526Q1491 478 1600 560V920H0Z" fill="#212e55"/>
+<path d="M0 707Q214 565 400 676T744 628Q914 568 1077 654T1400 601Q1544 570 1600 635V920H0Z" fill="url(#hill)"/>
+<path d="M0 750Q252 634 478 739T920 729Q1100 655 1270 727T1600 708V920H0Z" fill="url(#grass)"/>
+<path d="M0 883Q335 741 532 815T882 809Q1099 724 1600 831V920H0Z" fill="#0b2334" opacity=".75"/>
+<path d="M696 920Q794 825 794 788T895 707Q1025 639 876 603" stroke="#e3a3d3" stroke-width="100" fill="none" opacity=".19" stroke-linecap="round"/>
+<path d="M687 920Q784 831 789 788T889 708Q1018 642 878 605" stroke="url(#path)" stroke-width="47" fill="none" stroke-linecap="round"/>
+<path d="M692 917Q789 827 796 792T893 711Q1010 647 879 608" stroke="#fff0df" stroke-opacity=".28" stroke-width="7" fill="none" stroke-linecap="round"/>
+<!-- atmospheric flowers and lamps -->
+<g fill="#dcffcc" opacity=".83"><circle cx="188" cy="674" r="8"/><circle cx="209" cy="664" r="5"/><circle cx="262" cy="728" r="5"/><circle cx="420" cy="775" r="8"/><circle cx="1312" cy="772" r="7"/><circle cx="1434" cy="706" r="9"/><circle cx="1487" cy="828" r="6"/></g>
+<g stroke="#c0e2ca" fill="none" stroke-width="4"><path d="M188 727v-52"/><path d="M420 830v-55"/><path d="M1434 760v-55"/></g>
+<g fill="#f2d2d9"><circle cx="190" cy="674" r="15" opacity=".28"/><circle cx="420" cy="777" r="15" opacity=".23"/><circle cx="1434" cy="708" r="17" opacity=".3"/></g>
+<!-- Milo original mascot -->
+<g transform="translate(1010 530) rotate(5)" filter="url(#shadow)">
+<ellipse cx="142" cy="265" rx="134" ry="21" fill="#102c35" opacity=".43"/>
+<path d="M139 63Q120 10 84 18Q72 61 127 76" fill="#9ad7a7" stroke="#3f9e75" stroke-width="9"/>
+<path d="M141 65Q176 4 213 18Q209 64 146 76" fill="#a0eabc" stroke="#3f9e75" stroke-width="9"/>
+<path d="M142 67v51" stroke="#3f9e75" stroke-width="12" stroke-linecap="round"/>
+<path d="M45 159Q-9 136 6 188Q25 215 54 195" fill="#8fdfaf" stroke="#459a70" stroke-width="9"/>
+<path d="M245 154Q292 132 298 176Q294 203 250 193" fill="#8fdfaf" stroke="#459a70" stroke-width="9"/>
+<rect x="41" y="94" width="212" height="176" rx="95" fill="url(#milo)" stroke="#39895c" stroke-width="10"/>
+<ellipse cx="103" cy="160" rx="13" ry="22" fill="#254f49"/><ellipse cx="192" cy="160" rx="13" ry="22" fill="#254f49"/>
+<circle cx="80" cy="192" r="16" fill="#f3a0aa" opacity=".57"/><circle cx="216" cy="192" r="16" fill="#f3a0aa" opacity=".57"/>
+<path d="M127 195q22 25 44 0" stroke="#315e50" stroke-width="8" stroke-linecap="round" fill="none"/>
+<ellipse cx="146" cy="232" rx="44" ry="22" fill="#d3f9c8" opacity=".82"/>
+<path d="M129 227q8-10 17 0q10-10 19 0q0 12-19 22q-19-10-17-22" fill="#f1a0b7"/>
+<ellipse cx="86" cy="269" rx="45" ry="18" fill="#6bbd92" stroke="#39895c" stroke-width="7"/>
+<ellipse cx="214" cy="269" rx="45" ry="18" fill="#6bbd92" stroke="#39895c" stroke-width="7"/>
+</g>
+<!-- hovering care-heart beacon -->
+<g transform="translate(775 370)" filter="url(#shadow)">
+<circle r="70" fill="#f7c3a4" opacity=".85"/><circle r="55" fill="#fdedcc"/>
+<path d="M-41-4c0-27 32-37 41-15 10-22 42-12 42 15C42 21 0 49 0 49S-41 21-41-4Z" fill="#ed8996"/>
+</g>
+<g fill="#f9e3ba" opacity=".9"><circle cx="762" cy="504" r="6"/><circle cx="915" cy="529" r="4"/><circle cx="1357" cy="554" r="5"/><circle cx="601" cy="635" r="5"/></g>
+</svg>

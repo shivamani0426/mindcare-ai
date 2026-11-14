@@ -221,3 +221,16 @@ Milo is an optional, cute green plant companion rendered with CSS and controlled
 - If safe roaming positions are unavailable, Milo prefers remaining still rather than deliberately standing over a form control.
 
 Existing WhatsApp, 112, consent, authentication, database, games, reminders and caregiver workflows are unaffected. Browser QA covers ordinary and reduced motion, access isolation, help, hide/pause persistence, and responsive layouts.
+
+
+## Dark illustrated MindCare World landing page
+
+The **public homepage only** uses an original arcade-inspired art direction: near-black scanline background, oversized monochrome display headings, warm purple/blue/green illustrated MindCare landscape, white pill CTAs and lime active control states. It includes a full-viewport hero, sticky section navigation, two-line manifesto, original immersive artwork, three accessible capability tabs, two interactive simulated (not real patient data) patient/caregiver interface previews, six original feature gallery cards in horizontally scrollable two offset rows, entry CTAs, and a matching oversized brand footer.
+
+Design reference inspired the layout and rhythm, but all artwork, names, copy, gallery scenes and interface mockups are original MindCare assets. No reference trademarks, logos, images, fonts or UI code are reused. Files are templates/home.html, static/mindcare-world.svg, static/landing-world.css and static/landing-world.js. The homepage relies on zero external CDNs, fonts, browser permissions or account data.
+
+Links to Login and Create Account use their **existing working Flask routes**. Auth pages, patient/caregiver dashboards, memory games, reminder scheduling, family photos, approved care connections, WhatsApp handoff, Milo, and emergency 112 keep their independent accessible layouts and backend behaviour. This separation matters for low-vision or cognitively vulnerable patients.
+
+All feature gallery cards represent existing platform concepts; the gallery is **not** a real community or user-posted collection. Simulated dashboard previews are clearly labeled as fictional; there is no customer-data exposure. The footer privacy/usage notes are short prototype notices, not a replacement for a full privacy policy, regulatory analysis, or Terms of Service.
+
+Keyboard navigation works for capability tabs (left/right/home/end), both preview dots, all section anchors, and the horizontally scrollable gallery. Animation respects reduced-motion settings. The Python and Playwright suites check functionality and responsiveness down to 320px.

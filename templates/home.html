@@ -1,28 +1,206 @@
-{% extends 'base.html' %}{% block title %}A gentler way to stay connected{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Enter a gentler world{% endblock %}
+{% block body_class %}mc-world-page{% endblock %}
+{% block head %}
+  <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
+  <script src="{{ url_for('static', filename='landing-world.js') }}" defer></script>
+{% endblock %}
 {% block content %}
-<section class="hero">
-  <div class="hero-copy"><span class="eyebrow"><span class="eyebrow-dot"></span> A little brighter, every day</span>
-    <h1>Small moments.<br><em>Meaningful</em> memories.</h1>
-    <p class="hero-description">An inviting space for older adults to enjoy gentle brain games, remember daily routines, and feel closer to the people who matter most.</p>
-    <div class="hero-actions"><a class="button button-primary button-lg" href="{{ url_for('register') }}">Start your journey <span>↗</span></a><a class="button button-outline button-lg" href="#how-it-works">Explore MindCare <span>↘</span></a></div>
-    <div class="trust-line"><div class="stack-avatars"><span>🌸</span><span>🧡</span><span>🌻</span></div><p>Simple to use · Made for families · Calm by design</p></div>
-  </div>
-  <div class="hero-scene" aria-label="Decorative illustration of a welcoming brain games dashboard" role="img"><div class="orb orb-1"></div><div class="orb orb-2"></div>
-    <div class="hero-app"><div class="hero-app-top"><div class="hero-app-logo">✦</div><div><strong>Good morning, Asha!</strong><span>Let's make today a lovely one.</span></div><span class="sun">☀️</span></div>
-      <div class="hero-feature"><span class="mini-label">TODAY'S LITTLE WIN</span><span class="featured-emoji">🌷</span><strong>You're doing beautifully!</strong><p>A few minutes of play goes a long way.</p><div class="hero-progress"><span></span></div></div>
-      <div class="hero-app-footer"><div><span>🧠</span><b>Memory games</b><small>Play at your pace</small></div><div><span>🔔</span><b>Daily routine</b><small>Stay on track</small></div></div>
-    </div><div class="floating-note"><span>💛</span><span><strong>Stay connected</strong><small>One precious moment at a time</small></span></div><div class="sparkle sparkle-1">✧</div><div class="sparkle sparkle-2">✦</div>
-  </div>
-</section>
-<section class="section" id="features"><div class="section-heading center"><span class="eyebrow">THOUGHTFULLY DESIGNED</span><h2>Care that feels like <em>care.</em></h2><p>Everything in one warm, easy-to-use space. No pressure, just progress at your own pace.</p></div>
-  <div class="feature-grid"><article class="feature-tile"><span class="feature-icon mint">🧩</span><h3>Playful brain games</h3><p>Memory cards, puzzles, word and number games that adapt gently to each person.</p><a href="{{ url_for('register') }}">Explore games <span>→</span></a></article>
-    <article class="feature-tile"><span class="feature-icon peach">🔔</span><h3>Friendly reminders</h3><p>Small nudges for medicine, meals, appointments and special family moments.</p><a href="{{ url_for('register') }}">Explore reminders <span>→</span></a></article>
-    <article class="feature-tile"><span class="feature-icon lavender">👨‍👩‍👧</span><h3>Faces you love</h3><p>See familiar photos, names and relationships, and practise remembering loved ones.</p><a href="{{ url_for('register') }}">Explore family space <span>→</span></a></article>
-    <article class="feature-tile"><span class="feature-icon lemon">📈</span><h3>Caregiver insights</h3><p>See activity history and spot changes worth a gentle conversation, not a diagnosis.</p><a href="{{ url_for('register') }}">Explore insights <span>→</span></a></article>
-  </div>
-</section>
-<section class="how-section" id="how-it-works"><div class="how-header"><div><span class="eyebrow">AS SIMPLE AS ONE, TWO, THREE</span><h2>Getting started is <em>easy.</em></h2></div><p>Whether you're here for yourself or someone you care for, MindCare grows with you.</p></div>
-  <div class="steps-grid"><div><span class="step-number">01</span><h3>Create your space</h3><p>Choose a patient or caregiver account. Just a few simple details.</p></div><div><span class="step-number">02</span><h3>Enjoy a little activity</h3><p>Pick a game, add daily reminders, and explore familiar faces.</p></div><div><span class="step-number">03</span><h3>Stay close together</h3><p>Connect securely with a caregiver and share activity updates.</p></div></div>
-</section>
-<section class="cta-panel"><div><span class="eyebrow">YOUR JOURNEY BEGINS HERE</span><h2>Every day is worth <em>remembering.</em></h2><p>A little encouragement can make a big difference. Start with just five minutes.</p><a class="button button-white button-lg" href="{{ url_for('register') }}">Create a free account ↗</a></div><span class="cta-illustration">🌼</span></section>
+<div class="mc-world-root" id="top">
+  <section class="mc-world-hero" aria-labelledby="mc-hero-heading">
+    <img class="mc-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" fetchpriority="high" decoding="async">
+    <div class="mc-hero-vignette" aria-hidden="true"></div>
+    <header class="mc-hero-header">
+      <a class="mc-hero-back" href="#overview" aria-label="Explore MindCare overview">←</a>
+      <a class="mc-hero-brand" href="#top" aria-label="MindCare AI, back to top"><span class="mc-brand-glyph" aria-hidden="true">✦</span><span>MINDCARE</span></a>
+      <div class="mc-hero-header-right"><span>EVERYDAY CARE, REIMAGINED</span><span class="mc-outline-badge">EARLY ACCESS</span></div>
+    </header>
+    <div class="mc-hero-center">
+      <span class="mc-hero-kicker">A PLACE FOR SMALL WINS &amp; BIG HEARTS</span>
+      <h1 id="mc-hero-heading" class="mc-pixel mc-hero-wordmark">MINDCARE<span>AI</span></h1>
+      <p>A brighter world for daily routines, playful moments, and the people who matter.</p>
+      <a class="mc-pill mc-pill-light mc-pixel mc-hero-enter" href="{{ url_for('register') }}">ENTER MINDCARE <span aria-hidden="true">↗</span></a>
+      <a class="mc-hero-signin" href="{{ url_for('login') }}">Already part of MindCare? Sign in</a>
+    </div>
+    <a class="mc-hero-scroll" href="#overview"><span>EXPLORE THE WORLD</span><span aria-hidden="true">↓</span></a>
+    <span class="mc-hero-corner mc-hero-corner-left" aria-hidden="true">01 — A WORLD OF CARE</span>
+    <span class="mc-hero-corner mc-hero-corner-right" aria-hidden="true">✳ BUILT WITH FAMILIES IN MIND</span>
+  </section>
+
+  <nav class="mc-world-nav" aria-label="MindCare landing sections">
+    <a class="mc-world-nav-brand mc-pixel" href="#top"><span class="mc-brand-glyph" aria-hidden="true">✦</span> M<span class="mc-world-nav-brand-long">INDCARE</span></a>
+    <div class="mc-world-nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#discover">Discover</a>
+      <a href="#access">Access</a>
+    </div>
+    <a class="mc-world-nav-action" href="{{ url_for('login') }}" aria-label="Sign in to MindCare" title="Sign in">↗</a>
+  </nav>
+
+  <section class="mc-world-manifesto mc-scanlines" id="overview" aria-labelledby="mc-manifesto-heading">
+    <span class="mc-mini-pill mc-pixel">THE IDEA</span>
+    <h2 class="mc-pixel" id="mc-manifesto-heading">GENTLE DAYS.<br>BRIGHTER MOMENTS.</h2>
+    <p>MindCare brings little moments of play, familiar faces, and everyday routines into one welcoming space. Made for older adults and the caregivers they choose to trust.</p>
+  </section>
+
+  <section class="mc-world-media" aria-label="An illustrated look inside the MindCare world">
+    <div class="mc-media-frame">
+      <img src="{{ url_for('static', filename='mindcare-world.svg') }}" loading="lazy" decoding="async" alt="An original illustrated world with Milo the green companion, playful memory cards, glowing hearts, and a gentle path forward">
+      <span class="mc-media-stamp mc-pixel" aria-hidden="true">MAKE ROOM FOR JOY ✳</span>
+      <span class="mc-media-corner mc-pixel" aria-hidden="true">MINDCARE UNIVERSE / 001</span>
+    </div>
+    <p class="mc-media-caption">Original MindCare illustration. Created to evoke warmth, memory, and everyday connection.</p>
+  </section>
+
+  <section class="mc-world-capabilities mc-scanlines" id="capabilities" aria-labelledby="mc-capabilities-heading">
+    <span class="mc-mini-pill mc-pixel">WHAT'S INSIDE</span>
+    <h2 class="mc-pixel mc-section-title" id="mc-capabilities-heading">POSSIBILITIES,<br>AT YOUR PACE.</h2>
+    <p class="mc-section-lead">Three ways to make everyday moments feel a little easier.</p>
+    <div class="mc-cap-tabs" role="tablist" aria-label="MindCare capabilities">
+      <button type="button" class="mc-cap-tab mc-pixel" id="mc-tab-memory" role="tab" aria-controls="mc-panel-memory" aria-selected="true" tabindex="0">MEMORY PLAY</button>
+      <button type="button" class="mc-cap-tab mc-pixel" id="mc-tab-routine" role="tab" aria-controls="mc-panel-routine" aria-selected="false" tabindex="-1">DAILY RHYTHM</button>
+      <button type="button" class="mc-cap-tab mc-pixel" id="mc-tab-together" role="tab" aria-controls="mc-panel-together" aria-selected="false" tabindex="-1">STAY CLOSE</button>
+    </div>
+    <div class="mc-cap-content">
+      <div id="mc-panel-memory" class="mc-cap-panel" role="tabpanel" aria-labelledby="mc-tab-memory" tabindex="0">
+        <span class="mc-cap-index mc-pixel">01 / PLAY</span>
+        <p>From picture puzzles to gentle matching games, MindCare gives every player room to explore familiar ideas in their own time. No races, no pressure—just little victories.</p>
+        <a href="{{ url_for('register') }}" class="mc-underlined-link">Explore memory games <span aria-hidden="true">↗</span></a>
+      </div>
+      <div id="mc-panel-routine" class="mc-cap-panel" role="tabpanel" aria-labelledby="mc-tab-routine" tabindex="0" hidden>
+        <span class="mc-cap-index mc-pixel">02 / ROUTINE</span>
+        <p>Friendly reminders offer a familiar rhythm for meals, activities, and everyday tasks. Large controls, spoken cues, and a simplified patient view help make each next step clearer.</p>
+        <a href="{{ url_for('register') }}" class="mc-underlined-link">Discover gentle reminders <span aria-hidden="true">↗</span></a>
+      </div>
+      <div id="mc-panel-together" class="mc-cap-panel" role="tabpanel" aria-labelledby="mc-tab-together" tabindex="0" hidden>
+        <span class="mc-cap-index mc-pixel">03 / CONNECTION</span>
+        <p>See familiar family faces, reach trusted contacts, and share selected activity updates with caregivers only after approval. Milo is always nearby when a little guidance would help.</p>
+        <a href="{{ url_for('register') }}" class="mc-underlined-link">Explore the family space <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="mc-world-product" aria-labelledby="mc-product-heading">
+    <span class="mc-mini-pill mc-pixel">A LOOK INSIDE</span>
+    <h2 class="mc-pixel mc-section-title" id="mc-product-heading">A WORLD THAT<br>FEELS LIKE YOURS.</h2>
+    <p class="mc-section-lead">The right tools, made clearer for the people using them.</p>
+    <div class="mc-product-frame" aria-roledescription="carousel" aria-label="Simulated MindCare interface previews">
+      <div class="mc-product-slide mc-product-slide-patient" id="mc-product-patient" role="group" aria-roledescription="slide" aria-label="1 of 2: patient dashboard">
+        <div class="mc-demo-app">
+          <aside class="mc-demo-side">
+            <div class="mc-demo-logo">✦ <strong>mindcare<span>.ai</span></strong></div>
+            <span class="mc-demo-menu-active">⌂ <span>My day</span></span>
+            <span>◈ <span>Brain games</span></span>
+            <span>◷ <span>Reminders</span></span>
+            <span>♡ <span>My people</span></span>
+            <span>✳ <span>Ask Milo</span></span>
+            <div class="mc-demo-side-bottom">🌿 <span>One step at a time</span></div>
+          </aside>
+          <div class="mc-demo-body">
+            <div class="mc-demo-topline"><span>YOUR GENTLE SPACE</span><span>Saturday · A new day ☀</span></div>
+            <h3>Good morning, Asha! <span aria-hidden="true">☀️</span></h3>
+            <p>Let's make today a lovely one.</p>
+            <div class="mc-demo-patient-grid">
+              <div class="mc-demo-card mc-demo-card-hero"><span>🌼 TODAY'S LITTLE WIN</span><strong>Every small step counts.</strong><p>Enjoy a little game at your own pace.</p><div class="mc-demo-white-pill">PLAY A GAME ↗</div><span class="mc-demo-card-orb" aria-hidden="true">✿</span></div>
+              <div class="mc-demo-card mc-demo-card-milo"><span>YOUR FRIENDLY GUIDE</span><strong>Meet Milo</strong><p>Here whenever you need a little help.</p><span class="mc-demo-milo-face" aria-hidden="true">🌱</span></div>
+              <div class="mc-demo-card mc-demo-card-reminder"><span>🔔 MY NEXT REMINDER</span><strong>Time for a gentle break</strong><p>One thing at a time, always.</p></div>
+              <div class="mc-demo-card mc-demo-card-family"><span>💛 KEEP IN TOUCH</span><strong>Familiar faces, close by</strong><p>A little connection goes a long way.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mc-product-slide mc-product-slide-caregiver" id="mc-product-caregiver" role="group" aria-roledescription="slide" aria-label="2 of 2: caregiver dashboard" hidden>
+        <div class="mc-demo-app">
+          <aside class="mc-demo-side">
+            <div class="mc-demo-logo">✦ <strong>mindcare<span>.ai</span></strong></div>
+            <span class="mc-demo-menu-active">⌂ <span>Overview</span></span>
+            <span>♡ <span>Care circle</span></span>
+            <span>◷ <span>Reminders</span></span>
+            <span>▧ <span>Family photos</span></span>
+            <div class="mc-demo-side-bottom">💛 <span>Care that connects</span></div>
+          </aside>
+          <div class="mc-demo-body">
+            <div class="mc-demo-topline"><span>CAREGIVER OVERVIEW</span><span>Only approved connections</span></div>
+            <h3>Good morning, Priya! <span aria-hidden="true">💛</span></h3>
+            <p>A thoughtful overview of your care circle.</p>
+            <div class="mc-demo-care-stats"><div><span>PEOPLE</span><strong>02</strong><small>Connected</small></div><div><span>CHECK-INS</span><strong>05</strong><small>Voluntary</small></div><div><span>FOLLOW-UP</span><strong>01</strong><small>Review needed</small></div></div>
+            <div class="mc-demo-care-row"><div class="mc-demo-portrait">🌷</div><div><strong>Asha</strong><small>Daily check-in saved</small></div><span>View updates ↗</span></div>
+            <div class="mc-demo-care-row"><div class="mc-demo-portrait">🌻</div><div><strong>Leela</strong><small>Support check-in to review</small></div><span>View updates ↗</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mc-screen-disclaimer">Illustrative interface previews. People, data and screens are simulated—not real patient records.</p>
+    <div class="mc-carousel-dots" role="group" aria-label="Select interface preview">
+      <button type="button" class="mc-carousel-dot" data-mc-slide="0" aria-label="Show patient interface preview" aria-pressed="true"></button>
+      <button type="button" class="mc-carousel-dot" data-mc-slide="1" aria-label="Show caregiver interface preview" aria-pressed="false"></button>
+    </div>
+  </section>
+
+  <section class="mc-world-discover mc-scanlines" id="discover" aria-labelledby="mc-discover-heading">
+    <a href="{{ url_for('register') }}" class="mc-pill mc-pill-light mc-pixel">DISCOVER MINDCARE <span aria-hidden="true">↗</span></a>
+    <span class="mc-discover-kicker mc-pixel">AN UNIVERSE OF LITTLE WINS</span>
+    <h2 class="mc-pixel mc-section-title" id="mc-discover-heading">EVERY MOMENT<br>HAS A STORY.</h2>
+    <p class="mc-section-lead">A peek at the thoughtful experiences inside MindCare, brought to life as imaginative example scenes.</p>
+    <div class="mc-gallery-rail" aria-label="A gallery of illustrative MindCare features" tabindex="0">
+      <div class="mc-gallery-row">
+        <a class="mc-gallery-card mc-gallery-matching" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">PLAY</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-matching" aria-hidden="true"><span class="mc-gallery-big-symbol">✿</span><span class="mc-gallery-side-symbol">✦</span></div>
+          <span class="mc-gallery-caption"><small>01 — GENTLE GAMES</small><strong class="mc-pixel">MATCH &amp; REMEMBER</strong><span>Find a familiar pair, one card at a time.</span><small>@mindcare.ai</small></span>
+        </a>
+        <a class="mc-gallery-card mc-gallery-routine" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">ROUTINE</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-routine" aria-hidden="true"><span class="mc-gallery-big-symbol">☀</span><span class="mc-gallery-side-symbol">◷</span></div>
+          <span class="mc-gallery-caption"><small>02 — THE LITTLE THINGS</small><strong class="mc-pixel">A GENTLE RHYTHM</strong><span>Friendly reminders for everyday moments.</span><small>@mindcare.ai</small></span>
+        </a>
+        <a class="mc-gallery-card mc-gallery-faces" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">CONNECTION</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-faces" aria-hidden="true"><span class="mc-gallery-big-symbol">♡</span><span class="mc-gallery-side-symbol">✽</span></div>
+          <span class="mc-gallery-caption"><small>03 — STAY CONNECTED</small><strong class="mc-pixel">FAMILIAR FACES</strong><span>Keep the people you love close.</span><small>@mindcare.ai</small></span>
+        </a>
+      </div>
+      <div class="mc-gallery-row mc-gallery-row-offset">
+        <a class="mc-gallery-card mc-gallery-puzzles" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">DISCOVER</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-puzzles" aria-hidden="true"><span class="mc-gallery-big-symbol">◈</span><span class="mc-gallery-side-symbol">✧</span></div>
+          <span class="mc-gallery-caption"><small>04 — EXPLORE AT YOUR PACE</small><strong class="mc-pixel">PICTURE PATHWAYS</strong><span>Every small puzzle is a new discovery.</span><small>@mindcare.ai</small></span>
+        </a>
+        <a class="mc-gallery-card mc-gallery-milo" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">COMPANION</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-milo" aria-hidden="true"><span class="mc-gallery-big-symbol">🌱</span><span class="mc-gallery-side-symbol">✦</span></div>
+          <span class="mc-gallery-caption"><small>05 — YOUR LITTLE HELPER</small><strong class="mc-pixel">MEET MILO</strong><span>A friendly guide who walks beside you.</span><small>@mindcare.ai</small></span>
+        </a>
+        <a class="mc-gallery-card mc-gallery-together" href="{{ url_for('register') }}">
+          <span class="mc-gallery-category mc-pixel">FAMILY</span>
+          <div class="mc-gallery-illustration mc-gallery-illustration-together" aria-hidden="true"><span class="mc-gallery-big-symbol">♥</span><span class="mc-gallery-side-symbol">✽</span></div>
+          <span class="mc-gallery-caption"><small>06 — CARE CIRCLE</small><strong class="mc-pixel">CLOSER TOGETHER</strong><span>Share moments with approved caregivers.</span><small>@mindcare.ai</small></span>
+        </a>
+      </div>
+    </div>
+    <p class="mc-gallery-note">These original illustrations represent MindCare features; they are not community uploads or real patient photos. Scroll sideways to explore.</p>
+  </section>
+
+  <section class="mc-world-access mc-scanlines" id="access" aria-labelledby="mc-access-heading">
+    <span class="mc-mini-pill mc-pixel">YOUR WORLD AWAITS</span>
+    <h2 class="mc-pixel mc-section-title" id="mc-access-heading">READY FOR YOUR<br>NEXT LITTLE WIN?</h2>
+    <p>Whether you're here to play, remember or care for someone you love, there's room for you in MindCare.</p>
+    <a href="{{ url_for('register') }}" class="mc-pill mc-pill-light mc-pixel mc-access-enter">GET STARTED <span aria-hidden="true">↗</span></a>
+    <p class="mc-access-legal">MindCare is an educational, non-diagnostic support prototype; it is not a medical service or an emergency response system.<br>Caregiver information is shared only with patient approval. Internet access and device permissions may be required.</p>
+    <div class="mc-access-actions">
+      <a href="{{ url_for('register') }}" class="mc-pill mc-pill-light mc-pixel">CREATE AN ACCOUNT</a>
+      <a href="{{ url_for('login') }}" class="mc-pill mc-pill-dark mc-pixel">I ALREADY HAVE ONE</a>
+    </div>
+  </section>
+
+  <footer class="mc-world-footer">
+    <div class="mc-footer-related"><span class="mc-pixel">EXPLORE MORE</span><div><a href="#capabilities">Play &amp; remember ↗</a><a href="#discover">Our little world ↗</a><a href="#access">Patient &amp; caregiver access ↗</a></div></div>
+    <div class="mc-footer-giant mc-pixel" aria-hidden="true">MINDCARE</div>
+    <div class="mc-footer-bottom"><a href="#top" class="mc-footer-brand"><span class="mc-brand-glyph" aria-hidden="true">✦</span> mindcare.ai</a><nav aria-label="MindCare footer links"><a href="#overview">About</a><a href="#capabilities">Products</a><a href="#access">Help</a><a href="#privacy-note">Privacy</a><a href="#terms-note">Terms</a></nav></div>
+    <div class="mc-footer-notes"><p id="privacy-note"><strong>Privacy:</strong> Personal information belongs to each account; caregivers see patient information only after patient approval. This prototype is not certified for clinical use.</p><p id="terms-note"><strong>Use:</strong> The games, reminders, Milo and wellbeing check-ins are supportive tools only, not a substitute for medical advice or emergency services.</p></div>
+    <p class="mc-footer-signoff">© 2026 MindCare AI · Thoughtfully made for everyday connections.</p>
+  </footer>
+</div>
 {% endblock %}
