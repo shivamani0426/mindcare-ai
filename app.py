@@ -498,11 +498,11 @@ def _send_recovery_mail(destination, code):
     msg["To"] = destination
     msg["Subject"] = "MindCare password recovery code"
     msg.set_content(
-        "A password reset was requested for your MindCare account.\\n\\n"
-        "Recovery code: " + code + "\\n\\n"
+        "A password reset was requested for your MindCare account.\n\n"
+        "Recovery code: " + code + "\n\n"
         "Enter this code at the MindCare Reset password page. "
         "It expires in 15 minutes and works only once. "
-        "If you did not request this, ignore this email.\\n")
+        "If you did not request this, ignore this email.\n")
     port = int(os.environ["SMTP_PORT"])
     if port not in (465, 587):
         raise ValueError("SMTP must use port 465 (TLS) or 587 (STARTTLS)")
@@ -1088,7 +1088,7 @@ def reset_password():
         _record_auth_attempts(buckets, RECOVERY_WINDOW_SECONDS)
         if not 10 <= len(new_password) <= 128:
             flash("Choose a new password between 10 and 128 characters.", "error")
-        elif not re.fullmatch(r"[^\\s@]+@[^\\s@]+\\.[^\\s@]+", email) or len(code) != 43:
+        elif not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email) or len(code) != 43:
             flash("Invalid or expired recovery details. Request a new code.", "error")
         else:
             user = User.query.filter(func.lower(User.email) == email).first()
