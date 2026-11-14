@@ -241,6 +241,24 @@ try:
         page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
+        verify(page.locator("[data-bounce-stack]").count() >= 3,
+               "Patient dashboard groups functional cards into bounce stacks")
+        page.emulate_media(reduced_motion="no-preference")
+        page.reload()
+        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'stacked'""")
+        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_visible(),
+               "Patient card stack can be spread from a clear button")
+        verify(page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
+               "Stacked card form controls are inert until revealed")
+        page.locator(".patient-top-tiles .dashboard-stack-open").click()
+        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") == "expanded",
+               "Patient cards fly back into their normal grid")
+        verify(not page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
+               "Patient actions are reachable after spreading cards")
+        page.emulate_media(reduced_motion="reduce")
+        page.reload()
+        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") != "stacked",
+               "Reduced-motion patients see normal accessible dashboard layout")
         verify(page.locator('link[href*="app-world.css"]').count() == 1,
                "Signed-in patient dashboard loads the new design system")
         verify("mc-app-shell" in page.locator("body").get_attribute("class"),
