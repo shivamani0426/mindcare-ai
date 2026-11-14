@@ -33,6 +33,7 @@
   let panelOpen = false;
   let hidden = false;
   let paused = false;
+  let hovering = false;
 
   function readPreference(key) {
     try { return window.localStorage.getItem(key) === '1'; } catch (_) { return false; }
@@ -44,7 +45,8 @@
     return motionPreference.matches || document.body.classList.contains('reduced-motion');
   }
   function canMove() {
-    return !hidden && !paused && !panelOpen && !gamePage && !reduced() &&
+    return !hidden && !paused && !hovering && !panelOpen && !gamePage && !reduced() &&
+      !roamer.contains(document.activeElement) &&
       !document.hidden && !document.querySelector('dialog[open], [aria-modal="true"]:not([hidden])') &&
       !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
   }
@@ -181,6 +183,26 @@
     if (!hidden) planNext();
   }
 
+  // If Milo wanders under a mouse or receives keyboard focus, stop him in
+  // place so tapping remains easy for patients with tremors or slow movement.
+  roamer.addEventListener('pointerenter', () => {
+    hovering = true;
+    const rect = roamer.getBoundingClientRect();
+    stopTimer();
+    place(rect.left,rect.top,0);
+  });
+  roamer.addEventListener('pointerleave', () => {
+    hovering = false;
+    if (canMove()) planNext(6000);
+  });
+  roamer.addEventListener('focusin', () => {
+    const rect = roamer.getBoundingClientRect();
+    stopTimer();
+    place(rect.left,rect.top,0);
+  });
+  roamer.addEventListener('focusout', () => {
+    if (canMove()) planNext(6000);
+  });
   nav.addEventListener('click', () => setVisible(hidden));
   mascot.addEventListener('click', () => panelOpen ? closePanel() : openPanel());
   closeButton.addEventListener('click', () => closePanel());
