@@ -234,3 +234,18 @@ Links to Login and Create Account use their **existing working Flask routes**. A
 All feature gallery cards represent existing platform concepts; the gallery is **not** a real community or user-posted collection. Simulated dashboard previews are clearly labeled as fictional; there is no customer-data exposure. The footer privacy/usage notes are short prototype notices, not a replacement for a full privacy policy, regulatory analysis, or Terms of Service.
 
 Keyboard navigation works for capability tabs (left/right/home/end), both preview dots, all section anchors, and the horizontally scrollable gallery. Animation respects reduced-motion settings. The Python and Playwright suites check functionality and responsiveness down to 320px.
+
+
+## MindCare World: full application visual transformation
+
+The public homepage, authenticated dashboards and existing authentication screens now share the same original MindCare interpretation of the requested dark, pixel-inspired arcade art direction. This is **not** limited to the public landing page.
+
+- Authenticated patient and caregiver pages use the near-black scanline background, monochrome header/footer, pixel-inspired headings, white rounded actions and acid-lime active states via static/app-world.css, loaded only for logged-in accounts.
+- Patient full and simple dashboards and caregiver overview show the original illustrated world (static/mindcare-world.svg) inside rich, dark full-width hero regions. Milo, patient Need Support, caregivers, consent and emergency controls are unchanged.
+- Games catalogue uses vivid gradient covers and the existing working game URLs; active game instructions, reminders, family photos, WhatsApp help, settings, account security and caregiver detail screens share the new dark application chrome.
+- The simplified patient view deliberately retains large, visually distinct pastel feature cards and at least 58–64px primary actions; support and emergency actions remain clearly recognizable.
+- The login, registration and social onboarding screens have matching visual direction through static/auth-world.css. All verified Google/Firebase provider behavior remains gated by actual service credentials, not merely UI buttons.
+- Color contrast, reduced motion, larger text, patient's language settings, and per-patient Simplified View remain available. Animated Milo remains controlled entirely by the patient's existing pause/hide and reduced-motion settings.
+- No backend routes, models, data, caregiver approvals, forms, CSRF tokens, login sessions, provider credentials, WebRTC, WhatsApp linking or contact addresses were changed by this visual release.
+
+To preview the real change, **sign in** as a patient or caregiver and open /dashboard; refreshing the public homepage alone does not show the private dashboards. Browser tests assert computed near-black backgrounds after login (not only content existence) across actual routes and mobile sizes.
