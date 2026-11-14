@@ -1,37 +1,51 @@
-# MindCare AI — PostgreSQL backup and recovery runbook
+# MindCare AI — encrypted PostgreSQL backup and recovery runbook
 
-This is a **manual, opt-in** operational procedure for the existing Render PostgreSQL database. It does **not** replace the database, deploy a new database, or change production code. The data may contain sensitive patient and family information.
+**Manual, opt-in workflow.** This documents the existing `scripts/backup_postgres.sh` and does not modify production data, create a new database, or turn on a paid service. MindCare stores private patient and family information: treat archives and the corresponding decryption identity as sensitive.
 
-## Preparation
+## Before the backup
 
-1. Confirm the **correct existing** MindCare Render PostgreSQL instance and check the database's expiry and storage limits. Never provision a replacement simply to run this procedure.
-2. Use a trusted workstation (not ephemeral Render web-service storage) with PostgreSQL client utilities `pg_dump` and `pg_restore` compatible with the server version.
-3. Choose an access-controlled **encrypted** backup destination with enough space. Restrict who can view copies. Do not save backups in GitHub, a public bucket, unencrypted cloud folders, logs, or browser downloads.
-4. Retrieve the connection URL through Render's private Database > Connect UI. Export `DATABASE_URL` in your own terminal without writing the credential to source files, shell history, chat or screenshots. An external connection should use TLS, e.g. the provider's supported `sslmode=require` configuration.
+1. Verify the **existing MindCare Render PostgreSQL** database, its expiry date, and its storage allowance. Never create a replacement database as part of this process.
+2. Run from a trusted Linux/macOS workstation with PostgreSQL client `pg_dump` and `age` installed. Do not run backups on the Render web service's ephemeral disk.
+3. Prepare an `age` recipient (public key) and preserve its matching **private identity separately** in secure storage. Losing that identity makes the backup unrecoverable.
+4. Obtain the database connection parameters in the private Render dashboard. Provide `PGHOST`, `PGDATABASE`, `PGUSER`, and password through secure PostgreSQL client configuration such as a permission-restricted `~/.pgpass` file; optional `PGPORT` as needed. The script enforces TLS via `PGSSLMODE=require`. Do **not** put credentials in source code, GitHub, shell history, screenshots, chat, logs or copied documentation.
+5. Never export production credentials or patient data to a developer's publicly shared computer.
 
-## Backup (Linux / macOS)
+## Run a backup
 
 ```bash
-# Set DATABASE_URL privately in this shell first; do not paste its value into commands shared publicly.
-export BACKUP_DIR="/path/to/your/existing/encrypted/backup-directory"
-export MINDCARE_BACKUP_ENCRYPTED_STORAGE=1
-bash scripts/backup_postgres.sh
+# Environment values below are placeholder examples, not production secrets.
+export PGHOST="your-render-postgres-host"
+export PGDATABASE="your-database-name"
+export PGUSER="your-database-user"
+export AGE_RECIPIENT="age1YOUR_PUBLIC_RECIPIENT"
+bash scripts/backup_postgres.sh "$HOME/mindcare-backups"
 ```
 
-The script uses a PostgreSQL **custom-format logical backup**, verifies its archive directory via `pg_restore --list`, creates a SHA-256 checksum, and applies restrictive file permissions. It does not delete old backups or automate database access. A successful archive-list check is **not** proof that every row can be restored.
+The existing script streams `pg_dump --format=custom` directly into `age` encryption, writes a `.dump.age` file with restrictive permissions, and removes incomplete output on errors. **No unencrypted database dump is intentionally written to disk.** It does not delete old backups, schedule future backups, or upload copies. Confirm the file exists and has a sensible size; this is not a substitute for a restore test.
 
-## Recovery drill (never on production)
+## Isolated restore drill — never into production
 
-1. Prepare an **isolated disposable test database**. Explicitly double-check its URL is **not** MindCare production.
-2. Check `sha256sum -c <backup-file>.sha256` from the secure backup folder.
-3. Restore to the isolated test database using `pg_restore --dbname=<TEST_DATABASE_URL> --no-owner --no-acl <backup-file>`. This command modifies its target; **never substitute the production URL**.
-4. Verify counts and representative records for users, caregiver links, photos, games, reminders, and call records. Do not expose or log any private records. Destroy the disposable database and copies when the drill is finished.
-5. Record backup time, operator, checksum check, and restore-drill outcome in an access-controlled operations log.
+1. Use a separate, disposable PostgreSQL test database and verify its hostname and database name are *not* the production values.
+2. On the trusted workstation, decrypt using the private `age` identity and stream into `pg_restore --list` to confirm the archive can be read:
 
-## Limitations and release checklist
+```bash
+age --decrypt -i /secure/path/to/age-identity.txt "$HOME/mindcare-backups/YOUR_BACKUP.dump.age" | pg_restore --list >/dev/null
+```
 
-- No schedule or remote encrypted replication is configured; the operator must actually run backups and verify secure off-site retention. A local-only copy is not a sufficient disaster-recovery strategy.
-- Do not make backups publicly accessible or store them on the Render free web service's ephemeral disk.
-- Configure retention and secure deletion according to the project's data policy; avoid unattended deletion before recovery has been tested.
-- Verify the patient consent/privacy model and login throttling separately. Use synthetic accounts for browser tests.
-- For video calls, provision TURN secrets only through private Render environment settings and test separate networks. This guide does not provision TURN resources.
+3. Restore **only** into the verified disposable test database (command intentionally uses an explicit TEST URL to avoid accidental production restores):
+
+```bash
+set -o pipefail
+age --decrypt -i /secure/path/to/age-identity.txt "$HOME/mindcare-backups/YOUR_BACKUP.dump.age" | \
+  pg_restore --dbname="$TEST_DATABASE_URL" --no-owner --no-acl --exit-on-error
+```
+
+4. Privately confirm representative counts and usability of users, caregiver links, family photos, game scores, and reminders. Do not expose real patient data in logs or screenshots. Record whether the drill succeeded, then securely remove the disposable restore environment.
+
+## Operational limits and safeguards
+
+- This is not an automated backup service. Set an appropriate recurring operator procedure and encrypted off-site retention, and periodically **test restores** before depending on the backup.
+- Retain the private age identity independently and securely; confirm staff authorization and a documented recovery process. Do not commit identity files or backup archives to Git.
+- A `pg_dump` export is a logical snapshot; it does not provide point-in-time recovery. Confirm whether Render's managed plan offers additional restore guarantees.
+- The existing database remains untouched by these steps until the operator explicitly runs a restore **against a separate target**.
+- Before v1.0.0 release, verify account throttling under load, CSRF and role checks, accessibility with real devices, and mobile-data-to-Wi-Fi video calls. TURN credentials, if needed, belong only in private Render environment settings.
