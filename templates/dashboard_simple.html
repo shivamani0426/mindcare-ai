@@ -74,7 +74,6 @@
       {% else %}<p>{{ tr('no_people') }}</p>{% endif %}
       <a class="button button-primary button-lg" href="{{ url_for('family_page') }}">{{ tr('simple_see_photos') }} →</a>
     </article>
-  </div>
   <section class="simple-checkin panel" id="wellbeing">
     <h2>{{ tr('checkin') }}</h2>
     <p>{{ tr('checkin_sub') }}</p>
@@ -94,6 +93,7 @@
     </div>
     {% endif %}
   </section>
+  </div>
   <div class="simple-bottom-actions">
     <a href="{{ url_for('patient_help') }}" class="button button-danger button-lg">☎ {{ tr('quick_help') }}</a>
     <a href="tel:112" class="button button-outline button-lg">{{ tr('india_emergency') }} 112</a>

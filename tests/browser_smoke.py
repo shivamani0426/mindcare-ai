@@ -317,6 +317,11 @@ try:
         page.locator(".patient-mode-shortcut button").click()
         page.wait_for_selector(".simple-dashboard")
         verify(page.locator(".simple-action-card").count() == 4, "Simple View has four action cards")
+        verify(page.locator(".simple-actions > .simple-checkin").count() == 1,
+               "Wellbeing check-in is the fifth card in Simple View's stack")
+        verify(page.locator(".simple-actions > .simple-checkin").evaluate(
+               "(el) => getComputedStyle(el).gridColumnStart === '1'"),
+               "Wellbeing card spans both columns after it expands")
         verify(page.locator(".simple-actions[data-bounce-stack]").count() == 1,
                "Simple View action cards use the bounce stack")
         page.set_viewport_size({"width": 1280, "height": 860})
@@ -327,17 +332,27 @@ try:
                "Simple View shows the touch-to-spread control")
         verify(page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
                "Simple View stacked controls are not accidentally interactive")
+        verify(page.locator(".simple-checkin").evaluate("(el) => el.inert"),
+               "Wellbeing check-in cannot accidentally submit while stacked")
         page.locator(".simple-actions .dashboard-stack-open").click()
         verify(page.locator(".simple-actions").get_attribute("data-stack-state") == "expanded",
                "Simple View cards spring back to their original positions")
         verify(not page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
                "Simple View cards are usable after expanding")
+        verify(not page.locator(".simple-checkin").evaluate("(el) => el.inert"),
+               "Wellbeing check-in can be used after the cards spread")
+        verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
+               "All four feeling options remain available")
+        verify(page.locator(".simple-checkin-form button[type='submit']").is_visible(),
+               "Save check-in remains visible after animation")
         verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
                "Simple View expand control disappears after use")
         page.emulate_media(reduced_motion="reduce")
         page.reload()
         verify(page.locator(".simple-actions").get_attribute("data-stack-state") != "stacked",
                "Reduced-motion Simple View retains a static, accessible layout")
+        verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
+               "Reduced-motion users can still choose a feeling")
         verify(page.locator(".simple-banner .mc-app-hero-art").count() == 1,
                "Simplified dashboard has the original illustrated hero")
         verify(page.locator(".simple-game").evaluate(

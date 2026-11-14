@@ -75,3 +75,12 @@ body.mc-app-shell.high-contrast [data-bounce-stack] > [data-bounce-card] {
 }
 body.mc-app-shell.reduced-motion [data-bounce-stack] .dashboard-stack-open,
 body.mc-app-shell.high-contrast [data-bounce-stack] .dashboard-stack-open {display:none!important}
+
+/* Simple View: fifth card joins the same stack and returns to its full-width
+   place when expanded. The form stays a real, accessible form. */
+body.mc-app-shell .simple-actions > .simple-checkin {
+  grid-column:1 / -1;
+  min-width:0;
+  width:100%;
+  margin:0;
+}
