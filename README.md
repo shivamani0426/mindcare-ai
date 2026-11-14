@@ -249,3 +249,37 @@ The public homepage, authenticated dashboards and existing authentication screen
 - No backend routes, models, data, caregiver approvals, forms, CSRF tokens, login sessions, provider credentials, WebRTC, WhatsApp linking or contact addresses were changed by this visual release.
 
 To preview the real change, **sign in** as a patient or caregiver and open /dashboard; refreshing the public homepage alone does not show the private dashboards. Browser tests assert computed near-black backgrounds after login (not only content existence) across actual routes and mobile sizes.
+
+
+## v1.0.0 release hardening: authentication and database durability
+
+Password sign-in is now protected by shared PostgreSQL/SQLite counters (per
+account, per client IP and per IP+account combination) with a 15-minute quiet
+period. Sign-up submissions are limited per client IP per hour. Rejected
+requests use HTTP 429 and Retry-After; the throttle table contains only
+HMAC-hashed identifiers (no plaintext IP, email or password). Successful
+password sign-in still resets the existing Flask login session and clears
+that account's failure counters. The separate IP total remains to discourage
+credential stuffing. A controlled, single-hop trusted Render proxy supplies
+the client IP; untrusted forwarded headers are ignored locally.
+
+HTTPS requests set HSTS; public authentication pages opt out of browser
+caching. These are defenses in depth, not an absolute guarantee against
+distributed attack or abuse. Login and registration remain fully compatible
+with the existing CSS and patient/caregiver backend.
+
+**Do not tag a final v1.0.0 release until database durability is resolved.**
+The current free Render PostgreSQL instance lists an expiration of
+**December 12, 2026**. Free Render Postgres has no managed backups and
+expires after 30 days. The opt-in encrypted PostgreSQL export script at
+scripts/backup_postgres.sh and the step-by-step recovery runbook at
+docs/backup-and-restore.md are ready for the authorized administrator to
+run on their own computer. The script never executes as part of a web
+request or CI, and no patient record is committed or copied to ChatGPT.
+A successful encrypted backup *and an isolated restore rehearsal* are
+required before a production-ready claim.
+
+Remaining release blockers: verified off-device backup/restore, durable DB
+plan, live mobile-device review, password-recovery email provider configuration,
+and live third-party Google/phone auth credentials if those sign-in methods
+are to be offered.

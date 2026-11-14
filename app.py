@@ -6,6 +6,9 @@ from __future__ import annotations
 
 import io
 import hashlib
+import hmac
+import ipaddress
+import time
 import os
 import random
 import re
@@ -25,6 +28,7 @@ from authlib.integrations.base_client.errors import OAuthError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from patient_labels import PATIENT_LABELS
 
 app = Flask(__name__)
@@ -42,6 +46,11 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.getenv("SECURE_COOKIES", "0") == "1" or bool(os.getenv("RENDER_EXTERNAL_URL")),
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),
 )
+# Render terminates HTTPS and provides a forwarded client IP. Only its final
+# proxy hop is trusted; direct localhost requests ignore spoofed headers.
+if os.getenv("RENDER_EXTERNAL_URL", "").startswith("https://"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
 db = SQLAlchemy(app)
 
 # OAuth client credentials and Firebase service-account credentials are secrets
@@ -88,6 +97,14 @@ class User(db.Model):
     region = db.Column(db.String(80), nullable=True)
     invite_code = db.Column(db.String(16), unique=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class AuthAttempt(db.Model):
+    """Shared throttle counters: never store raw client IPs or email addresses."""
+    __tablename__ = "auth_attempt"
+    bucket_hash = db.Column(db.String(64), primary_key=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    last_failure_epoch = db.Column(db.BigInteger, nullable=False)
 
 
 class ExternalIdentity(db.Model):
@@ -352,6 +369,87 @@ def today_local():
     return datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
 
+# Database-backed authentication throttling, shared by all Gunicorn workers.
+LOGIN_WINDOW_SECONDS = 15 * 60
+LOGIN_LIMIT_PER_ACCOUNT = 20
+LOGIN_LIMIT_PER_IP = 50
+LOGIN_LIMIT_PER_IP_ACCOUNT = 8
+REGISTER_WINDOW_SECONDS = 60 * 60
+REGISTER_LIMIT_PER_IP = 12
+
+
+def _auth_client_ip():
+    try:
+        return str(ipaddress.ip_address(request.remote_addr or ""))
+    except ValueError:
+        return "unknown"
+
+
+def _auth_bucket(kind, value):
+    secret = app.config["SECRET_KEY"]
+    if isinstance(secret, str):
+        secret = secret.encode("utf-8")
+    payload = (kind + ":" + value).encode("utf-8")
+    return hmac.new(secret, payload, hashlib.sha256).hexdigest()
+
+
+def _login_buckets(email):
+    ip = _auth_client_ip()
+    normalized = email.strip().lower()[:180]
+    return (
+        (_auth_bucket("login-account", normalized), LOGIN_LIMIT_PER_ACCOUNT),
+        (_auth_bucket("login-ip", ip), LOGIN_LIMIT_PER_IP),
+        (_auth_bucket("login-pair", ip + "|" + normalized), LOGIN_LIMIT_PER_IP_ACCOUNT),
+    )
+
+
+def _auth_retry_after(buckets, window_seconds):
+    now = int(time.time())
+    ids = [bucket for bucket, _ in buckets]
+    rows = AuthAttempt.query.filter(AuthAttempt.bucket_hash.in_(ids)).all()
+    by_id = {row.bucket_hash: row for row in rows}
+    waiting = 0
+    for bucket, limit in buckets:
+        entry = by_id.get(bucket)
+        if entry and entry.attempts >= limit:
+            elapsed = now - entry.last_failure_epoch
+            if 0 <= elapsed < window_seconds:
+                waiting = max(waiting, window_seconds - elapsed)
+    return waiting
+
+
+def _record_auth_attempts(buckets, window_seconds):
+    """Atomic counters using portable PostgreSQL/SQLite UPSERT syntax.
+
+    Counters reset after a full quiet period; outdated opaque hashes are
+    cleaned up opportunistically. No raw email, IP or password is persisted.
+    """
+    now = int(time.time())
+    for bucket, _ in buckets:
+        db.session.execute(db.text("""
+            INSERT INTO auth_attempt (bucket_hash, attempts, last_failure_epoch)
+            VALUES (:bucket, 1, :now)
+            ON CONFLICT (bucket_hash) DO UPDATE SET
+                attempts = CASE
+                    WHEN auth_attempt.last_failure_epoch < :cutoff THEN 1
+                    ELSE auth_attempt.attempts + 1 END,
+                last_failure_epoch = :now
+        """), {"bucket": bucket, "now": now, "cutoff": now - window_seconds})
+    if secrets.randbelow(128) == 0:
+        AuthAttempt.query.filter(AuthAttempt.last_failure_epoch < now - 86400).delete(
+            synchronize_session=False)
+    db.session.commit()
+
+
+def _auth_rate_limited(retry_after):
+    response = app.make_response((render_template("error.html",
+        title="Too many attempts",
+        detail="Please try again later. Your account information is safe."), 429))
+    response.headers["Retry-After"] = str(max(1, int(retry_after)))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def current_user():
     return getattr(g, "user", None)
 
@@ -527,6 +625,10 @@ def security_headers(response):
     response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
+    elif request.endpoint in ("login", "register", "auth_complete"):
+        response.headers["Cache-Control"] = "no-store"
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=15552000"
     return response
 
 
@@ -784,6 +886,11 @@ def register():
     if current_user():
         return redirect(url_for("dashboard"))
     if request.method == "POST":
+        registration_bucket = ((_auth_bucket("register-ip", _auth_client_ip()), REGISTER_LIMIT_PER_IP),)
+        retry_after = _auth_retry_after(registration_bucket, REGISTER_WINDOW_SECONDS)
+        if retry_after:
+            return _auth_rate_limited(retry_after)
+        _record_auth_attempts(registration_bucket, REGISTER_WINDOW_SECONDS)
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
@@ -822,13 +929,23 @@ def login():
         return redirect(url_for("dashboard"))
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
+        buckets = _login_buckets(email)
+        retry_after = _auth_retry_after(buckets, LOGIN_WINDOW_SECONDS)
+        if retry_after:
+            return _auth_rate_limited(retry_after)
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password_hash, request.form.get("password", "")):
+            # The per-IP total remains in place to deter credential stuffing.
+            # Only the account and IP/account counters reset on successful login.
+            AuthAttempt.query.filter(AuthAttempt.bucket_hash.in_(
+                [buckets[0][0], buckets[2][0]])).delete(synchronize_session=False)
+            db.session.commit()
             session.clear()
             session["uid"] = user.id
             session.permanent = True
             flash("Welcome back!", "success")
             return redirect(url_for("dashboard"))
+        _record_auth_attempts(buckets, LOGIN_WINDOW_SECONDS)
         flash("Email or password was not recognised.", "error")
     return render_template("auth.html", mode="login")
 
