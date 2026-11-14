@@ -76,6 +76,72 @@ try:
         page.set_default_timeout(13000)
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
+        # Dark, original public landing page: real Chromium tests at mobile/tablet/desktop.
+        page.goto(base + "/")
+        verify(page.locator(".mc-world-hero").count() == 1,
+               "MindCare's immersive public hero renders")
+        verify(page.locator(".mc-world-nav").count() == 1,
+               "Public landing has exactly one sticky section navigation")
+        verify(page.locator(".site-header").count() == 0,
+               "Public page does not duplicate the authenticated header")
+        verify(page.locator(".site-footer").count() == 0,
+               "Public page has its own complete footer")
+        verify(page.locator(".mc-gallery-card").count() == 6,
+               "Two rows of six original feature illustrations render")
+        verify(page.locator('.mc-hero-enter[href="/register"]').count() == 1,
+               "Hero CTA opens real existing account registration")
+        verify(page.locator('.mc-hero-signin[href="/login"]').count() == 1,
+               "Existing account login remains available")
+        page.wait_for_function(
+            "() => document.querySelector('.mc-hero-art').complete && document.querySelector('.mc-hero-art').naturalWidth > 0"
+        )
+        verify(page.locator('.mc-hero-art').count() == 1,
+               "Original immersive world artwork loads correctly")
+
+        page.locator("#mc-tab-routine").click()
+        verify(page.locator("#mc-panel-routine").is_visible() and
+               page.locator("#mc-panel-memory").is_hidden(),
+               "Capability tabs swap visible descriptions")
+        verify(page.locator("#mc-tab-routine").get_attribute("aria-selected") == "true",
+               "Active tab exposes accessible selection state")
+        page.locator("#mc-tab-routine").focus()
+        page.keyboard.press("ArrowRight")
+        verify(page.locator("#mc-tab-together").get_attribute("aria-selected") == "true",
+               "Keyboard arrows navigate capability tabs")
+        page.keyboard.press("Home")
+        verify(page.locator("#mc-tab-memory").get_attribute("aria-selected") == "true",
+               "Home key returns to first capability")
+
+        page.locator('[data-mc-slide="1"]').click()
+        verify(page.locator("#mc-product-caregiver").is_visible() and
+               page.locator("#mc-product-patient").is_hidden(),
+               "Carousel switches to simulated caregiver screen")
+        page.locator('[data-mc-slide="0"]').click()
+        verify(page.locator("#mc-product-patient").is_visible(),
+               "Carousel switches back to simulated patient screen")
+
+        for width, height in [(320, 780), (375, 812), (768, 1024), (1280, 900)]:
+            page.set_viewport_size({"width": width, "height": height})
+            page.wait_for_timeout(100)
+            no_horizontal_scroll(page, width)
+            verify(page.locator(".mc-hero-enter").is_visible() and
+                   page.locator(".mc-world-nav-links").is_visible(),
+                   f"CTA and section links remain visible at {width}px")
+            verify(page.locator("#mc-capabilities-heading").count() == 1,
+                   f"Capabilities heading remains present at {width}px")
+        page.set_viewport_size({"width": 1280, "height": 860})
+        page.locator('.mc-world-nav-links a[href="#capabilities"]').click()
+        page.wait_for_timeout(300)
+        verify(page.url.endswith("#capabilities"), "Sticky nav scrolls to real section anchor")
+        sticky_top = page.locator(".mc-world-nav").evaluate(
+            "(element) => Math.round(element.getBoundingClientRect().top)"
+        )
+        verify(abs(sticky_top) < 4,
+               "Chapter navigation stays pinned when scrolling long landing page")
+        verify(page.locator("#privacy-note").count() == 1 and
+               page.locator("#terms-note").count() == 1,
+               "Footer privacy and terms anchors lead to visible notices")
+
         page.goto(base + "/register")
         verify(page.locator(".auth-v2").count() == 1, "Professional registration page renders")
         verify(page.locator(".auth-method-tabs").count() == 1, "Email and phone sign-in tabs visible")
