@@ -168,6 +168,30 @@ try:
         verify(glow["animation"] == "none",
                "Reduced-motion preference stops the atmospheric animation")
 
+        expanded = page.locator(".auth-v2").evaluate("""(el) => ({
+            stageWidth: el.getBoundingClientRect().width,
+            glowWidth: getComputedStyle(el, '::before').width,
+            background: getComputedStyle(el, '::before').backgroundImage,
+            motion: getComputedStyle(el, '::before').animationName,
+            pointerEvents: getComputedStyle(el, '::before').pointerEvents
+        })""")
+        verify(float(expanded["glowWidth"].replace("px","")) >=
+               .74 * expanded["stageWidth"],
+               "Blue aura covers at least 75 percent of the desktop auth stage")
+        verify("radial-gradient" in expanded["background"] and
+               expanded["pointerEvents"] == "none",
+               "Bright decorative bloom cannot block auth inputs")
+        verify(expanded["motion"] == "none",
+               "Expanded bloom respects reduced motion")
+        web_corner = page.locator(".auth-v2-story").evaluate("""(el) => ({
+            background: getComputedStyle(el, '::before').backgroundImage,
+            pointerEvents: getComputedStyle(el, '::before').pointerEvents
+        })""")
+        verify("data:image/svg+xml" in web_corner["background"] and
+               web_corner["pointerEvents"] == "none",
+               "Decorative corner web is present and cannot block forms")
+
+
 
         verify(page.locator('link[href*="auth-world.css"]').count() == 1,
                "Real registration screen loads the matching dark visual theme")
