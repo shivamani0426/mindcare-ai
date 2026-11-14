@@ -1244,7 +1244,8 @@ def test_failed_login_is_rate_limited_with_retry_after_and_no_plain_identifiers(
     assert "no-store" in limited.headers.get("Cache-Control","")
     with app.app_context():
         rows = AuthAttempt.query.all()
-        assert len(rows) == 3
+        # 3 failed-login buckets + 1 signup-request bucket from setup.
+        assert len(rows) == 4
         assert all(len(row.bucket_hash) == 64 for row in rows)
         assert all("@" not in row.bucket_hash and "." not in row.bucket_hash for row in rows)
 
