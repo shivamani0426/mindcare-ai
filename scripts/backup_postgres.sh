@@ -5,6 +5,12 @@ set -euo pipefail
 umask 077
 
 # Required env vars: PGHOST, PGDATABASE, PGUSER and AGE_RECIPIENT.
+for key in PGHOST PGDATABASE PGUSER AGE_RECIPIENT; do
+  if [[ ! -v "$key" ]]; then
+    printf 'Set %s before running the backup.\n' "$key" >&2
+    exit 2
+  fi
+done
 if [[ -z "$PGHOST" || -z "$PGDATABASE" || -z "$PGUSER" || -z "$AGE_RECIPIENT" ]]; then
   printf 'Missing PGHOST, PGDATABASE, PGUSER or AGE_RECIPIENT.\n' >&2
   exit 2
