@@ -19,6 +19,7 @@
 <body class="{% block body_class %}{% endblock %} {{ 'large-text' if patient_prefs and patient_prefs.large_text else '' }} {{ 'high-contrast' if patient_prefs and patient_prefs.high_contrast else '' }} {{ 'reduced-motion' if patient_prefs and patient_prefs.reduced_motion else '' }} {{ 'simple-view' if simple_view else '' }}" data-patient="{{ '1' if me and me.role == 'patient' else '0' }}">
   <a class="skip" href="#main">Skip to content</a>
   <div class="site-shell">
+    {% if request.endpoint != 'home' %}
     <header class="site-header">
       <div class="nav-container">
         <a class="brand" href="{{ url_for('dashboard') if me else url_for('home') }}" aria-label="MindCare AI home"><span class="brand-mark">✦</span><span>mindcare<span class="brand-ai">.ai</span><small>Every memory matters</small></span></a>
@@ -46,14 +47,17 @@
         </div>
       </div>
     </header>
-    <main id="main" class="main-container">
+    {% endif %}
+    <main id="main" class="{{ 'mc-world-main' if request.endpoint == 'home' else 'main-container' }}">
       {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
       <div class="flash-area" role="status" aria-live="polite">
         {% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}<button type="button" class="flash-close" aria-label="Dismiss notification">×</button></div>{% endfor %}
       </div>{% endif %}{% endwith %}
       {% block content %}{% endblock %}
     </main>
+    {% if request.endpoint != 'home' %}
     <footer class="site-footer"><div class="footer-inner"><div><span class="footer-brand">✦ mindcare.ai</span><p>{{ tr('footer_quote') }}</p></div><p>{{ tr('footer_disclaimer') }}</p><span>Built with care for the North Eastern Region of India</span></div></footer>
+    {% endif %}
   </div>
   {% if me %}<aside class="incoming-call" id="incoming-call" role="alert" aria-live="assertive" hidden>
     <div class="incoming-call-icon" aria-hidden="true">📹</div>
