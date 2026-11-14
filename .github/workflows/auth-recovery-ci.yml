@@ -1,0 +1,38 @@
+name: Authentication recovery tests
+on:
+  pull_request:
+    paths:
+      - app.py
+      - tests/**
+      - templates/**
+      - requirements.txt
+      - .github/workflows/auth-recovery-ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: "sqlite://"
+      SECRET_KEY: "github-actions-isolated-testing-only"
+      SECURE_COOKIES: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Compile Python
+        run: python -m py_compile app.py tests/test_app.py
+      - name: Run authentication recovery regression tests
+        run: python -m pytest -q tests/test_app.py -k recovery
+      - name: Run complete Python regression suite
+        run: python -m pytest -q tests/test_app.py
