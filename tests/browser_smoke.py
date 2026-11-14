@@ -144,6 +144,17 @@ try:
 
         page.goto(base + "/register")
         verify(page.locator(".auth-v2").count() == 1, "Professional registration page renders")
+        verify(page.locator("#auth-title").inner_text().strip() == "YOU MATTER.", 
+               "MindCare account heading uses the new YOU MATTER message")
+        verify(page.locator(".auth-v2-form-panel").evaluate(
+            "(el) => getComputedStyle(el).order") == "0",
+            "Form panel is ordered first for the premium editorial layout")
+        verify(page.locator(".auth-v2-story").evaluate(
+            "(el) => getComputedStyle(el).order") == "1",
+            "Original MindCare illustration follows the form")
+        verify(page.locator(".auth-v2-story .auth-story-main p").count() == 1,
+               "MindCare artwork includes a concise care-focused caption")
+
         verify(page.locator('link[href*="auth-world.css"]').count() == 1,
                "Real registration screen loads the matching dark visual theme")
         verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
@@ -159,6 +170,9 @@ try:
             verify(page.locator(".auth-v2-email-form").is_visible(),
                    f"Email registration available at {width}px")
         page.set_viewport_size({"width": 1280, "height": 860})
+        verify(page.locator(".auth-v2-form-panel").bounding_box()["x"] <
+               page.locator(".auth-v2-story").bounding_box()["x"],
+               "Desktop auth form appears to the left of the illustration")
         page.locator('[data-auth-tab="phone"]').click()
         verify(page.locator(".auth-phone-not-ready").is_visible(),
                "SMS option explains required provider setup instead of fake sign-in")
