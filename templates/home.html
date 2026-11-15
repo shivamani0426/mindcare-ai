@@ -5,8 +5,8 @@
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-paper.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css') }}">
-  <script src="{{ url_for('static', filename='landing-world.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css', v='rebuild2') }}">
+  <script src="{{ url_for('static', filename='landing-world.js', v='rebuild2') }}" defer></script>
 {% endblock %}
 {% block content %}
 <!-- An optional, dismissible one-time paper-unfold introduction. The site remains
@@ -44,6 +44,7 @@
       <a class="mc-pill mc-pill-light mc-pixel mc-hero-enter" href="{{ url_for('register') }}">ENTER MINDCARE <span aria-hidden="true">↗</span></a>
       <a class="mc-hero-signin" href="{{ url_for('login') }}">Already part of MindCare? Sign in</a>
     </div>
+    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the landing-page paper and animation">↻ Replay introduction</button>
     <a class="mc-hero-scroll" href="#overview"><span>EXPLORE THE WORLD</span><span aria-hidden="true">↓</span></a>
     <span class="mc-hero-corner mc-hero-corner-left" aria-hidden="true">01 — A WORLD OF CARE</span>
     <span class="mc-hero-corner mc-hero-corner-right" aria-hidden="true">✳ BUILT WITH FAMILIES IN MIND</span>
