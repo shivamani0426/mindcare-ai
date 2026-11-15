@@ -2,59 +2,103 @@
   'use strict';
   if (!document.body.classList.contains('mc-world-page')) return;
 
-  // A single, optional tactile paper-to-website introduction per browser tab.
-  // The full site stays visible if scripts fail, if motion is reduced, or when
-  // arriving at a deep section anchor. No tracking or server-side persistence.
+  // A robust two-phase sequence: FIRST unfold the paper, THEN build the hero.
+  // Previously both animations ran together, with the hero hidden beneath
+  // the opaque paper overlay. Keep all existing links and artwork untouched.
   const paperIntro = document.getElementById('mc-paper-intro');
   const paperTouch = document.getElementById('mc-paper-touch');
   const paperSkip = document.getElementById('mc-paper-skip');
+  const replay = document.getElementById('mc-hero-replay');
   const world = document.querySelector('.mc-world-root');
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const introStorageKey = 'mindcare-paper-unfold-seen-v1';
+  const introStorageKey = 'mindcare-paper-unfold-seen-v2';
+  const motionAllowed = () => !motionPreference.matches &&
+    !document.body.classList.contains('reduced-motion');
   let introSeen = false;
   try { introSeen = window.sessionStorage.getItem(introStorageKey) === '1'; }
-  catch (_) { /* Private browsing can deny storage. */ }
-  const canPresent = paperIntro && paperTouch && paperSkip && world &&
-    !motionPreference.matches && !introSeen && !window.location.hash;
-  if (canPresent) {
-    let alreadyRevealed = false;
-    let finishTimer;
-    const finish = () => {
-      window.clearTimeout(finishTimer);
-      paperIntro.hidden = true;
-      world.inert = false;
-      document.body.classList.remove('mc-paper-active', 'mc-paper-revealing');
-      alreadyRevealed = true;
-    };
-    const reveal = (animate = true) => {
-      if (alreadyRevealed) return;
-      alreadyRevealed = true;
-      try { window.sessionStorage.setItem(introStorageKey, '1'); }
-      catch (_) { /* Effect still opens. */ }
-      world.inert = false;
-      if (!animate || motionPreference.matches) {
-        finish();
-        return;
-      }
-      document.body.classList.add('mc-paper-revealing');
-      // Allow separately arriving heading, navigation and actions to settle.
-      finishTimer = window.setTimeout(finish, 2900);
-    };
-    world.inert = true;
+  catch (_) { /* Private mode may restrict session storage. */ }
+  let phase = 'ready';
+  let sequenceToken = 0;
+  let paperTimer = null;
+  let heroTimer = null;
+  const clearSequenceTimers = () => {
+    window.clearTimeout(paperTimer);
+    window.clearTimeout(heroTimer);
+  };
+  const finishImmediately = () => {
+    ++sequenceToken;
+    clearSequenceTimers();
+    phase = 'ready';
+    paperIntro.hidden = true;
+    world.inert = false;
+    document.body.classList.remove('mc-paper-active','mc-paper-revealing','mc-hero-assembling');
+    document.body.classList.add('mc-hero-resting');
+    if (replay) replay.hidden = !motionAllowed();
+    try { window.sessionStorage.setItem(introStorageKey, '1'); }
+    catch (_) {}
+  };
+  const beginHeroAssembly = () => {
+    phase = 'assembling';
+    const token = ++sequenceToken;
+    // Remove paper BEFORE animation class is applied. This ensures the full
+    // growing orb and all four-edge text flights are actually visible.
+    paperIntro.hidden = true;
+    world.inert = false;
+    document.body.classList.remove('mc-paper-active','mc-paper-revealing','mc-hero-resting');
+    if (replay) replay.hidden = true;
+    // Force layout between the two animation phases to avoid canceled or
+    // coalesced style changes when Chromium renders two states in one frame.
+    void document.body.offsetHeight;
+    document.body.classList.add('mc-hero-assembling');
+    heroTimer = window.setTimeout(() => {
+      if (sequenceToken !== token) return;
+      document.body.classList.remove('mc-hero-assembling');
+      document.body.classList.add('mc-hero-resting');
+      phase = 'ready';
+      if (replay) replay.hidden = !motionAllowed();
+    }, 2480);
+  };
+  const unfoldPaper = () => {
+    if (phase !== 'paper') return;
+    if (!motionAllowed()) { finishImmediately(); return; }
+    phase = 'unfolding';
+    const token = ++sequenceToken;
+    document.body.classList.add('mc-paper-revealing');
+    try { window.sessionStorage.setItem(introStorageKey, '1'); }
+    catch (_) {}
+    // Paper completes at 1400ms; begin content only once it is out of sight.
+    paperTimer = window.setTimeout(() => {
+      if (sequenceToken !== token) return;
+      beginHeroAssembly();
+    }, 1450);
+  };
+  const showPaper = () => {
+    if (!motionAllowed() || !paperIntro || !paperTouch || !paperSkip || !world) {
+      finishImmediately(); return;
+    }
+    ++sequenceToken;
+    clearSequenceTimers();
+    phase = 'paper';
+    document.body.classList.remove('mc-hero-assembling','mc-hero-resting','mc-paper-revealing');
     paperIntro.hidden = false;
+    world.inert = true;
+    if (replay) replay.hidden = true;
     document.body.classList.add('mc-paper-active');
-    paperTouch.addEventListener('click', () => reveal());
-    paperSkip.addEventListener('click', () => reveal(false));
-    paperIntro.addEventListener('keydown', event => {
-      if (event.key === 'Escape') reveal(false);
-    });
-    motionPreference.addEventListener?.('change', () => {
-      if (motionPreference.matches) reveal(false);
-    });
-    // Focus the paper action so keyboard visitors can instantly open the site.
     paperTouch.focus({preventScroll:true});
+  };
+  if (paperIntro && paperTouch && paperSkip && world) {
+    paperTouch.addEventListener('click', unfoldPaper);
+    paperSkip.addEventListener('click', finishImmediately);
+    paperIntro.addEventListener('keydown', event => {
+      if (event.key === 'Escape') finishImmediately();
+    });
+    replay?.addEventListener('click',showPaper);
+    motionPreference.addEventListener?.('change', () => {
+      if (!motionAllowed()) finishImmediately();
+    });
+    if (motionAllowed() && !introSeen && !window.location.hash) showPaper();
+    else finishImmediately();
   }
-
 
   // Three fully accessible, keyboard-operable capability tabs.
   const tabs = [...document.querySelectorAll('.mc-cap-tab[role="tab"]')];
