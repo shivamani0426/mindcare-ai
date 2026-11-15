@@ -177,6 +177,7 @@ try:
                "Below-fold landing headings fly in when their section enters view")
         verify(paper_tab.locator(".mc-hero-enter").get_attribute("href") == "/register",
                "Existing landing registration route remains unchanged")
+        paper_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
         paper_tab.wait_for_function(
             "() => document.body.classList.contains('mc-hero-out-of-view')",
             timeout=6000)
