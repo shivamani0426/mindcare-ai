@@ -157,6 +157,9 @@ try:
                "Original homepage becomes fully interactive after the reveal")
         verify(paper_tab.locator(".mc-hero-enter").is_visible(),
                "Registration call to action survives paper animation")
+        paper_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-hero-resting')",
+            timeout=6000)
         verify(paper_tab.locator("#mc-hero-replay").is_visible(),
                "Finished hero offers a visible replay button")
         paper_tab.locator("#mc-hero-replay").click()
