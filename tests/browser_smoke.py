@@ -333,29 +333,23 @@ try:
             verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
                    f"{route} dark background is actually rendered")
         page.goto(base + "/games")
-        verify(page.locator(".games-catalog[data-bounce-stack]").count() == 1,
-               "Games catalog participates in floating card stack")
         verify(page.locator(".games-catalog > .catalog-card").count() == 6,
-               "All six brain game cards remain present")
+               "All six Brain Games remain present")
+        verify(page.locator(".games-catalog .dashboard-stack-open").count() == 0,
+               "Brain Games no longer have stack-up controls")
+        verify(page.locator(".games-catalog a[href*='/games/']").count() >= 5,
+               "Playable Brain Games retain navigation")
         page.set_viewport_size({"width": 1280, "height": 860})
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.games-catalog')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".games-catalog .dashboard-stack-open").is_visible(),
-               "Games catalog provides a clear spread-cards button")
-        verify(page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
-               "Game links are protected while the cards overlap")
-        page.locator(".games-catalog .dashboard-stack-open").click()
-        verify(page.locator(".games-catalog").get_attribute("data-stack-state") == "expanded",
-               "All game cards fly back into their original grid positions")
-        verify(not page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
-               "Play now links are accessible after cards spread")
-        verify(page.locator(".games-catalog a[href*='/games/']").count() >= 5,
-               "Playable games remain linked to their original destinations")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".games-catalog > .catalog-card").first.evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Brain Game cards receive independent flight animation")
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".games-catalog").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion patients see the normal games grid")
+        verify(page.locator(".games-catalog").get_attribute("data-stack-state") is None,
+               "Brain Games remain in their original grid")
         for width in (320, 375, 768):
             page.set_viewport_size({"width": width, "height": 820})
             page.wait_for_timeout(100)
