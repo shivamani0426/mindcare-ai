@@ -168,6 +168,23 @@ try:
         paper_tab.locator("#mc-paper-skip").click()
         verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
                "Replay paper can be skipped immediately")
+        paper_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
+        paper_tab.wait_for_function(
+            "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'",
+            timeout=6000)
+        verify(paper_tab.locator(".mc-world-manifesto h2").evaluate(
+               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
+               "Below-fold landing headings fly in when their section enters view")
+        verify(paper_tab.locator(".mc-hero-enter").get_attribute("href") == "/register",
+               "Existing landing registration route remains unchanged")
+        paper_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
+        paper_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-hero-out-of-view')",
+            timeout=6000)
+        verify(paper_tab.locator(".mc-hero-art").evaluate(
+               "(el) => getComputedStyle(el).animationPlayState === 'paused'"),
+               "Decorative hero animation pauses offscreen to reduce GPU work")
+
 
         verify(paper_tab.locator(".mc-hero-light-ring").first.evaluate(
                "(el) => getComputedStyle(el).animationName.includes('mc-ring-glow')"),
