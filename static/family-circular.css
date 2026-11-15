@@ -19,7 +19,7 @@ body.mc-app-shell .family-gallery-controls button:disabled{opacity:.4}
 body.mc-app-shell .family-circular-gallery {
   position:relative;display:flex!important;grid-template-columns:none!important;
   align-items:center;gap:22px;width:100%;max-width:100%;
-  min-height:355px;padding:28px max(20px,calc((100% - 235px)/2)) 38px;
+  min-height:355px;padding:28px max(20px,calc(50% - 117px)) 38px;
   overflow-x:auto;overflow-y:hidden;
   overscroll-behavior-x:contain;
   scroll-snap-type:x mandatory;
@@ -57,7 +57,7 @@ body.mc-app-shell .family-circular-gallery .family-card p{margin-bottom:9px}
 @media(max-width:600px){
   body.mc-app-shell .family-circular-gallery{
     min-height:300px;gap:15px;
-    padding:22px max(12px,calc((100% - 190px)/2)) 27px
+    padding:22px max(12px,calc(50% - 95px)) 27px
   }
   body.mc-app-shell .family-circular-gallery .family-card{
     flex-basis:190px;width:190px
