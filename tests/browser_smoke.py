@@ -283,30 +283,28 @@ try:
         page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
-        verify(page.locator("[data-bounce-stack]").count() >= 3,
-               "Patient dashboard groups functional cards into bounce stacks")
+        verify(page.locator("[data-bounce-stack], .dashboard-stack-open").count() == 0,
+               "Patient dashboard has no card stack hooks or spread buttons")
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'arriving'""")
-        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_hidden(),
-               "Patient stack button stays hidden until incoming cards land")
-        verify(page.locator(".patient-top-tiles > [data-bounce-card]").first.evaluate(
-               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
-               "Patient cards arrive one by one from the window edges")
-        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_visible(),
-               "Patient card stack can be spread from a clear button")
-        verify(page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
-               "Stacked card form controls are inert until revealed")
-        page.locator(".patient-top-tiles .dashboard-stack-open").click()
-        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") == "expanded",
-               "Patient cards fly back into their normal grid")
-        verify(not page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
-               "Patient actions are reachable after spreading cards")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".mc-flight-curtain").count() == 1,
+               "Patient dashboard starts with a dark window")
+        verify(page.locator(".welcome-banner h1").evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Patient welcome heading flies in independently")
+        verify(page.locator(".stat-card").first.evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Activity cards fly directly to their real positions")
+        verify(not page.locator(".patient-top-tiles").evaluate("(el) => el.inert"),
+               "Patient actions no longer require spreading cards")
+        page.locator(".mc-flight-skip").click()
+        verify(page.locator(".mc-flight-curtain").count() == 0,
+               "Skip action immediately removes the dark curtain")
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion patients see normal accessible dashboard layout")
+        verify(page.locator(".mc-flight-curtain, .mc-flight-skip").count() == 0,
+               "Reduced-motion patients see their dashboard directly")
         verify(page.locator('link[href*="app-world.css"]').count() == 1,
                "Signed-in patient dashboard loads the new design system")
         verify("mc-app-shell" in page.locator("body").get_attribute("class"),
