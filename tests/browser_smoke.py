@@ -97,6 +97,39 @@ try:
         )
         verify(page.locator('.mc-hero-art').count() == 1,
                "Original immersive world artwork loads correctly")
+        verify(page.locator("#mc-paper-intro").is_hidden(),
+               "Reduced-motion visitors skip the paper animation and see the homepage")
+        paper_tab = ctx.new_page()
+        paper_tab.emulate_media(reduced_motion="no-preference")
+        paper_tab.goto(base + "/")
+        verify(paper_tab.locator("#mc-paper-touch").is_visible(),
+               "First desktop visit starts with the accessible crumpled paper")
+        verify(paper_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+               "Interactive homepage controls stay protected while paper is closed")
+        verify(paper_tab.locator(".mc-paper-crease").count() == 3,
+               "Crumpled sheet has multiple visible fold accents")
+        paper_tab.locator("#mc-paper-touch").click()
+        paper_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-paper-revealing')")
+        paper_tab.wait_for_function(
+            "() => document.getElementById('mc-paper-intro').hidden",
+            timeout=6000)
+        verify(not paper_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+               "Original homepage becomes fully interactive after the reveal")
+        verify(paper_tab.locator(".mc-hero-enter").is_visible(),
+               "Registration call to action survives paper animation")
+        paper_tab.reload()
+        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
+               "Paper introduction does not repeat on every refresh in the same tab")
+        paper_tab.close()
+        paper_skip = ctx.new_page()
+        paper_skip.emulate_media(reduced_motion="no-preference")
+        paper_skip.goto(base + "/")
+        paper_skip.locator("#mc-paper-skip").click()
+        verify(paper_skip.locator("#mc-paper-intro").is_hidden(),
+               "Skip introduction immediately reveals homepage")
+        paper_skip.close()
+
 
         page.locator("#mc-tab-routine").click()
         verify(page.locator("#mc-panel-routine").is_visible() and

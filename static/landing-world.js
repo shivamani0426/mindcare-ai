@@ -2,6 +2,59 @@
   'use strict';
   if (!document.body.classList.contains('mc-world-page')) return;
 
+  // A single, optional tactile paper-to-website introduction per browser tab.
+  // The full site stays visible if scripts fail, if motion is reduced, or when
+  // arriving at a deep section anchor. No tracking or server-side persistence.
+  const paperIntro = document.getElementById('mc-paper-intro');
+  const paperTouch = document.getElementById('mc-paper-touch');
+  const paperSkip = document.getElementById('mc-paper-skip');
+  const world = document.querySelector('.mc-world-root');
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const introStorageKey = 'mindcare-paper-unfold-seen-v1';
+  let introSeen = false;
+  try { introSeen = window.sessionStorage.getItem(introStorageKey) === '1'; }
+  catch (_) { /* Private browsing can deny storage. */ }
+  const canPresent = paperIntro && paperTouch && paperSkip && world &&
+    !motionPreference.matches && !introSeen && !window.location.hash;
+  if (canPresent) {
+    let alreadyRevealed = false;
+    let finishTimer;
+    const finish = () => {
+      window.clearTimeout(finishTimer);
+      paperIntro.hidden = true;
+      world.inert = false;
+      document.body.classList.remove('mc-paper-active', 'mc-paper-revealing');
+      alreadyRevealed = true;
+    };
+    const reveal = (animate = true) => {
+      if (alreadyRevealed) return;
+      alreadyRevealed = true;
+      try { window.sessionStorage.setItem(introStorageKey, '1'); }
+      catch (_) { /* Effect still opens. */ }
+      world.inert = false;
+      if (!animate || motionPreference.matches) {
+        finish();
+        return;
+      }
+      document.body.classList.add('mc-paper-revealing');
+      finishTimer = window.setTimeout(finish, 1450);
+    };
+    world.inert = true;
+    paperIntro.hidden = false;
+    document.body.classList.add('mc-paper-active');
+    paperTouch.addEventListener('click', () => reveal());
+    paperSkip.addEventListener('click', () => reveal(false));
+    paperIntro.addEventListener('keydown', event => {
+      if (event.key === 'Escape') reveal(false);
+    });
+    motionPreference.addEventListener?.('change', () => {
+      if (motionPreference.matches) reveal(false);
+    });
+    // Focus the paper action so keyboard visitors can instantly open the site.
+    paperTouch.focus({preventScroll:true});
+  }
+
+
   // Three fully accessible, keyboard-operable capability tabs.
   const tabs = [...document.querySelectorAll('.mc-cap-tab[role="tab"]')];
   const activateTab = (selected, focus = false) => {
