@@ -147,6 +147,16 @@
     });
   });
 
+  // Suspend the expensive decorative hero motion while visitors read the
+  // lower sections. One observer; no scroll events, polling or layout writes.
+  const heroForMotion = document.querySelector('.mc-world-hero');
+  if (heroForMotion && 'IntersectionObserver' in window) {
+    const heroVisibility = new IntersectionObserver(([entry]) => {
+      document.body.classList.toggle('mc-hero-out-of-view', !entry.isIntersecting);
+    },{threshold:0.01});
+    heroVisibility.observe(heroForMotion);
+  }
+
   // Highlight actual section in sticky nav, without moving keyboard focus.
   const navLinks = [...document.querySelectorAll('.mc-world-nav-links a[href^="#"]')];
   if ('IntersectionObserver' in window) {
