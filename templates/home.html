@@ -4,9 +4,28 @@
 {% block head %}
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-paper.css') }}">
   <script src="{{ url_for('static', filename='landing-world.js') }}" defer></script>
 {% endblock %}
 {% block content %}
+<!-- An optional, dismissible one-time paper-unfold introduction. The site remains
+     accessible without JavaScript; interactive links are not removed or replaced. -->
+<div class="mc-paper-intro" id="mc-paper-intro" hidden>
+  <button type="button" class="mc-paper-touch" id="mc-paper-touch" aria-label="Unfold the paper to enter MindCare">
+    <span class="mc-paper-sheet" aria-hidden="true">
+      <span class="mc-paper-crease mc-paper-crease-a"></span>
+      <span class="mc-paper-crease mc-paper-crease-b"></span>
+      <span class="mc-paper-crease mc-paper-crease-c"></span>
+      <span class="mc-paper-flap mc-paper-flap-a"></span>
+      <span class="mc-paper-flap mc-paper-flap-b"></span>
+      <span class="mc-paper-stamp">✦</span>
+      <span class="mc-paper-title">MINDCARE<span>AI</span></span>
+      <span class="mc-paper-subtitle">A LITTLE WORLD, WAITING TO UNFOLD.</span>
+      <span class="mc-paper-tap">✳ TAP TO UNFOLD</span>
+    </span>
+  </button>
+  <button type="button" class="mc-paper-skip" id="mc-paper-skip">Skip introduction</button>
+</div>
 <div class="mc-world-root" id="top">
   <section class="mc-world-hero" aria-labelledby="mc-hero-heading">
     <img class="mc-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" fetchpriority="high" decoding="async">
