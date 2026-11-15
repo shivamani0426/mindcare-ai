@@ -1,0 +1,167 @@
+/* MindCare original landing page — additive motion only.
+ * Preserve the illustrated hero, typography, colors, exact links, paper markup
+ * and section layout. Inspired by luminous ring and gentle hovering demo.
+ * Active once when a visitor clicks the existing paper intro. */
+.mc-world-hero{--mc-hero-shift-x:0px;--mc-hero-shift-y:0px}
+.mc-hero-orb{transform:translate(-50%,-50%);transform-origin:center center}
+.mc-hero-light-ring{
+  position:absolute;display:block;inset:0;
+  border:3px solid transparent;border-radius:50%;pointer-events:none;
+  box-shadow:inset 0 0 12px #dceaff17;
+  will-change:transform,opacity;
+}
+.mc-hero-light-ring.mc-ring-one{
+  inset:2%;
+  border-top-color:#e6f5ffe8;border-left-color:#a6caffc9;
+  border-bottom-color:#94bbff3e;border-right-color:#9eafff30;
+  transform:rotate(-25deg) scaleY(.84);
+  filter:drop-shadow(0 0 9px #c5e4ff) drop-shadow(0 0 18px #699af5);
+  animation:mc-ring-pulse 6s ease-in-out infinite alternate;
+}
+.mc-hero-light-ring.mc-ring-two{
+  inset:-5%;
+  border-right-color:#c1daff99;border-top-color:#b9d3ff70;
+  border-left-color:#b3d5ff44;
+  transform:rotate(23deg) scaleY(.63);
+  filter:drop-shadow(0 0 9px #93c2ff);
+  opacity:.75;
+  animation:mc-ring-pulse 7.8s -2.7s ease-in-out infinite alternate;
+}
+.mc-hero-light-flare{
+  position:absolute;top:12%;left:23%;width:15%;height:2.5%;
+  border-radius:999px;background:#e7faffc9;
+  transform:rotate(-27deg);
+  filter:blur(4px) drop-shadow(0 0 13px #9cc6ff);
+  opacity:.75;
+  box-shadow:0 0 23px 10px #a3baff7a;
+  animation:mc-flare-pulse 5.6s ease-in-out infinite alternate;
+}
+@keyframes mc-ring-pulse{
+  0%{opacity:.55;filter:drop-shadow(0 0 4px #8ab5ff)}
+  100%{opacity:1;filter:drop-shadow(0 0 14px #e5f4ff) drop-shadow(0 0 22px #739cf5)}
+}
+@keyframes mc-flare-pulse{0%{opacity:.5}100%{opacity:.95}}
+/* Ambient movement after the first assembly; no zoom toward the camera. */
+body.mc-world-page .mc-hero-art {
+  animation:mc-gentle-art-drift 16s ease-in-out infinite alternate;
+  transform-origin:center;
+}
+@keyframes mc-gentle-art-drift{
+  from{transform:scale(1.055) translate3d(-.7%,.5%,0)}
+  to{transform:scale(1.08) translate3d(.7%,-.7%,0)}
+}
+body.mc-world-page .mc-hero-orb-core{
+  animation:mc-sphere-core-glow 7s ease-in-out infinite alternate;
+}
+@keyframes mc-sphere-core-glow{
+  from{opacity:.45;transform:scale(.94)}
+  to{opacity:1;transform:scale(1.06)}
+}
+/* A gentle dark/light in-out breath at the START of the paper reveal.
+ * The overlay is decorative and cannot cover any focus/click action. */
+body.mc-paper-revealing .mc-world-hero::after{
+  content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 47%,#020511e6 0%,#030511ed 63%,#000c 100%);
+  animation:mc-screen-dark-breath 1550ms ease-in-out both;
+}
+@keyframes mc-screen-dark-breath{
+  0%{opacity:.84}20%{opacity:.98}45%{opacity:.65}76%{opacity:.24}100%{opacity:0}
+}
+/* Build the luminous bubble from a dot, shape it and form its light rings.
+ * Both the initial and final transforms preserve the original orb position. */
+body.mc-paper-revealing .mc-world-hero .mc-hero-orb{
+  animation:mc-sphere-develop 2150ms cubic-bezier(.17,.78,.25,1) both;
+}
+@keyframes mc-sphere-develop{
+  0%{opacity:0;filter:blur(28px) saturate(.4);transform:translate(-50%,-50%) scale(.12)}
+  23%{opacity:.38;filter:blur(15px) saturate(1.5);transform:translate(-50%,-50%) scale(.35)}
+  58%{opacity:.87;filter:blur(4px) saturate(1.3);transform:translate(-50%,-50%) scale(1.07)}
+  78%{opacity:.8;filter:blur(0) saturate(1.1);transform:translate(-50%,-50%) scale(.97)}
+  100%{opacity:.75;filter:blur(0) saturate(1);transform:translate(-50%,-50%) scale(1)}
+}
+body.mc-paper-revealing .mc-hero-light-ring.mc-ring-one{
+  animation:mc-ring-create-one 1950ms .23s cubic-bezier(.22,.75,.28,1) both;
+}
+body.mc-paper-revealing .mc-hero-light-ring.mc-ring-two{
+  animation:mc-ring-create-two 1950ms .39s cubic-bezier(.22,.75,.28,1) both;
+}
+body.mc-paper-revealing .mc-hero-light-flare{
+  animation:mc-flare-form 1800ms .53s ease-in-out both;
+}
+@keyframes mc-ring-create-one{
+  0%{opacity:0;transform:rotate(-100deg) scale(.17,.08);filter:blur(12px)}
+  58%{opacity:1;transform:rotate(-13deg) scale(1.08,.89);filter:blur(2px)}
+  100%{opacity:1;transform:rotate(-25deg) scale(1,.84);filter:blur(0) drop-shadow(0 0 9px #bddfff)}
+}
+@keyframes mc-ring-create-two{
+  0%{opacity:0;transform:rotate(120deg) scale(.17,.1);filter:blur(14px)}
+  63%{opacity:.92;transform:rotate(12deg) scale(1.07,.68);filter:blur(3px)}
+  100%{opacity:.75;transform:rotate(23deg) scale(1,.63);filter:blur(0) drop-shadow(0 0 9px #93c2ff)}
+}
+@keyframes mc-flare-form{
+  0%,26%{opacity:0;transform:rotate(-27deg) scale(.1);filter:blur(14px)}
+  75%{opacity:1;transform:rotate(-27deg) scale(1.12);filter:blur(4px)}
+  100%{opacity:.75;transform:rotate(-27deg) scale(1);filter:blur(4px)}
+}
+/* Existing typography and illustrated UI each enter from different window
+ * edges — their natural resting transforms and links are preserved. */
+body.mc-paper-revealing .mc-world-hero .mc-hero-header{
+  animation:mc-enter-nav 1250ms .16s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-kicker{
+  animation:mc-enter-north 1120ms .36s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-wordmark{
+  animation:mc-enter-west 1330ms .49s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-center>p{
+  animation:mc-enter-east 1290ms .64s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-enter{
+  animation:mc-enter-south 1220ms .84s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-signin{
+  animation:mc-enter-east 1120ms 1.02s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-scroll{
+  animation:mc-enter-bottom-centered 1140ms 1.02s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-corner-left{
+  animation:mc-enter-west 1060ms 1s cubic-bezier(.16,1,.29,1) both;
+}
+body.mc-paper-revealing .mc-world-hero .mc-hero-corner-right{
+  animation:mc-enter-east 1060ms 1.08s cubic-bezier(.16,1,.29,1) both;
+}
+@keyframes mc-enter-nav{
+  from{opacity:0;filter:blur(7px);transform:translateY(-min(30vh,245px))}
+  to{opacity:1;filter:blur(0);transform:translateY(0)}
+}
+@keyframes mc-enter-north{
+  from{opacity:0;filter:blur(8px);transform:translate3d(0,-min(37vh,310px),0)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0)}
+}
+@keyframes mc-enter-west{
+  from{opacity:0;filter:blur(9px);transform:translate3d(-min(72vw,780px),22px,0) rotate(-7deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0deg)}
+}
+@keyframes mc-enter-east{
+  from{opacity:0;filter:blur(9px);transform:translate3d(min(72vw,780px),-20px,0) rotate(7deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0deg)}
+}
+@keyframes mc-enter-south{
+  from{opacity:0;filter:blur(8px);transform:translate3d(0,min(42vh,360px),0) rotate(5deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0deg)}
+}
+@keyframes mc-enter-bottom-centered{
+  from{opacity:0;filter:blur(8px);transform:translate3d(-50%,min(42vh,360px),0)}
+  to{opacity:1;filter:blur(0);transform:translate3d(-50%,0,0)}
+}
+body.mc-world-page.reduced-motion .mc-world-hero::after{display:none!important}
+@media(prefers-reduced-motion:reduce){
+  body.mc-world-page .mc-hero-art,
+  body.mc-world-page .mc-hero-orb,
+  body.mc-world-page .mc-hero-orb-core,
+  body.mc-world-page .mc-hero-light-ring,
+  body.mc-world-page .mc-hero-light-flare {animation:none!important}
+  body.mc-world-page .mc-world-hero::after{display:none!important}
+}
