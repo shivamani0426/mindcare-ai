@@ -98,27 +98,26 @@ try:
         register(caregiver, "caregiver", "Caregiver Maya", "qa-maya-caregiver@example.org")
         verify(caregiver.locator(".caregiver-v2").count() == 1,
                "Caregiver 2.0 overview loads")
-        verify(caregiver.locator("[data-bounce-stack]").count() >= 2,
-               "Caregiver dashboard has centered card stack groups")
+        verify(caregiver.locator("[data-bounce-stack], .dashboard-stack-open").count() == 0,
+               "Caregiver has no stacked or touch-to-spread cards")
         caregiver.emulate_media(reduced_motion="no-preference")
         caregiver.reload()
-        caregiver.wait_for_function("""() => document.querySelector('.caregiver-stats')?.dataset.stackState === 'arriving'""")
-        verify(caregiver.locator(".caregiver-stats .dashboard-stack-open").is_hidden(),
-               "Caregiver cards assemble before the spread control becomes available")
-        verify(caregiver.locator(".caregiver-stats > [data-bounce-card]").first.evaluate(
-               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
-               "Caregiver overview cards fly from the window edges")
-        caregiver.wait_for_function("""() => document.querySelector('.caregiver-stats')?.dataset.stackState === 'stacked'""")
-        verify(caregiver.locator(".caregiver-stats .dashboard-stack-open").is_visible(),
-               "Caregiver overview cards display accessible expand button")
-        caregiver.locator(".caregiver-stats .dashboard-stack-open").click()
-        verify(caregiver.locator(".caregiver-stats").get_attribute("data-stack-state") == "expanded",
-               "Caregiver cards fly back to their original positions")
+        caregiver.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(caregiver.locator(".mc-flight-curtain").count() == 1,
+               "Caregiver dashboard starts with a brief dark screen")
+        verify(caregiver.locator(".caregiver-hero h1").evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Caregiver greeting text flies in individually")
+        verify(caregiver.locator(".caregiver-stats > *").first.evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Caregiver statistic cards arrive at their original positions")
+        verify(not caregiver.locator(".caregiver-stats").evaluate("(el) => el.inert"),
+               "Caregiver controls never require an extra spread action")
+        caregiver.locator(".mc-flight-skip").click()
         caregiver.emulate_media(reduced_motion="reduce")
         caregiver.reload()
-        verify(caregiver.locator(".caregiver-stats").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion caregivers get the original card layout")
-
+        verify(caregiver.locator(".mc-flight-curtain, .mc-flight-skip").count() == 0,
+               "Reduced-motion caregiver sees original static layout")
         verify("mc-app-shell" in caregiver.locator("body").get_attribute("class"),
                "Real caregiver dashboard uses the new design system")
         verify(caregiver.locator('link[href*="app-world.css"]').count() == 1,
