@@ -97,11 +97,11 @@ body.mc-hero-assembling .mc-hero-scroll {animation:mc-phase-scroll 1150ms 1.12s 
 body.mc-hero-assembling .mc-hero-corner-left {animation:mc-phase-left 1150ms 1s cubic-bezier(.16,1,.3,1) both}
 body.mc-hero-assembling .mc-hero-corner-right {animation:mc-phase-right 1150ms 1.1s cubic-bezier(.16,1,.3,1) both}
 @keyframes mc-phase-top {
- from{opacity:0;filter:blur(9px);transform:translateY(-min(39vh,350px))}
+ from{opacity:0;filter:blur(9px);transform:translateY(calc(0px - min(39vh,350px)))}
  to{opacity:1;filter:blur(0);transform:translateY(0)}
 }
 @keyframes mc-phase-left {
- from{opacity:0;filter:blur(9px);transform:translate3d(-min(78vw,850px),28px,0) rotate(-5deg)}
+ from{opacity:0;filter:blur(9px);transform:translate3d(calc(0px - min(78vw,850px)),28px,0) rotate(-5deg)}
  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0)}
 }
 @keyframes mc-phase-right {
