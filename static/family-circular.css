@@ -1,0 +1,75 @@
+/* Original curved family-photo gallery inspired by React Bits interaction.
+   Uses authenticated same-origin images and preserves modal/photo delete actions. */
+body.mc-app-shell .family-gallery-wrap{min-width:0;max-width:100%;margin:0 0 22px}
+body.mc-app-shell .family-gallery-top{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  flex-wrap:wrap;margin:0 0 14px
+}
+body.mc-app-shell .family-gallery-hint{
+  margin:0;color:#c7d4d0;font-size:13px;line-height:1.5
+}
+body.mc-app-shell .family-gallery-controls{display:flex;gap:10px}
+body.mc-app-shell .family-gallery-controls button{
+  min-width:48px;min-height:48px;border-radius:50%;font-size:22px;
+  border:1px solid #61705e;background:#263a39;color:#fff;
+  box-shadow:0 5px 18px #0004
+}
+body.mc-app-shell .family-gallery-controls button:hover{background:#3c5651}
+body.mc-app-shell .family-gallery-controls button:disabled{opacity:.4}
+body.mc-app-shell .family-circular-gallery {
+  position:relative;display:flex!important;grid-template-columns:none!important;
+  align-items:center;gap:22px;width:100%;max-width:100%;
+  min-height:355px;padding:28px max(20px,calc((100% - 235px)/2)) 38px;
+  overflow-x:auto;overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:thin;scrollbar-color:#566d64 #161f20;
+  perspective:1100px;transform-style:preserve-3d;
+  touch-action:pan-x pan-y
+}
+body.mc-app-shell .family-circular-gallery .family-card {
+  flex:0 0 clamp(186px,27vw,264px);
+  width:clamp(186px,27vw,264px);
+  min-width:0;max-width:none;margin:0;
+  scroll-snap-align:center;scroll-snap-stop:always;
+  transform:perspective(1000px) rotateY(var(--gallery-angle,0deg))
+    translateY(var(--gallery-lift,0px)) scale(var(--gallery-scale,1));
+  transform-origin:center center;will-change:transform;
+  opacity:var(--gallery-opacity,1);
+  transition:transform .24s cubic-bezier(.22,.65,.24,1),
+    opacity .24s,box-shadow .2s;
+  box-shadow:0 24px 45px #0006;
+  border-radius:20px;overflow:hidden
+}
+body.mc-app-shell .family-circular-gallery .family-photo-trigger img{
+  display:block;width:100%;height:clamp(170px,20vw,245px);
+  object-fit:cover
+}
+body.mc-app-shell .family-circular-gallery .family-card:focus-within{
+  outline:3px solid #d7f36a;outline-offset:4px;
+  opacity:1;z-index:2
+}
+body.mc-app-shell .family-circular-gallery .family-card>div{padding:15px 18px}
+body.mc-app-shell .family-circular-gallery .family-card h3{
+  margin-bottom:6px;font-size:17px;overflow-wrap:anywhere
+}
+body.mc-app-shell .family-circular-gallery .family-card p{margin-bottom:9px}
+@media(max-width:600px){
+  body.mc-app-shell .family-circular-gallery{
+    min-height:300px;gap:15px;
+    padding:22px max(12px,calc((100% - 190px)/2)) 27px
+  }
+  body.mc-app-shell .family-circular-gallery .family-card{
+    flex-basis:190px;width:190px
+  }
+  body.mc-app-shell .family-circular-gallery .family-photo-trigger img{height:175px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.mc-app-shell .family-circular-gallery .family-card{
+    transform:none!important;opacity:1!important;transition:none!important
+  }
+}
+body.mc-app-shell.reduced-motion .family-circular-gallery .family-card,
+body.mc-app-shell.high-contrast .family-circular-gallery .family-card{
+  transform:none!important;opacity:1!important;transition:none!important
+}
