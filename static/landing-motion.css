@@ -33,12 +33,14 @@ body.mc-hero-resting .mc-hero-light-ring.mc-ring-two {animation:mc-ring-glow 7s 
 body.mc-hero-resting .mc-hero-light-flare {animation:mc-flare-glow 5s ease-in-out infinite alternate}
 body.mc-hero-resting .mc-hero-art {animation:mc-art-float 17s ease-in-out infinite alternate}
 @keyframes mc-orb-float {
- from{transform:translate(-50%,-50%) translateY(5px);opacity:.7;filter:saturate(1)}
- to{transform:translate(-50%,-50%) translateY(-7px);opacity:.82;filter:saturate(1.2)}
+ from{transform:translate(-50%,-50%) translateY(5px);opacity:.7}
+ to{transform:translate(-50%,-50%) translateY(-7px);opacity:.82}
 }
+/* Stable glow is painted once; only composite opacity for ambient breathing.
+   Repainting huge drop-shadows each frame was expensive on integrated GPUs. */
 @keyframes mc-ring-glow {
- from{opacity:.53;filter:drop-shadow(0 0 5px #7caaff)}
- to{opacity:1;filter:drop-shadow(0 0 16px #d2eaff) drop-shadow(0 0 23px #77a6f5)}
+ from{opacity:.58}
+ to{opacity:1}
 }
 @keyframes mc-flare-glow{from{opacity:.48}to{opacity:.92}}
 @keyframes mc-art-float {
@@ -139,4 +141,14 @@ body.mc-hero-assembling .mc-hero-corner-right {animation:mc-phase-right 1150ms 1
  body.mc-world-page .mc-hero-scroll {animation:none!important}
  body.mc-world-page .mc-world-hero::after{display:none!important}
  .mc-hero-replay{display:none!important}
+}
+
+/* Pause composited ambient loops outside the first viewport to conserve CPU/GPU.
+   Entrance animations are unaffected. Body class is updated by the existing
+   landing-world.js with one IntersectionObserver, not scroll polling. */
+body.mc-world-page.mc-hero-out-of-view.mc-hero-resting .mc-hero-art,
+body.mc-world-page.mc-hero-out-of-view.mc-hero-resting .mc-hero-orb,
+body.mc-world-page.mc-hero-out-of-view.mc-hero-resting .mc-hero-light-ring,
+body.mc-world-page.mc-hero-out-of-view.mc-hero-resting .mc-hero-light-flare {
+ animation-play-state:paused!important;
 }
