@@ -17,7 +17,7 @@ body.mc-app-shell .simple-actions > .simple-checkin {
 }
 .mc-flight-skip:focus-visible {outline:3px solid #fff;outline-offset:4px}
 .mc-flight-skip[hidden],.mc-flight-curtain[hidden]{display:none!important}
-body.mc-app-shell [data-flight-item] {will-change:transform,opacity,filter}
+body.mc-app-shell [data-flight-item] {will-change:transform,opacity}
 body.mc-app-shell .site-header,body.mc-app-shell .site-shell {isolation:auto}
 /* No motion is forced on users with preferences that disable it. */
 @media(prefers-reduced-motion:reduce) {
