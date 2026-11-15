@@ -51,8 +51,6 @@
 
   let pending = [];
   let skipRequested = false;
-  const now = () => window.performance?.now?.() || Date.now();
-  const startAt = now();
   const initial = [];
   const later = [];
   [...targets].forEach((el,index) => {
@@ -93,10 +91,10 @@
       side === 3 ? vh - rect.top + 85 : (side === 0 ? -36 : 36);
     const a = el.animate([
       {transform:`translate3d(${fromX}px,${fromY}px,0) rotate(${side%2?-4:4}deg) scale(.91)`,
-       opacity:0,filter:'blur(8px)',offset:0},
+       opacity:0,offset:0},
       {transform:'translate3d(0,0,0) rotate(0deg) scale(1)',
-       opacity:1,filter:'blur(0)',offset:1}
-    ],{duration:930,delay,easing:'cubic-bezier(.17,.83,.27,1)',fill:'both'});
+       opacity:1,offset:1}
+    ],{duration:720,delay,easing:'cubic-bezier(.17,.83,.27,1)',fill:'both'});
     pending.push(a);
     a.finished.then(() => {
       a.cancel();
@@ -107,8 +105,8 @@
   const header = document.querySelector('.site-header');
   if (header && !disabled()) {
     const a = header.animate([
-      {opacity:0,transform:'translateY(-110px)',filter:'blur(8px)'},
-      {opacity:1,transform:'translateY(0)',filter:'blur(0)'}
+      {opacity:0,transform:'translateY(-110px)'},
+      {opacity:1,transform:'translateY(0)'}
     ],{duration:1050,delay:110,easing:'cubic-bezier(.17,.83,.27,1)',fill:'both'});
     pending.push(a);
     a.finished.then(()=>a.cancel()).catch(()=>{});
@@ -120,7 +118,7 @@
   pending.push(shade);
   shade.finished.then(() => curtain.remove()).catch(()=>{});
 
-  initial.forEach((item,n) => animateItem(item,200+Math.min(1450,n*48)));
+  initial.forEach((item,n) => animateItem(item,200+Math.min(850,n*40)));
   if ('IntersectionObserver' in window) {
     observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
