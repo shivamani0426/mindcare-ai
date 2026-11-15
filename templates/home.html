@@ -5,6 +5,7 @@
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-paper.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css') }}">
   <script src="{{ url_for('static', filename='landing-world.js') }}" defer></script>
 {% endblock %}
 {% block content %}
@@ -30,7 +31,7 @@
   <section class="mc-world-hero" aria-labelledby="mc-hero-heading">
     <img class="mc-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" fetchpriority="high" decoding="async">
     <div class="mc-hero-vignette" aria-hidden="true"></div>
-    <div class="mc-hero-orb" aria-hidden="true"><span class="mc-hero-orb-core"></span></div>
+    <div class="mc-hero-orb" aria-hidden="true"><span class="mc-hero-orb-core"></span><span class="mc-hero-light-ring mc-ring-one"></span><span class="mc-hero-light-ring mc-ring-two"></span><span class="mc-hero-light-flare"></span></div>
     <header class="mc-hero-header">
       <a class="mc-hero-back" href="#overview" aria-label="Explore MindCare overview">←</a>
       <a class="mc-hero-brand" href="#top" aria-label="MindCare AI, back to top"><span class="mc-brand-glyph" aria-hidden="true">✦</span><span>MINDCARE</span></a>
