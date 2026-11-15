@@ -399,38 +399,26 @@ try:
         verify(page.locator(".simple-actions > .simple-checkin").evaluate(
                "(el) => getComputedStyle(el).gridColumnStart === '1'"),
                "Wellbeing card spans both columns after it expands")
-        verify(page.locator(".simple-actions[data-bounce-stack]").count() == 1,
-               "Simple View action cards use the bounce stack")
+        verify(page.locator(".simple-actions .dashboard-stack-open").count() == 0,
+               "Simple View has no stack or spread control")
         page.set_viewport_size({"width": 1280, "height": 860})
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'arriving'""")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
-               "Simple View waits until all five flying cards have settled")
-        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_visible(),
-               "Simple View shows the touch-to-spread control")
-        verify(page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
-               "Simple View stacked controls are not accidentally interactive")
-        verify(page.locator(".simple-checkin").evaluate("(el) => el.inert"),
-               "Wellbeing check-in cannot accidentally submit while stacked")
-        page.locator(".simple-actions .dashboard-stack-open").click()
-        verify(page.locator(".simple-actions").get_attribute("data-stack-state") == "expanded",
-               "Simple View cards spring back to their original positions")
-        verify(not page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
-               "Simple View cards are usable after expanding")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".simple-checkin").evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Wellbeing check-in flies directly to its layout position")
         verify(not page.locator(".simple-checkin").evaluate("(el) => el.inert"),
-               "Wellbeing check-in can be used after the cards spread")
+               "Wellbeing controls are usable without a spread step")
         verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
-               "All four feeling options remain available")
+               "Four feeling options remain present")
         verify(page.locator(".simple-checkin-form button[type='submit']").is_visible(),
-               "Save check-in remains visible after animation")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
-               "Simple View expand control disappears after use")
+               "Save check-in remains available")
+        page.locator(".mc-flight-skip").click()
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".simple-actions").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion Simple View retains a static, accessible layout")
+        verify(page.locator(".mc-flight-curtain").count() == 0,
+               "Reduced-motion Simple View displays without animation curtain")
         verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
                "Reduced-motion users can still choose a feeling")
         verify(page.locator(".simple-banner .mc-app-hero-art").count() == 1,
