@@ -37,7 +37,8 @@
         return;
       }
       document.body.classList.add('mc-paper-revealing');
-      finishTimer = window.setTimeout(finish, 1450);
+      // Allow separately arriving heading, navigation and actions to settle.
+      finishTimer = window.setTimeout(finish, 2150);
     };
     world.inert = true;
     paperIntro.hidden = false;

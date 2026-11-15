@@ -102,6 +102,12 @@ try:
                "Caregiver dashboard has centered card stack groups")
         caregiver.emulate_media(reduced_motion="no-preference")
         caregiver.reload()
+        caregiver.wait_for_function("""() => document.querySelector('.caregiver-stats')?.dataset.stackState === 'arriving'""")
+        verify(caregiver.locator(".caregiver-stats .dashboard-stack-open").is_hidden(),
+               "Caregiver cards assemble before the spread control becomes available")
+        verify(caregiver.locator(".caregiver-stats > [data-bounce-card]").first.evaluate(
+               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
+               "Caregiver overview cards fly from the window edges")
         caregiver.wait_for_function("""() => document.querySelector('.caregiver-stats')?.dataset.stackState === 'stacked'""")
         verify(caregiver.locator(".caregiver-stats .dashboard-stack-open").is_visible(),
                "Caregiver overview cards display accessible expand button")

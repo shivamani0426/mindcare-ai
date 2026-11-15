@@ -83,7 +83,7 @@ body.mc-paper-revealing .mc-world-root {filter:none;transform:none}
     clip-path:polygon(3% 5%,14% 1%,25% 6%,35% 0%,49% 3%,66% 1%,81% 8%,94% 3%,99% 18%,94% 34%,100% 49%,94% 70%,98% 88%,88% 97%,69% 93%,52% 100%,38% 94%,21% 98%,9% 90%,2% 76%,7% 59%,1% 38%)}
   35% {transform:rotate(7deg) rotateX(-10deg) rotateY(6deg) scale(.94,1.03);opacity:1}
   70% {transform:rotate(0) rotateX(0) rotateY(0) scale(1.65,1.55);opacity:.9;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
-  100% {transform:rotate(0) scale(4.5);opacity:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+  100% {transform:rotate(0) scale(1.9);opacity:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
 }
 @keyframes mc-paper-curtain {0%,45%{opacity:1}100%{opacity:0}}
 @media(max-width:600px) {
@@ -96,4 +96,61 @@ body.mc-paper-revealing .mc-world-root {filter:none;transform:none}
   body.mc-world-page .mc-paper-intro {display:none!important}
   body.mc-world-page .mc-world-root {filter:none!important;transform:none!important;transition:none!important}
   .mc-paper-sheet,.mc-paper-intro {animation:none!important}
+}
+
+/* Paper settles in place; the actual site assembles from each window edge.
+   Deliberately avoid an aggressive full-screen zoom toward the user. */
+body.mc-paper-revealing .mc-hero-header {
+  animation:mc-assemble-top 1150ms .12s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-kicker {
+  animation:mc-assemble-top 1000ms .2s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-wordmark {
+  animation:mc-assemble-left 1280ms .28s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-center>p {
+  animation:mc-assemble-right 1230ms .4s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-enter {
+  animation:mc-assemble-bottom 1120ms .59s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-signin {
+  animation:mc-assemble-right 1100ms .69s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-scroll {
+  animation:mc-assemble-scroll 1050ms .74s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-corner-left {
+  animation:mc-assemble-left 1100ms .62s cubic-bezier(.17,1,.32,1) both;
+}
+body.mc-paper-revealing .mc-hero-corner-right {
+  animation:mc-assemble-right 1100ms .66s cubic-bezier(.17,1,.32,1) both;
+}
+/* The hero background stays grounded; only text and controls travel. */
+@keyframes mc-assemble-left {
+  from{opacity:0;filter:blur(9px);transform:translate3d(-min(55vw,620px),40px,0) rotate(-6deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0)}
+}
+@keyframes mc-assemble-right {
+  from{opacity:0;filter:blur(9px);transform:translate3d(min(55vw,620px),-28px,0) rotate(6deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0)}
+}
+@keyframes mc-assemble-top {
+  from{opacity:0;filter:blur(7px);transform:translate3d(0,-min(35vh,290px),0) rotate(-3deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0)}
+}
+@keyframes mc-assemble-bottom {
+  from{opacity:0;filter:blur(8px);transform:translate3d(0,min(32vh,260px),0) rotate(5deg)}
+  to{opacity:1;filter:blur(0);transform:translate3d(0,0,0) rotate(0)}
+}
+/* Preserve the original horizontal centering transform of scroll hint. */
+@keyframes mc-assemble-scroll {
+  from{opacity:0;filter:blur(7px);transform:translate3d(-50%,min(35vh,280px),0)}
+  to{opacity:1;filter:blur(0);transform:translate3d(-50%,0,0)}
+}
+@media(prefers-reduced-motion:reduce) {
+  body.mc-paper-revealing :is(.mc-hero-header,.mc-hero-kicker,.mc-hero-wordmark,.mc-hero-center>p,.mc-hero-enter,.mc-hero-signin,.mc-hero-scroll,.mc-hero-corner) {
+    animation:none!important;filter:none!important;
+  }
 }

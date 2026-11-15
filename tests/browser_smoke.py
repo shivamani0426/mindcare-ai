@@ -111,6 +111,15 @@ try:
         paper_tab.locator("#mc-paper-touch").click()
         paper_tab.wait_for_function(
             "() => document.body.classList.contains('mc-paper-revealing')")
+        verify("mc-assemble-left" in paper_tab.locator(".mc-hero-wordmark").evaluate(
+               "(el) => getComputedStyle(el).animationName"),
+               "Landing title flies in from the left instead of zooming at visitors")
+        verify("mc-assemble-right" in paper_tab.locator(".mc-hero-center > p").evaluate(
+               "(el) => getComputedStyle(el).animationName"),
+               "Landing description flies in from the right")
+        verify("mc-assemble-bottom" in paper_tab.locator(".mc-hero-enter").evaluate(
+               "(el) => getComputedStyle(el).animationName"),
+               "Landing registration action rises from below")
         paper_tab.wait_for_function(
             "() => document.getElementById('mc-paper-intro').hidden",
             timeout=6000)
@@ -278,6 +287,12 @@ try:
                "Patient dashboard groups functional cards into bounce stacks")
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
+        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'arriving'""")
+        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_hidden(),
+               "Patient stack button stays hidden until incoming cards land")
+        verify(page.locator(".patient-top-tiles > [data-bounce-card]").first.evaluate(
+               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
+               "Patient cards arrive one by one from the window edges")
         page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'stacked'""")
         verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_visible(),
                "Patient card stack can be spread from a clear button")
@@ -397,6 +412,9 @@ try:
         page.set_viewport_size({"width": 1280, "height": 860})
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
+        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'arriving'""")
+        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
+               "Simple View waits until all five flying cards have settled")
         page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'stacked'""")
         verify(page.locator(".simple-actions .dashboard-stack-open").is_visible(),
                "Simple View shows the touch-to-spread control")

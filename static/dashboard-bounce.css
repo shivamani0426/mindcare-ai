@@ -13,6 +13,7 @@ body.mc-app-shell [data-bounce-stack] > [data-bounce-card] {
   transform:translate3d(0,0,0) rotate(0) scale(1);
   will-change:transform;
 }
+body.mc-app-shell [data-bounce-stack][data-stack-state="arriving"] > [data-bounce-card],
 body.mc-app-shell [data-bounce-stack][data-stack-state="stacked"] > [data-bounce-card] {
   transform:translate3d(var(--bounce-x,0px),var(--bounce-y,0px),0)
     rotate(var(--bounce-tilt,0deg)) scale(.82);
@@ -84,3 +85,14 @@ body.mc-app-shell .simple-actions > .simple-checkin {
   width:100%;
   margin:0;
 }
+
+/* During entrance cards are already logically assembled at the group center.
+   Temporary WAAPI flights override this stable end position until arrival. */
+body.mc-app-shell [data-bounce-stack][data-stack-state="arriving"] > [data-bounce-card] {
+  transition:none!important;
+}
+body.mc-app-shell [data-bounce-stack][data-stack-state="arriving"] .dashboard-stack-open {
+  display:none!important;
+}
+/* Moving from viewport edges must not introduce horizontal page scrolling. */
+body.mc-app-shell:has([data-bounce-stack]) {overflow-x:clip}
