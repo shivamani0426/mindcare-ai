@@ -15,7 +15,7 @@ if [[ -z "$PGHOST" || -z "$PGDATABASE" || -z "$PGUSER" || -z "$AGE_RECIPIENT" ]]
   printf 'Missing PGHOST, PGDATABASE, PGUSER or AGE_RECIPIENT.\n' >&2
   exit 2
 fi
-for program in pg_dump age; do
+for program in pg_dump age sha256sum; do
   if ! command -v "$program" >/dev/null 2>&1; then
     printf 'Missing command: %s\n' "$program" >&2
     exit 2
@@ -49,5 +49,14 @@ pg_dump --format=custom --no-owner --no-acl --no-password |
   age --recipient "$AGE_RECIPIENT" --output "$PART"
 mv -- "$PART" "$TARGET"
 trap - EXIT
+# Provide a transport-integrity checksum without inspecting or exposing records.
+# Use relative paths so the encrypted archive can be verified after copying.
+(
+  cd -- "$DEST"
+  sha256sum -- "$(basename -- "$TARGET")" > "$(basename -- "$TARGET").sha256"
+  sha256sum --check -- "$(basename -- "$TARGET").sha256" >/dev/null
+)
 printf 'Encrypted backup created: %s\n' "$TARGET"
+printf 'SHA-256 checksum: %s.sha256\n' "$TARGET"
+printf 'IMPORTANT: backup is not restore-verified until decryption and an isolated restore test succeed.\n'
 printf 'Keep the private age identity in a separate secure location.\n'

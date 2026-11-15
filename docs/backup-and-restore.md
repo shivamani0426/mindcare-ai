@@ -67,7 +67,9 @@ From the checked-out repository:
     bash scripts/backup_postgres.sh
 
 Output goes to $HOME/mindcare-backups with owner-only permissions and the
-filename mindcare-YYYYMMDDTHHMMSSZ.dump.age. The script uses TLS, a pg_dump
+filename mindcare-YYYYMMDDTHHMMSSZ.dump.age. A matching .dump.age.sha256
+checksum file is also created, allowing an integrity check after copying the
+encrypted archive. Copy **both** files together. The script uses TLS, a pg_dump
 custom archive and streaming age encryption. It does not create a temporary
 unencrypted dump file or change any live database records.
 
@@ -81,13 +83,18 @@ After the command, end the password-bearing shell session, or run:
 
 ## 4. Verify and rehearse a restore (MANDATORY before release)
 
-In a private environment with the backup identity, verify the archive structure
-without writing an unencrypted copy to disk:
+In a private environment with the backup identity, verify the encrypted file
+checksum, decrypt the archive in a pipe, and inspect the PostgreSQL archive
+structure **without writing an unencrypted copy to disk**:
 
-    age --decrypt --identity "$HOME/.config/mindcare/backup-identity.txt" '/path/to/backup.dump.age' | pg_restore --list >/dev/null
+    bash scripts/verify_postgres_backup.sh \
+      '/path/to/backup.dump.age' \
+      "$HOME/.config/mindcare/backup-identity.txt"
 
-A successful listing proves that the archive is readable; it does NOT prove
-that all tables and relationships can be restored. For a complete restore
+The companion `.dump.age.sha256` file must be next to the encrypted archive.
+The verifier fails if either the checksum or decryption/archive parsing fails.
+Successful verification proves the archive is intact and readable; it does NOT
+prove that all tables and relationships can be restored. For a complete restore
 drill, create a NEW disposable PostgreSQL database on your own machine and
 check connectivity and representative counts against the production totals.
 **Never point pg_restore at the live Render database.** Example for a local
