@@ -16,13 +16,12 @@
 
   const selectors = [
     '.mc-world-manifesto', '.mc-world-media', '.mc-world-capabilities',
-    '.mc-world-product', '.mc-gallery-rail', '.mc-world-access',
+    '.mc-world-product', '.mc-world-access',
     '.mc-world-footer', '.mc-world-discover'
   ];
   // Identify actual existing sections instead of manipulating the page structure.
   const sections = [...new Set(selectors.flatMap(s => [...root.querySelectorAll(s)]))];
   if (!sections.length) return;
-  const active = new Set();
   let completed = false;
   let observer = null;
   let readyObserver = null;
