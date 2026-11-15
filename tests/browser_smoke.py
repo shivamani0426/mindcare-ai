@@ -111,32 +111,43 @@ try:
         paper_tab.locator("#mc-paper-touch").click()
         paper_tab.wait_for_function(
             "() => document.body.classList.contains('mc-paper-revealing')")
+        verify(not paper_tab.locator("body").evaluate(
+               "(el) => el.classList.contains('mc-hero-assembling')"),
+               "Hero assembly must NOT run invisibly underneath the paper")
+        paper_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-hero-assembling')",
+            timeout=6000)
+        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
+               "Paper is hidden before orb and text animation starts")
+        verify(paper_tab.locator("#mc-hero-replay").is_hidden(),
+               "Replay is hidden while the hero assembles")
+
         verify(paper_tab.locator(".mc-hero-orb").count() == 1,
                "Original hero keeps the animated central bubble")
         verify(paper_tab.locator(".mc-hero-light-ring").count() == 2,
                "Two animated luminous rings develop around the bubble")
-        verify("mc-sphere-develop" in paper_tab.locator(".mc-hero-orb").evaluate(
+        verify("mc-phase-sphere" in paper_tab.locator(".mc-hero-orb").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "Central bubble forms from small glow and settles into its final size")
-        verify("mc-ring-create-one" in paper_tab.locator(".mc-ring-one").evaluate(
+        verify("mc-phase-ring-one" in paper_tab.locator(".mc-ring-one").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "First orbit ring draws itself during paper reveal")
-        verify("mc-ring-create-two" in paper_tab.locator(".mc-ring-two").evaluate(
+        verify("mc-phase-ring-two" in paper_tab.locator(".mc-ring-two").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "Second orbit ring assembles after the first")
-        verify("mc-screen-dark-breath" in paper_tab.locator(".mc-world-hero").evaluate(
+        verify("mc-phase-veil" in paper_tab.locator(".mc-world-hero").evaluate(
                "(el) => getComputedStyle(el, '::after').animationName"),
                "Screen breathes from dark to bright while content assembles")
         verify(paper_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
                "Existing illustrated landing hero is preserved exactly")
 
-        verify("mc-enter-west" in paper_tab.locator(".mc-hero-wordmark").evaluate(
+        verify("mc-phase-left" in paper_tab.locator(".mc-hero-wordmark").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "Landing title flies in from the left instead of zooming at visitors")
-        verify("mc-enter-east" in paper_tab.locator(".mc-hero-center > p").evaluate(
+        verify("mc-phase-right" in paper_tab.locator(".mc-hero-center > p").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "Landing description flies in from the right")
-        verify("mc-enter-south" in paper_tab.locator(".mc-hero-enter").evaluate(
+        verify("mc-phase-bottom" in paper_tab.locator(".mc-hero-enter").evaluate(
                "(el) => getComputedStyle(el).animationName"),
                "Landing registration action rises from below")
         paper_tab.wait_for_function(
@@ -146,8 +157,17 @@ try:
                "Original homepage becomes fully interactive after the reveal")
         verify(paper_tab.locator(".mc-hero-enter").is_visible(),
                "Registration call to action survives paper animation")
+        verify(paper_tab.locator("#mc-hero-replay").is_visible(),
+               "Finished hero offers a visible replay button")
+        paper_tab.locator("#mc-hero-replay").click()
+        verify(paper_tab.locator("#mc-paper-touch").is_visible(),
+               "Replay shows paper again without a new tab")
+        paper_tab.locator("#mc-paper-skip").click()
+        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
+               "Replay paper can be skipped immediately")
+
         verify(paper_tab.locator(".mc-hero-light-ring").first.evaluate(
-               "(el) => getComputedStyle(el).animationName.includes('mc-ring-pulse')"),
+               "(el) => getComputedStyle(el).animationName.includes('mc-ring-glow')"),
                "Luminous rings continue their gentle animation after the reveal")
 
         paper_tab.reload()
