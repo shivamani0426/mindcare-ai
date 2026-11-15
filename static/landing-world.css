@@ -292,3 +292,45 @@ body.reduced-motion .mc-world-root *{transition:none!important;animation:none!im
 .mc-world-nav-links a{font-size:9px;letter-spacing:-.02em}
 .mc-world-nav-action{width:26px;min-width:26px;height:26px;font-size:15px}
 }
+
+
+/* Luminous editorial orb: MindCare's original interpretation of the supplied
+   ArgusVPN-like glowing circle reference. Paper-to-unfold remains unchanged. */
+.mc-hero-orb{
+  position:absolute;z-index:0;pointer-events:none;
+  left:50%;top:45%;transform:translate(-50%,-50%);
+  width:min(74vw,690px);aspect-ratio:1;border-radius:50%;
+  background:
+    radial-gradient(circle at 35% 29%,#f2f9ff8a 0%,#a6b9ef7a 10%,transparent 27%),
+    radial-gradient(circle at 52% 54%,#12203b 0%,#273d6c 40%,#4466b1 62%,#a0bce4 72%,#1b254b 77%,transparent 82%);
+  border:1px solid #d4eaff55;
+  box-shadow:inset -26px -32px 65px #060b28cc,
+    inset 13px 11px 40px #c6e9ff45,
+    0 0 72px 22px #6c92c84a,
+    0 0 170px 65px #6276b523;
+  opacity:.75;mix-blend-mode:screen;
+  animation:mc-orb-breathe 13s ease-in-out infinite alternate;
+}
+.mc-hero-orb::before{
+  content:"";position:absolute;inset:9%;border-radius:50%;
+  border:1px solid #def1ff55;transform:rotateX(66deg) rotate(-25deg);
+  box-shadow:0 0 25px #b9dfff88,0 0 60px #77a9ef4a;
+}
+.mc-hero-orb::after{
+  content:"";position:absolute;inset:-9%;border-radius:50%;
+  border:1px solid #cedeff38;transform:rotate(-26deg) scaleY(.73);
+  box-shadow:0 0 30px #b6d6ff50;
+}
+.mc-hero-orb-core{display:block;position:absolute;inset:25%;border-radius:50%;
+  background:radial-gradient(circle at 45% 39%,#9bc5ff18,transparent 72%)}
+.mc-world-hero .mc-hero-wordmark {position:relative;z-index:2;text-shadow:0 10px 38px #030512b5}
+@keyframes mc-orb-breathe {
+  from{filter:saturate(1);opacity:.65}
+  to{filter:saturate(1.3);opacity:.85}
+}
+@media(max-width:650px) {
+  .mc-hero-orb{width:min(108vw,530px);top:43%;opacity:.62}
+}
+@media(prefers-reduced-motion:reduce) {
+  .mc-hero-orb{animation:none!important}
+}
