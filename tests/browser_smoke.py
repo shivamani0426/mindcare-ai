@@ -283,30 +283,28 @@ try:
         page.get_by_role("button", name=re.compile("Create my account")).click()
         page.wait_for_url("**/dashboard")
         verify(page.locator(".patient-mode-shortcut").count() == 1, "Full dashboard offers Simple View")
-        verify(page.locator("[data-bounce-stack]").count() >= 3,
-               "Patient dashboard groups functional cards into bounce stacks")
+        verify(page.locator("[data-bounce-stack], .dashboard-stack-open").count() == 0,
+               "Patient dashboard has no card stack hooks or spread buttons")
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'arriving'""")
-        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_hidden(),
-               "Patient stack button stays hidden until incoming cards land")
-        verify(page.locator(".patient-top-tiles > [data-bounce-card]").first.evaluate(
-               "(el) => el.getAnimations().some(a => a.playState === 'running')"),
-               "Patient cards arrive one by one from the window edges")
-        page.wait_for_function("""() => document.querySelector('.patient-top-tiles')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".patient-top-tiles .dashboard-stack-open").is_visible(),
-               "Patient card stack can be spread from a clear button")
-        verify(page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
-               "Stacked card form controls are inert until revealed")
-        page.locator(".patient-top-tiles .dashboard-stack-open").click()
-        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") == "expanded",
-               "Patient cards fly back into their normal grid")
-        verify(not page.locator(".patient-top-tiles [data-bounce-card]").first.evaluate("(el) => el.inert"),
-               "Patient actions are reachable after spreading cards")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".mc-flight-curtain").count() == 1,
+               "Patient dashboard starts with a dark window")
+        verify(page.locator(".welcome-banner h1").evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Patient welcome heading flies in independently")
+        verify(page.locator(".stat-card").first.evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Activity cards fly directly to their real positions")
+        verify(not page.locator(".patient-top-tiles").evaluate("(el) => el.inert"),
+               "Patient actions no longer require spreading cards")
+        page.locator(".mc-flight-skip").click()
+        verify(page.locator(".mc-flight-curtain").count() == 0,
+               "Skip action immediately removes the dark curtain")
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".patient-top-tiles").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion patients see normal accessible dashboard layout")
+        verify(page.locator(".mc-flight-curtain, .mc-flight-skip").count() == 0,
+               "Reduced-motion patients see their dashboard directly")
         verify(page.locator('link[href*="app-world.css"]').count() == 1,
                "Signed-in patient dashboard loads the new design system")
         verify("mc-app-shell" in page.locator("body").get_attribute("class"),
@@ -335,29 +333,23 @@ try:
             verify(page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(10, 10, 10)",
                    f"{route} dark background is actually rendered")
         page.goto(base + "/games")
-        verify(page.locator(".games-catalog[data-bounce-stack]").count() == 1,
-               "Games catalog participates in floating card stack")
         verify(page.locator(".games-catalog > .catalog-card").count() == 6,
-               "All six brain game cards remain present")
+               "All six Brain Games remain present")
+        verify(page.locator(".games-catalog .dashboard-stack-open").count() == 0,
+               "Brain Games no longer have stack-up controls")
+        verify(page.locator(".games-catalog a[href*='/games/']").count() >= 5,
+               "Playable Brain Games retain navigation")
         page.set_viewport_size({"width": 1280, "height": 860})
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.games-catalog')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".games-catalog .dashboard-stack-open").is_visible(),
-               "Games catalog provides a clear spread-cards button")
-        verify(page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
-               "Game links are protected while the cards overlap")
-        page.locator(".games-catalog .dashboard-stack-open").click()
-        verify(page.locator(".games-catalog").get_attribute("data-stack-state") == "expanded",
-               "All game cards fly back into their original grid positions")
-        verify(not page.locator(".games-catalog > .catalog-card").first.evaluate("(el) => el.inert"),
-               "Play now links are accessible after cards spread")
-        verify(page.locator(".games-catalog a[href*='/games/']").count() >= 5,
-               "Playable games remain linked to their original destinations")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".games-catalog > .catalog-card").first.evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Brain Game cards receive independent flight animation")
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".games-catalog").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion patients see the normal games grid")
+        verify(page.locator(".games-catalog").get_attribute("data-stack-state") is None,
+               "Brain Games remain in their original grid")
         for width in (320, 375, 768):
             page.set_viewport_size({"width": width, "height": 820})
             page.wait_for_timeout(100)
@@ -407,38 +399,26 @@ try:
         verify(page.locator(".simple-actions > .simple-checkin").evaluate(
                "(el) => getComputedStyle(el).gridColumnStart === '1'"),
                "Wellbeing card spans both columns after it expands")
-        verify(page.locator(".simple-actions[data-bounce-stack]").count() == 1,
-               "Simple View action cards use the bounce stack")
+        verify(page.locator(".simple-actions .dashboard-stack-open").count() == 0,
+               "Simple View has no stack or spread control")
         page.set_viewport_size({"width": 1280, "height": 860})
         page.emulate_media(reduced_motion="no-preference")
         page.reload()
-        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'arriving'""")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
-               "Simple View waits until all five flying cards have settled")
-        page.wait_for_function("""() => document.querySelector('.simple-actions')?.dataset.stackState === 'stacked'""")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_visible(),
-               "Simple View shows the touch-to-spread control")
-        verify(page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
-               "Simple View stacked controls are not accidentally interactive")
-        verify(page.locator(".simple-checkin").evaluate("(el) => el.inert"),
-               "Wellbeing check-in cannot accidentally submit while stacked")
-        page.locator(".simple-actions .dashboard-stack-open").click()
-        verify(page.locator(".simple-actions").get_attribute("data-stack-state") == "expanded",
-               "Simple View cards spring back to their original positions")
-        verify(not page.locator(".simple-action-card").first.evaluate("(el) => el.inert"),
-               "Simple View cards are usable after expanding")
+        page.wait_for_function("() => document.body.dataset.flightState === 'arriving'")
+        verify(page.locator(".simple-checkin").evaluate(
+               "(el) => el.hasAttribute('data-flight-item')"),
+               "Wellbeing check-in flies directly to its layout position")
         verify(not page.locator(".simple-checkin").evaluate("(el) => el.inert"),
-               "Wellbeing check-in can be used after the cards spread")
+               "Wellbeing controls are usable without a spread step")
         verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
-               "All four feeling options remain available")
+               "Four feeling options remain present")
         verify(page.locator(".simple-checkin-form button[type='submit']").is_visible(),
-               "Save check-in remains visible after animation")
-        verify(page.locator(".simple-actions .dashboard-stack-open").is_hidden(),
-               "Simple View expand control disappears after use")
+               "Save check-in remains available")
+        page.locator(".mc-flight-skip").click()
         page.emulate_media(reduced_motion="reduce")
         page.reload()
-        verify(page.locator(".simple-actions").get_attribute("data-stack-state") != "stacked",
-               "Reduced-motion Simple View retains a static, accessible layout")
+        verify(page.locator(".mc-flight-curtain").count() == 0,
+               "Reduced-motion Simple View displays without animation curtain")
         verify(page.locator(".simple-checkin-form input[name='feeling']").count() == 4,
                "Reduced-motion users can still choose a feeling")
         verify(page.locator(".simple-banner .mc-app-hero-art").count() == 1,

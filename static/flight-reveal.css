@@ -1,0 +1,30 @@
+/* MindCare: window-edge entrance for every authenticated view.
+   Replaces BounceCards entirely: no stacked, overlapping, or inert actions.
+   CSS is layered after app-world.css without changing backend / data flows. */
+body.mc-app-shell { overflow-x:clip; }
+body.mc-app-shell .simple-actions > .simple-checkin {
+  grid-column:1/-1;min-width:0;width:100%;margin:0;
+}
+.mc-flight-curtain {
+  position:fixed;inset:0;z-index:80;background:#090a0e;
+  pointer-events:none;opacity:1;
+}
+.mc-flight-skip {
+  position:fixed;top:18px;right:18px;z-index:81;
+  background:#d7f36a;color:#162315;border:2px solid #101a14;
+  border-radius:100px;min-height:44px;padding:9px 18px;
+  font:800 12px/1.4 system-ui,sans-serif;box-shadow:0 8px 27px #0009;
+}
+.mc-flight-skip:focus-visible {outline:3px solid #fff;outline-offset:4px}
+.mc-flight-skip[hidden],.mc-flight-curtain[hidden]{display:none!important}
+body.mc-app-shell [data-flight-item] {will-change:transform,opacity,filter}
+body.mc-app-shell .site-header,body.mc-app-shell .site-shell {isolation:auto}
+/* No motion is forced on users with preferences that disable it. */
+@media(prefers-reduced-motion:reduce) {
+  .mc-flight-curtain,.mc-flight-skip{display:none!important}
+  body.mc-app-shell [data-flight-item]{transform:none!important;opacity:1!important;filter:none!important;animation:none!important}
+}
+body.mc-app-shell.reduced-motion [data-flight-item],
+body.mc-app-shell.high-contrast [data-flight-item]{
+  transform:none!important;opacity:1!important;filter:none!important;animation:none!important
+}
