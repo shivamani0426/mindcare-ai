@@ -6,6 +6,7 @@ patient information, WhatsApp contacts or the Render PostgreSQL service.
 from __future__ import annotations
 
 import json
+import base64
 import os
 import sys
 import tempfile
@@ -152,6 +153,37 @@ try:
                "Support queue shows voluntary Need Support message")
         verify(card.locator(".caregiver-overdue-note").count() == 1,
                "Overdue reminder status appears with safe self-report wording")
+        # Upload two disposable PNGs as an approved caregiver to verify that
+        # the curved gallery and the existing photo lightbox both still work.
+        sample_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/GLwAAAAASUVORK5CYII="
+        )
+        caregiver.goto(url + "/family")
+        for name in ("Amma QA", "Nanna QA"):
+            caregiver.locator('.family-help input[name="name"]').fill(name)
+            caregiver.locator('.family-help input[name="relation"]').fill("Family")
+            caregiver.locator('.family-help input[name="photo"]').set_input_files(
+                {"name": "test-photo.png", "mimeType": "image/png", "buffer": sample_png}
+            )
+            caregiver.locator('.family-help button[type="submit"]').click()
+            caregiver.wait_for_selector(".family-circular-gallery .family-card")
+        verify(caregiver.locator(".family-circular-gallery .family-card").count() == 2,
+               "Approved caregiver family library renders a curved photo rail")
+        verify(caregiver.locator(".family-gallery-next").is_visible(),
+               "Family photo rail has accessible arrow navigation")
+        verify(caregiver.locator(".family-circular-gallery").evaluate(
+               "(el) => getComputedStyle(el).display === 'flex'"),
+               "Family library uses a curved horizontal carousel rather than old grid")
+        caregiver.locator(".family-gallery-next").click()
+        caregiver.wait_for_timeout(500)
+        verify("image 2 of 2" in caregiver.locator(".family-circular-gallery").get_attribute("aria-label"),
+               "Next arrow advances to the next approved family photograph")
+        caregiver.locator(".family-photo-trigger").first.click()
+        verify(caregiver.locator(".family-photo-viewer").is_visible(),
+               "Curved photo items still open existing full-screen viewer")
+        caregiver.locator(".family-viewer-close").click()
+        caregiver.goto(url + "/dashboard")
+
 
         caregiver.locator('[data-care-filter="support"]').click()
         verify(card.is_visible(), "Needs-follow-up filter works")
