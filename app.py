@@ -14,9 +14,7 @@ import os
 import random
 import re
 import secrets
-import smtplib
-import ssl
-from email.message import EmailMessage
+import requests
 from itsdangerous import URLSafeTimedSerializer, BadData
 import json
 from collections import defaultdict
@@ -911,7 +909,7 @@ RESET_TTL_SECONDS = 900
 
 def recovery_ready():
     return all(os.getenv(key, "").strip() for key in (
-        "RESET_SMTP_HOST", "RESET_SMTP_USER", "RESET_SMTP_PASSWORD", "RESET_FROM_EMAIL"
+        "RESET_EMAIL_API_KEY", "RESET_FROM_EMAIL"
     ))
 
 
@@ -926,26 +924,14 @@ def make_reset_code(user):
 def send_reset_code(email, code):
     # No token in a URL, query string or server access log. User pastes code
     # into the form; a separate verified HTTPS deployment supplies the page.
-    message = EmailMessage()
-    message["From"] = os.environ["RESET_FROM_EMAIL"]
-    message["To"] = email
-    message["Subject"] = "MindCare password recovery"
-    message.set_content("A MindCare password reset was requested. Copy this code into the Password recovery page on the MindCare website. It expires in 15 minutes. If you did not request it, ignore this message. Never share this code.\n\n" + code)
-    port = int(os.getenv("RESET_SMTP_PORT", "465"))
-    if port not in (465, 587):
-        raise ValueError("Unsupported SMTP port")
-    context = ssl.create_default_context()
-    if port == 465:
-        with smtplib.SMTP_SSL(os.environ["RESET_SMTP_HOST"], port, timeout=8, context=context) as smtp:
-            smtp.login(os.environ["RESET_SMTP_USER"], os.environ["RESET_SMTP_PASSWORD"])
-            smtp.send_message(message)
-    else:
-        with smtplib.SMTP(os.environ["RESET_SMTP_HOST"], port, timeout=8) as smtp:
-            smtp.ehlo()
-            smtp.starttls(context=context)
-            smtp.ehlo()
-            smtp.login(os.environ["RESET_SMTP_USER"], os.environ["RESET_SMTP_PASSWORD"])
-            smtp.send_message(message)
+    body = ("A MindCare password reset was requested. Copy this code into the Password recovery page on the MindCare website. It expires in 15 minutes. If you did not request it, ignore this message. Never share this code.\n\n" + code)
+    response = requests.post("https://api.resend.com/emails",
+        headers={"Authorization": "Bearer " + os.environ["RESET_EMAIL_API_KEY"]},
+        json={"from": os.environ["RESET_FROM_EMAIL"], "to": [email],
+              "subject": "MindCare password recovery", "text": body},
+        timeout=(3, 5), allow_redirects=False)
+    if not 200 <= response.status_code < 300:
+        raise RequestException("Recovery delivery rejected")
 
 
 @app.route("/auth/forgot-password", methods=["GET", "POST"])
@@ -963,7 +949,7 @@ def forgot_password():
             if user and not user.email.endswith("@internal.mindcare.invalid"):
                 try:
                     send_reset_code(user.email, make_reset_code(user))
-                except (OSError, smtplib.SMTPException, ValueError):
+                except (RequestException, OSError, ValueError):
                     # Never log address, provider response, credentials or reset code.
                     app.logger.warning("Password recovery delivery failed")
             flash("If an eligible account exists and email delivery succeeds, you will receive a recovery code.", "info")
