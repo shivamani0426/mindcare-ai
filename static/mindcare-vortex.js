@@ -8,7 +8,7 @@
   const prefs = ['(prefers-reduced-motion: reduce)','(prefers-contrast: more)','(forced-colors: active)'].map(s => matchMedia(s));
   const motion = () => !prefs.some(p => p.matches) && !document.body.classList.contains('reduced-motion');
   let destination = null, controller = null, mounted = false, busy = false, scene = null;
-  let generation = 0, requestTimer = 0, group = [];
+  let generation = 0, requestTimer = 0, group = [], gravity = null;
   const portalTransform = scale => 'translate3d(-50%,-50%,0) scale(' + scale + ')';
   // One bounded compositor surface follows a tightening spiral, with
   // synchronized rotation, radius, depth tilt and contraction. No DOM
@@ -43,6 +43,7 @@
   const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
   const reset = () => {
     clearTimeout(requestTimer);
+    gravity?.destroy(); gravity = null;
     controller?.abort();
     controller = null;
     group.forEach(a => a.cancel());
@@ -99,8 +100,10 @@
     group = animations;
     const phase = stage.dataset.phase;
     document.dispatchEvent(new CustomEvent('mindcare:vortex-motion',{detail:{phase,duration}}));
+    gravity?.run(animations[0],phase,duration);
     await Promise.all(animations.map(a => a.finished));
     if (token !== generation) return false;
+    gravity?.settle(phase);
     specs.forEach(([element,frames]) => setPose(element,frames[frames.length-1]));
     animations.forEach(a => a.cancel());
     group = [];
@@ -155,6 +158,11 @@
     login.catch(() => {});
     requestTimer = setTimeout(() => { if (!mounted && token === generation) fallback(); },12000);
     try {
+      // Snapshot preparation is optional and bounded. The existing DOM path
+      // remains authoritative even if WebGL or capture is unavailable.
+      try { gravity = window.MindcareGravity?.create() || null; } catch (_) { gravity = null; }
+      if (gravity && !(await gravity.capture(scene))) { gravity.destroy(); gravity = null; }
+      if (token !== generation) return;
       const absorbed = await play([
         [scene,vacuum],
         [space,[{transform:portalTransform(.035),offset:0},{transform:portalTransform(.48),offset:.28},{transform:portalTransform(.88),offset:.65},{transform:portalTransform(1),offset:1}]],
@@ -192,6 +200,8 @@
       document.dispatchEvent(new Event('mindcare:login-mounted'));
       // Give the real login a layout/paint opportunity at the tiny pose.
       await frame();
+      if (token !== generation) return;
+      if (gravity && !(await gravity.capture(scene))) { gravity.destroy(); gravity = null; }
       if (token !== generation) return;
       const emitted = await play([
         [scene,emission],
