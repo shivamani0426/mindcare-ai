@@ -22,6 +22,8 @@
   let touchY = null, focusAfter = false;
   const clamp = value => Math.max(0, Math.min(1, value));
   const remember = () => { try { sessionStorage.setItem(storageKey, '1'); } catch (_) {} };
+  window.addEventListener('mindcare:landing-dispose', stopAfterLanding, {once:true});
+  function stopAfterLanding() { stop(); phase = 'disposed'; }
   const paint = () => {
     const set = (key,value) => carpet.style.setProperty(key,value);
     set('--carpet-progress', progress.toFixed(4));
@@ -65,19 +67,15 @@
   };
   const reveal = () => {
     stop();
-    phase = 'assembling';
+    // The hero is already visible behind the parting textile. Do not hide
+    // and rebuild it again once the fabric clears.
+    phase = 'ready';
     progress = target = 1;
     paint();
+    document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
+    document.body.classList.add('mc-hero-resting');
     release();
-    document.body.classList.add('mc-carpet-arrival','mc-hero-assembling');
-    document.body.classList.remove('mc-hero-resting');
-    if (replay) replay.hidden = true;
-    heroTimer = setTimeout(() => {
-      phase = 'ready';
-      document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
-      document.body.classList.add('mc-hero-resting');
-      if (replay) replay.hidden = !motionAllowed();
-    }, 2480);
+    if (replay) replay.hidden = !motionAllowed();
   };
   const animate = now => {
     frame = 0;
@@ -213,6 +211,7 @@
       document.body.classList.toggle('mc-hero-out-of-view', !entry.isIntersecting);
     },{threshold:0.01});
     heroVisibility.observe(heroForMotion);
+    window.addEventListener('mindcare:landing-dispose', () => heroVisibility.disconnect(), {once:true});
   }
 
   // Highlight actual section in sticky nav, without moving keyboard focus.
@@ -228,6 +227,7 @@
         else link.removeAttribute('aria-current');
       });
     }, {rootMargin: '-70px 0px -40% 0px', threshold: [0, .15, .4]});
+    window.addEventListener('mindcare:landing-dispose', () => observer.disconnect(), {once:true});
     ['overview', 'capabilities', 'discover', 'access'].forEach(id => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
