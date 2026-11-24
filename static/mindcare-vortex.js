@@ -9,18 +9,36 @@
   const motion = () => !prefs.some(p => p.matches) && !document.body.classList.contains('reduced-motion');
   let destination = null, controller = null, mounted = false, busy = false, scene = null;
   let generation = 0, requestTimer = 0, group = [];
-  const tiny = 'translate3d(0,0,0) rotate(-28deg) scale(.035)';
-  const full = 'translate3d(0,0,0) rotate(0deg) scale(1)';
   const portalTransform = scale => 'translate3d(-50%,-50%,0) scale(' + scale + ')';
-  // These exact same poses are traversed backwards when the login is emitted.
-  const vacuum = [
-    {transform:full,opacity:1,offset:0},
-    {transform:'translate3d(0,0,0) rotate(-2deg) scale(.91)',opacity:1,offset:.18},
-    {transform:'translate3d(0,0,0) rotate(-9deg) scale(.63)',opacity:1,offset:.43},
-    {transform:'translate3d(0,0,0) rotate(-19deg) scale(.26)',opacity:.85,offset:.72},
-    {transform:tiny,opacity:0,offset:1}
-  ];
-  const emission = vacuum.slice().reverse().map(k => ({...k,offset:1-k.offset}));
+  // One bounded compositor surface follows a tightening spiral, with
+  // synchronized rotation, radius, depth tilt and contraction. No DOM
+  // cloning, mesh, animated filter, extra canvas or per-frame layout.
+  const spiralPath = () => {
+    const radius = Math.min(window.innerWidth,window.innerHeight) * .10;
+    const anchors = [
+      // time, scale, accumulated turn (degrees), orbit radius, tilt, opacity
+      [0,1,0,0,0,1],
+      [.18,.91,-22,.90,7,1],
+      [.43,.63,-112,1,18,1],
+      [.72,.26,-242,.42,12,.95],
+      [1,.035,-360,0,0,0]
+    ];
+    const frames = [];
+    // Sample a true curved orbit so it doesn't cut across straight chords.
+    for (let i=0;i<anchors.length-1;i++) {
+      const a=anchors[i], b=anchors[i+1];
+      for (let step=0;step<8;step++) {
+        const t=step/8;
+        const [offset,scale,angle,r,tilt,opacity]=a.map((v,k)=>v+(b[k]-v)*t);
+        const theta=angle*Math.PI/180;
+        const x=radius*r*Math.cos(theta);
+        const y=radius*r*Math.sin(theta)*.72;
+        frames.push({offset,opacity,transform:`translate3d(${x.toFixed(3)}px,${y.toFixed(3)}px,0) rotateZ(${angle}deg) rotateY(${tilt}deg) scale(${scale})`});
+      }
+    }
+    frames.push({offset:1,opacity:0,transform:'translate3d(0px,0px,0) rotateZ(-360deg) rotateY(0deg) scale(.035)'});
+    return frames;
+  };
   const duration = 1650;
   const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
   const reset = () => {
@@ -112,6 +130,8 @@
     const outgoing = document.querySelector('.site-shell');
     const skip = document.querySelector('.skip');
     const scroll = window.scrollY;
+    const vacuum = spiralPath();
+    const emission = vacuum.slice().reverse().map(k => ({...k,offset:1-k.offset}));
     // Cull the long landing's below-fold sections before promoting its viewport.
     // Their layout below the visible slice is not part of the vacuum effect.
     const below = [...outgoing.querySelectorAll('.mc-world-root > *')].filter(el => el.getBoundingClientRect().top >= window.innerHeight);
