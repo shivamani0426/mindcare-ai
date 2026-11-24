@@ -12,6 +12,7 @@ uniform sampler2D u_page;
 uniform vec2 u_size;
 uniform float u_pull;
 uniform float u_time;
+uniform float u_view;
 #define PI 3.14159265359
 float hash(vec2 p){vec3 v=fract(vec3(p.xyx)*.1031);v+=dot(v,v.yzx+33.33);return fract((v.x+v.y)*v.z);}
 float star(vec2 p,float cells,float seed){
@@ -49,45 +50,65 @@ void main(){
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
   float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
-  // Analytic, cinematic approximation of a lensed accretion disk.
-  // No ray-marching, extra texture, render pass, or added motion clock.
+  // Perspective 3D scene in normalized black-hole coordinates. Each pixel
+  // traces a camera ray through a real sphere and inclined annular disk.
+  // The photon arc is a bounded artistic lensing approximation, not a
+  // numerical integration of Einstein's equations.
   float ring=mix(.025,.205,k);
   vec2 n=q/ring;
   vec2 d=vec2(n.x*.985+n.y*.172,-n.x*.172+n.y*.985);
   float h=length(d);
   float aa=max(.008,1.25/(u_size.y*ring));
-  float shadow=1.-smoothstep(.715-aa,.715+aa,h);
   float gravity=smoothstep(.02,.28,p);
-  // The upper image of the far disk is bent around the shadow. Its weaker
-  // lower counterpart and the narrow photon ring outline the horizon.
+  vec3 eye=vec3(0.,0.,6.);
+  vec3 ray=normalize(vec3(d,-6.));
+  float sphereRadius=.715;
+  float b=dot(eye,ray);
+  float discriminant=b*b-dot(eye,eye)+sphereRadius*sphereRadius;
+  float sphereHit=-b-sqrt(max(0.,discriminant));
+  float shadow=smoothstep(-aa*.8,aa*.8,discriminant);
+  // Camera pitch changes the actual plane normal. No painted ellipse.
+  float inclination=.235+.018*sin(u_time*.55)+u_view;
+  vec3 normal=normalize(vec3(0.,1.,inclination));
+  float denom=dot(ray,normal);
+  float safeDenom=abs(denom)<.0001?(denom<0.?-.0001:.0001):denom;
+  float diskHit=-dot(eye,normal)/safeDenom;
+  vec3 hit=eye+ray*max(diskHit,0.);
+  float diskR=length(hit);
+  float diskAngle=atan(hit.z,hit.x);
+  float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
+  band*=step(.001,diskHit);
+  // Kepler-inspired differential rotation makes inner plasma move faster.
+  float orbital=u_time*1.15/max(.75,diskR);
+  float streak=.62+.38*sin(47.*diskR+4.*diskAngle-orbital);
+  float turbulence=.78+.22*sin(11.*diskAngle+23.*diskR-orbital*.7);
+  float inner=1.-smoothstep(.90,1.95,diskR);
+  vec3 plasma=mix(vec3(.86,.16,.026),vec3(1.,.91,.64),inner);
+  float boost=mix(.55,1.48,smoothstep(-1.1,1.1,hit.x));
+  vec3 diskLight=band*plasma*(.78+.48*streak)*turbulence*boost;
+  float rim=(1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93)))*step(.001,diskHit);
+  diskLight+=rim*vec3(1.,.94,.78)*.88*boost;
+  // Depth test the nearest 3D surface. The rear disk is hidden by the
+  // sphere; the near disk remains visible in front of it.
+  float front=step(diskHit,sphereHit)*step(.001,diskHit);
+  float visibility=1.-shadow*(1.-front);
+  // Lensed images of the far disk arc around the apparent shadow.
+  // Inclination shapes the image; the hot inner edge forms the photon ring.
   float upper=smoothstep(-.10,.36,d.y);
   float lower=1.-smoothstep(-.42,-.06,d.y);
   float farBand=smoothstep(.76,.84,h)*(1.-smoothstep(1.12,1.49,h));
-  float arcTexture=.68+.32*sin(31.*h+3.*theta-u_time*1.1);
-  float boost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
-  float lensed=farBand*(upper+.29*lower)*arcTexture*boost;
+  float arcTexture=.70+.30*sin(31.*h+3.*theta-u_time*1.1);
+  float lensBoost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
+  float lensed=farBand*(upper+.29*lower)*arcTexture*lensBoost;
   float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
   float halo=1.-smoothstep(.77,1.82,h);
   vec3 backGlow=vec3(.32,.115,.035)*halo*.40;
   backGlow+=lensed*mix(vec3(.92,.24,.035),vec3(1.,.83,.51),1.-smoothstep(.85,1.30,h));
-  backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*boost);
-  // Project a thin, extended, inclined disk into the image plane. Radial
-  // filaments suggest orbiting hot plasma and an asymmetric Doppler glow.
-  float diskR=length(vec2(d.x,d.y/.245));
-  float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
-  float streak=.57+.43*sin(47.*diskR+4.*theta-u_time*1.5);
-  float inner=1.-smoothstep(.90,1.95,diskR);
-  vec3 plasma=mix(vec3(.80,.14,.025),vec3(1.,.87,.59),inner);
-  vec3 diskLight=band*plasma*(.74+.44*streak)*boost;
-  float rim=1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93));
-  diskLight+=rim*vec3(1.,.94,.78)*.85*boost;
-  float front=1.-smoothstep(-aa,aa,d.y);
+  backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*lensBoost);
   vec3 color=mix(sky,page,matter);
-  // Occlude the rear disk at the event-horizon shadow, then lay the nearer
-  // accretion stream across it. This ordering provides the 3D depth cue.
-  color+=(backGlow+diskLight*(1.-front))*gravity*(1.-matter*.45);
+  color+=backGlow*gravity*(1.-matter*.45);
   color=mix(color,vec3(.001,.001,.002),shadow*gravity);
-  color+=diskLight*front*gravity;
+  color+=diskLight*visibility*gravity;
   // Smooth handoff to/from actual DOM at the unwarped endpoint.
   float alpha=smoothstep(.01,.13,p);
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
@@ -143,6 +164,7 @@ void main(){
       if(buffer)gl.deleteBuffer(buffer);if(texture)gl.deleteTexture(texture);return null;
     }
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
+    gl.uniform1f(gl.getUniformLocation(program,'u_view'),0);
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
       const budget=software?Math.min(85000,quality===2?50000:quality===1?65000:85000):quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
