@@ -92,3 +92,9 @@ html.mc-vortex-departing body.mc-world-page{background:#04070c}
 .mc-vortex-arriving body.mindcare-auth-route .auth-v2::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2::after,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::after{animation-play-state:paused!important;filter:none!important}
 @media(max-width:650px){.mc-vortex-space{width:min(88vw,66vh)}.mc-vortex-particle:nth-child(even){display:none}.mc-vortex-ring-4{animation:none}}
 @media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex{display:none!important}.mc-vortex-arriving .site-shell,.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none!important;transform:none!important;opacity:1!important}}
+
+/* Hold the exact shared endpoint before mounting the incoming scene. */
+.mc-vortex-open:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none;opacity:0;transform:scale(.035) rotate(-9deg)}
+.mc-vortex-open .mc-vortex-space{animation:none;transform:translate3d(-50%,-50%,0) scale(1)}
+.mc-vortex-open:not(.mc-vortex-arriving) .mc-vortex{animation:none;opacity:1}
+.mc-vortex-open .mc-vortex::before{animation:none;opacity:1}
