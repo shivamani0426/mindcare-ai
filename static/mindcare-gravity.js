@@ -12,6 +12,7 @@ uniform sampler2D u_page;
 uniform vec2 u_size;
 uniform float u_pull;
 uniform float u_time;
+uniform float u_view;
 #define PI 3.14159265359
 float hash(vec2 p){vec3 v=fract(vec3(p.xyx)*.1031);v+=dot(v,v.yzx+33.33);return fract((v.x+v.y)*v.z);}
 float star(vec2 p,float cells,float seed){
@@ -49,22 +50,65 @@ void main(){
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
   float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
+  // Perspective 3D scene in normalized black-hole coordinates. Each pixel
+  // traces a camera ray through a real sphere and inclined annular disk.
+  // The photon arc is a bounded artistic lensing approximation, not a
+  // numerical integration of Einstein's equations.
   float ring=mix(.025,.205,k);
-  float halo=exp(-abs(r-ring)*22.);
-  vec3 glow=halo*vec3(.15,.46,.63);
-  float thin=exp(-abs(r-ring)*118.);
-  float arc=.55+.45*sin(theta*3.-u_time*1.25);
-  glow+=thin*mix(vec3(.35,.88,1.),vec3(1.,.83,.43),arc)*1.3;
-  // A tilted accretion disk adds a visible 3D depth cue around the dark core.
-  vec2 d=vec2(q.x*.94+q.y*.34,-q.x*.34+q.y*.94);
-  float diskRadius=length(vec2(d.x,d.y*3.1));
-  float disk=exp(-abs(diskRadius-ring*1.22)*84.);
-  glow+=disk*vec3(1.,.68,.28)*(.48+.52*sin(theta+u_time*.65)*sin(theta+u_time*.65));
-  float core=1.-smoothstep(ring*.70,ring*.84,r);
+  vec2 n=q/ring;
+  vec2 d=vec2(n.x*.985+n.y*.172,-n.x*.172+n.y*.985);
+  float h=length(d);
+  float aa=max(.008,1.25/(u_size.y*ring));
   float gravity=smoothstep(.02,.28,p);
+  vec3 eye=vec3(0.,0.,6.);
+  vec3 ray=normalize(vec3(d,-6.));
+  float sphereRadius=.715;
+  float b=dot(eye,ray);
+  float discriminant=b*b-dot(eye,eye)+sphereRadius*sphereRadius;
+  float sphereHit=-b-sqrt(max(0.,discriminant));
+  float shadow=smoothstep(-aa*.8,aa*.8,discriminant);
+  // Camera pitch changes the actual plane normal. No painted ellipse.
+  float inclination=.235+.018*sin(u_time*.55)+u_view;
+  vec3 normal=normalize(vec3(0.,1.,inclination));
+  float denom=dot(ray,normal);
+  float safeDenom=abs(denom)<.0001?(denom<0.?-.0001:.0001):denom;
+  float diskHit=-dot(eye,normal)/safeDenom;
+  vec3 hit=eye+ray*max(diskHit,0.);
+  float diskR=length(hit);
+  float diskAngle=atan(hit.z,hit.x);
+  float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
+  band*=step(.001,diskHit);
+  // Kepler-inspired differential rotation makes inner plasma move faster.
+  float orbital=u_time*1.15/max(.75,diskR);
+  float streak=.62+.38*sin(47.*diskR+4.*diskAngle-orbital);
+  float turbulence=.78+.22*sin(11.*diskAngle+23.*diskR-orbital*.7);
+  float inner=1.-smoothstep(.90,1.95,diskR);
+  vec3 plasma=mix(vec3(.86,.16,.026),vec3(1.,.91,.64),inner);
+  float boost=mix(.55,1.48,smoothstep(-1.1,1.1,hit.x));
+  vec3 diskLight=band*plasma*(.78+.48*streak)*turbulence*boost;
+  float rim=(1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93)))*step(.001,diskHit);
+  diskLight+=rim*vec3(1.,.94,.78)*.88*boost;
+  // Depth test the nearest 3D surface. The rear disk is hidden by the
+  // sphere; the near disk remains visible in front of it.
+  float front=step(diskHit,sphereHit)*step(.001,diskHit);
+  float visibility=1.-shadow*(1.-front);
+  // Lensed images of the far disk arc around the apparent shadow.
+  // Inclination shapes the image; the hot inner edge forms the photon ring.
+  float upper=smoothstep(-.10,.36,d.y);
+  float lower=1.-smoothstep(-.42,-.06,d.y);
+  float farBand=smoothstep(.76,.84,h)*(1.-smoothstep(1.12,1.49,h));
+  float arcTexture=.70+.30*sin(31.*h+3.*theta-u_time*1.1);
+  float lensBoost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
+  float lensed=farBand*(upper+.29*lower)*arcTexture*lensBoost;
+  float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
+  float halo=1.-smoothstep(.77,1.82,h);
+  vec3 backGlow=vec3(.32,.115,.035)*halo*.40;
+  backGlow+=lensed*mix(vec3(.92,.24,.035),vec3(1.,.83,.51),1.-smoothstep(.85,1.30,h));
+  backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*lensBoost);
   vec3 color=mix(sky,page,matter);
-  color+=glow*gravity*(1.-matter*.45);
-  color=mix(color,vec3(.002,.003,.006),core*gravity);
+  color+=backGlow*gravity*(1.-matter*.45);
+  color=mix(color,vec3(.001,.001,.002),shadow*gravity);
+  color+=diskLight*visibility*gravity;
   // Smooth handoff to/from actual DOM at the unwarped endpoint.
   float alpha=smoothstep(.01,.13,p);
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
@@ -85,6 +129,11 @@ void main(){
     const gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,stencil:false,
       premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'});
     if(!gl){report('webgl unavailable');return null;}
+    // Software WebGL executes the fragment shader on the CPU. Keep the
+    // full existing quality budget for hardware GPUs (including Brave).
+    const debugRenderer=gl.getExtension('WEBGL_debug_renderer_info');
+    const rendererName=debugRenderer?String(gl.getParameter(debugRenderer.UNMASKED_RENDERER_WEBGL)):'';
+    const software=/swiftshader|llvmpipe|softpipe|software rasterizer/i.test(rendererName);
     let destroyed=false, valid=false, raf=0, program, buffer, texture, vs, fs;
     let quality=0,resolveRun=null,epoch=performance.now();
     const stopRun=()=>{cancelAnimationFrame(raf);if(resolveRun){const done=resolveRun;resolveRun=null;done();}};
@@ -115,9 +164,10 @@ void main(){
       if(buffer)gl.deleteBuffer(buffer);if(texture)gl.deleteTexture(texture);return null;
     }
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
+    gl.uniform1f(gl.getUniformLocation(program,'u_view'),0);
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
-      const budget=quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
+      const budget=software?Math.min(85000,quality===2?50000:quality===1?65000:85000):quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
       const s=Math.min(1,Math.sqrt(budget/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       canvas.width=Math.max(1,Math.round(w*s));canvas.height=Math.max(1,Math.round(h*s));
       gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(uSize,canvas.width,canvas.height);
@@ -137,7 +187,7 @@ void main(){
       if(destroyed||gl.isContextLost()){report('context unavailable before capture');return false;}
       const w=scene.clientWidth,h=scene.clientHeight;
       if(w<1||h<1){report('empty capture dimensions');return false;}
-      const scale=Math.min(1,Math.sqrt(300000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
+      const scale=Math.min(1,Math.sqrt((software?160000:300000)/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       // Clone only the visible public scene plus its style/ancestor chain.
       // Avoid expensive hidden entrance, below-fold content and live overlays.
       const captureIgnore=el=>{
@@ -164,7 +214,7 @@ void main(){
             }
             target.querySelectorAll('input[type=password],input[type=email]').forEach(input=>{input.value='';});
           }
-        }),4800);
+        }),software?7000:4800);
         if(destroyed||gl.isContextLost()){report('context unavailable after capture');return false;}
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
@@ -201,6 +251,7 @@ void main(){
           if(!valid||now-started>duration*3){
             // Retain the exact DOM pose and let the compositor finish
             // independently if this graphics device cannot sustain motion.
+            if(valid)report('render deadline: '+phase);
             fail();
             for(const animation of animations)animation.play();
             Promise.all(animations.map(animation=>animation.finished)).then(stopRun,stopRun);
