@@ -4,11 +4,11 @@
 {% block head %}
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='landing-carpet.css', v='vacuum7') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-carpet.css', v='zcut1') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css', v='rebuild2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-cinematic.css') }}">
   <script src="{{ url_for('static', filename='landing-cinematic.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='landing-world.js', v='vacuum7') }}" defer></script>
+  <script src="{{ url_for('static', filename='landing-world.js', v='zcut1') }}" defer></script>
   <script src="{{ url_for('static', filename='landing-section-flight.js', v='fabric4') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='auth-world.css') }}">
   <script src="{{ url_for('static', filename='auth-ui.js', v='vacuum7') }}" defer></script>
@@ -18,26 +18,31 @@
   <script src="{{ url_for('static', filename='mindcare-vortex.js', v='gravity10') }}" defer></script>
 {% endblock %}
 {% block content %}
-<!-- Decorative woven entrance. The real homepage remains behind the fabric. -->
+<!-- Cinematic Z-cut entrance. The real landing page is mounted behind two cut panels. -->
 <div class="mc-carpet-intro" id="mc-carpet-intro" role="dialog" aria-modal="true" aria-labelledby="mc-carpet-title" hidden>
-  <div class="mc-carpet-stage" aria-hidden="true">
-    <div class="mc-carpet-fabric mc-carpet-left"><div class="mc-carpet-weave"></div><div class="mc-carpet-border"></div><div class="mc-carpet-medallion">✦</div><div class="mc-carpet-fringe"></div></div>
-    <div class="mc-carpet-fabric mc-carpet-right"><div class="mc-carpet-weave"></div><div class="mc-carpet-border"></div><div class="mc-carpet-medallion">✦</div><div class="mc-carpet-fringe"></div></div>
-    <div class="mc-carpet-runway"><div class="mc-carpet-runway-pattern"></div></div>
-    <div class="mc-carpet-seam"></div>
-  </div>
+  <div class="mc-z-panel mc-z-panel-top" aria-hidden="true"></div>
+  <div class="mc-z-panel mc-z-panel-bottom" aria-hidden="true"></div>
+  <svg class="mc-z-cuts" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    {% for points in ['M 180 300 L 820 300','M 820 300 L 180 700','M 180 700 L 820 700'] %}
+    <g class="mc-z-slash" data-cut="{{ loop.index }}" opacity="0">
+      <path class="mc-z-aura" d="{{ points }}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+      <path class="mc-z-heat" d="{{ points }}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+      <path class="mc-z-edge" d="{{ points }}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+      <path class="mc-z-core" d="{{ points }}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+      <circle class="mc-z-tip" r="6" opacity="0" />
+    </g>
+    {% endfor %}
+  </svg>
   <div class="mc-carpet-heading">
-    <span class="mc-carpet-emblem" aria-hidden="true">✦</span>
+    <span class="mc-z-kicker">A WORLD OF CARE</span>
     <h2 id="mc-carpet-title">MINDCARE<span>AI</span></h2>
     <p>Every memory deserves a little wonder.</p>
   </div>
   <div class="mc-carpet-controls">
     <button class="mc-carpet-enter" id="mc-carpet-enter" type="button" aria-describedby="mc-carpet-instructions">
-      <span class="mc-carpet-arrow" aria-hidden="true">↑</span>
-      <span>Slide to enter MindCare</span>
+      <span>Enter MindCare</span><span class="mc-z-arrow" aria-hidden="true">↗</span>
     </button>
-    <span id="mc-carpet-instructions">Scroll down or swipe up to part the carpets. You can also select Enter.</span>
-    <div class="mc-carpet-track" aria-hidden="true"><span></span></div>
+    <span id="mc-carpet-instructions">Select Enter, scroll down or swipe up to reveal the world.</span>
   </div>
   <button type="button" class="mc-carpet-skip" id="mc-carpet-skip">Skip introduction</button>
 </div>
@@ -68,7 +73,7 @@
       <a class="mc-pill mc-pill-light mc-pixel mc-hero-enter" href="{{ url_for('login') }}" data-mc-vortex-link>ENTER MINDCARE <span aria-hidden="true">↗</span></a>
       <a class="mc-hero-signin" href="{{ url_for('login') }}" data-mc-vortex-link>Already part of MindCare? Sign in</a>
     </div>
-    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the woven carpet introduction">↻ Replay introduction</button>
+    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the cinematic Z-cut introduction">↻ Replay introduction</button>
     <a class="mc-hero-scroll" href="#overview"><span>EXPLORE THE WORLD</span><span aria-hidden="true">↓</span></a>
     <span class="mc-hero-corner mc-hero-corner-left" aria-hidden="true">01 — A WORLD OF CARE</span>
     <span class="mc-hero-corner mc-hero-corner-right" aria-hidden="true">✳ BUILT WITH FAMILIES IN MIND</span>
