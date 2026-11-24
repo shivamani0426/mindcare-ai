@@ -53,7 +53,7 @@ if os.getenv("RENDER_EXTERNAL_URL", "").startswith("https://"):
 
 db = SQLAlchemy(app)
 
-# OAuth client credentials and Firebase service-account credentials are secrets
+# OAuth client credentials are secrets
 # configured in Render. Never write them in source control or browser templates.
 oauth = OAuth(app)
 GOOGLE_OAUTH_READY = all(os.getenv(k) for k in (
@@ -66,25 +66,6 @@ if GOOGLE_OAUTH_READY:
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid profile email"},
     )
-
-
-def firebase_phone_ready():
-    return all(os.getenv(k) for k in (
-        "FIREBASE_API_KEY", "FIREBASE_AUTH_DOMAIN", "FIREBASE_PROJECT_ID",
-        "FIREBASE_APP_ID", "FIREBASE_SERVICE_ACCOUNT_JSON"))
-
-
-def firebase_public_config():
-    if not firebase_phone_ready():
-        return None
-    return {
-        "apiKey": os.environ["FIREBASE_API_KEY"],
-        "authDomain": os.environ["FIREBASE_AUTH_DOMAIN"],
-        "projectId": os.environ["FIREBASE_PROJECT_ID"],
-        "appId": os.environ["FIREBASE_APP_ID"],
-    }
-
-
 
 
 class User(db.Model):
@@ -593,9 +574,7 @@ def inject_common():
                 CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES,
                 patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS,
                 simple_view=is_simple_view(current_user()),
-                google_login_ready=GOOGLE_OAUTH_READY,
-                phone_login_ready=firebase_phone_ready(),
-                firebase_web_config=firebase_public_config())
+                google_login_ready=GOOGLE_OAUTH_READY)
 
 
 @app.after_request
@@ -604,24 +583,10 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
-    # Allow Firebase only on authentication pages; other private pages retain
-    # the original more restrictive Content Security Policy.
+    # Use the same restrictive content security policy on authentication pages.
     content_policy = ("default-src 'self'; img-src 'self' data:; style-src 'self'; "
                       "script-src 'self'; font-src 'self'; connect-src 'self' stun: turn: turns:; "
                       "media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
-    public_firebase = firebase_public_config() if firebase_phone_ready() else None
-    if public_firebase and public_firebase.get("authDomain") and request.endpoint in ("login", "register", "account_security"):
-        content_policy = (
-            "default-src 'self'; "
-            "script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
-            "img-src 'self' data: https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
-            "style-src 'self' 'unsafe-inline'; "
-            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com "
-            "https://www.googleapis.com https://www.gstatic.com; "
-            "frame-src 'self' https://www.google.com https://www.recaptcha.net "
-            "https://" + public_firebase["authDomain"] + "; "
-            "font-src 'self' https://www.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
-        )
     response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
@@ -650,8 +615,8 @@ def home():
 
 
 # --- External identity login and account linking ----------------------------
-# Never match a Google or phone login to a password account based only on
-# email or phone. A user must first log into that account and connect it.
+# Never match a Google login to a password account based only on email.
+# A user must first log into that account and connect it.
 AUTH_PENDING_SECONDS = 600
 
 
@@ -661,17 +626,12 @@ def external_login_session(user):
     session.permanent = True
 
 
-def make_phone_account_email():
-    # Internal, unguessable identity; a phone user can later link Google.
-    return "phone-" + secrets.token_hex(16) + "@internal.mindcare.invalid"
-
-
 def pending_identity_or_none():
     raw = session.get("pending_identity_token")
     if not isinstance(raw, str) or len(raw) < 32:
         return None
     row = db.session.get(PendingIdentity, hashlib.sha256(raw.encode()).hexdigest())
-    if not row:
+    if not row or row.provider != "google" or not row.email:
         return None
     expiry = row.expires_at.replace(tzinfo=timezone.utc) if row.expires_at.tzinfo is None else row.expires_at
     if now_utc() >= expiry:
@@ -683,8 +643,8 @@ def pending_identity_or_none():
 
 
 def complete_verified_external_identity(provider, subject, name="", email="", label=""):
-    """Use only after Google OIDC/Firebase Admin successfully verified the token."""
-    if provider not in ("google", "firebase_phone") or not isinstance(subject, str) or not 1 <= len(subject) <= 180:
+    """Use only after Google OIDC successfully verified the token."""
+    if provider != "google" or not isinstance(subject, str) or not 1 <= len(subject) <= 180:
         abort(400)
     existing = ExternalIdentity.query.filter_by(provider=provider, subject=subject).first()
     if existing:
@@ -726,7 +686,7 @@ def complete_verified_external_identity(provider, subject, name="", email="", la
     pending = PendingIdentity(
         token_hash=hashlib.sha256(random_token.encode()).hexdigest(),
         provider=provider, subject=subject,
-        email=email[:180] if provider == "google" else None,
+        email=email[:180],
         name=name[:90], label=label[:180],
         expires_at=now_utc() + timedelta(seconds=AUTH_PENDING_SECONDS)
     )
@@ -765,7 +725,7 @@ def google_auth_callback():
     subject = profile.get("sub")
     email = profile.get("email") or ""
     verified = profile.get("email_verified") is True or profile.get("email_verified") == "true"
-    if not verified or not isinstance(email, str) or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+    if not verified or not isinstance(email, str) or len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
         flash("Please choose a Google account with a verified email address.", "error")
         return redirect(url_for("login"))
     expected_link = session.pop("google_link_user", None)
@@ -777,50 +737,6 @@ def google_auth_callback():
         "google", subject, name=profile.get("name") or "",
         email=email.lower(), label=email.lower()
     )
-
-
-def verify_firebase_phone_id_token(token):
-    """Verify ID token signature, issuer, project and revocation via Firebase Admin."""
-    import firebase_admin
-    from firebase_admin import auth as firebase_auth, credentials
-    try:
-        fb = firebase_admin.get_app("mindcare-phone")
-    except ValueError:
-        details = json.loads(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"])
-        fb = firebase_admin.initialize_app(
-            credentials.Certificate(details),
-            {"projectId": os.environ["FIREBASE_PROJECT_ID"]}, name="mindcare-phone"
-        )
-    claims = firebase_auth.verify_id_token(token, app=fb, check_revoked=True)
-    if claims.get("firebase", {}).get("sign_in_provider") != "phone":
-        raise ValueError("Not a phone-verified identity")
-    phone = claims.get("phone_number")
-    subject = claims.get("uid")
-    if (not isinstance(phone, str) or not re.fullmatch(r"\+[1-9][0-9]{7,14}", phone)
-            or not isinstance(subject, str) or not subject):
-        raise ValueError("Phone verification is incomplete")
-    return subject, phone
-
-
-@app.route("/auth/phone-session", methods=["POST"])
-def phone_session():
-    if not firebase_phone_ready():
-        return jsonify(error="Phone OTP sign-in is not configured."), 503
-    data = request.get_json(silent=True) or {}
-    token = data.get("id_token", "")
-    if not isinstance(token, str) or not 30 <= len(token) <= 12000:
-        return jsonify(error="Invalid phone verification."), 400
-    try:
-        subject, phone = verify_firebase_phone_id_token(token)
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
-        return jsonify(error="Could not verify that SMS code. Please try again."), 401
-    except Exception:
-        app.logger.warning("Firebase verification unavailable")
-        return jsonify(error="Phone verification is temporarily unavailable."), 503
-    response = complete_verified_external_identity(
-        "firebase_phone", subject, label=phone
-    )
-    return jsonify(ok=True, next_url=response.location)
 
 
 @app.route("/auth/complete", methods=["GET", "POST"])
@@ -850,7 +766,7 @@ def auth_complete():
             while invite and User.query.filter_by(invite_code=invite).first():
                 invite = secrets.token_hex(4).upper()
             user = User(
-                name=name, email=pending.email or make_phone_account_email(),
+                name=name, email=pending.email,
                 role=role, age=int(age_raw) if role == "patient" and age_raw else None,
                 password_hash=generate_password_hash(secrets.token_urlsafe(48)),
                 invite_code=invite,
