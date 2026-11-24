@@ -160,7 +160,10 @@
     try {
       // Snapshot preparation is optional and bounded. The existing DOM path
       // remains authoritative even if WebGL or capture is unavailable.
-      try { gravity = window.MindcareGravity?.create() || null; } catch (_) { gravity = null; }
+      try { gravity = window.MindcareGravity?.create() || null; } catch (error) {
+        document.dispatchEvent(new CustomEvent('mindcare:gravity-fallback',{detail:{reason:'renderer setup: '+String(error.message||error)}}));
+        gravity = null;
+      }
       const renderer = gravity;
       const captured = renderer ? await renderer.capture(scene) : false;
       if (token !== generation) return;
