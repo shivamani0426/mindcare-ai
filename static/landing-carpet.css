@@ -23,16 +23,19 @@ body.mc-carpet-active{overflow:hidden;overscroll-behavior:none}
  clip-path:polygon(0 25.74%,80.2% 25.74%,20.2% 74.08%,100% 74.08%,100% 100%,0 100%);
  transform:translate3d(0,calc(105% * var(--z-open)),0);
 }
-.mc-z-blade{overflow:visible;opacity:var(--z-glow)}
+.mc-z-blade{overflow:visible;opacity:var(--z-glow);transform:translate3d(var(--z-jolt-x,0px),var(--z-jolt-y,0px),0)}
 .mc-z-stroke{--z-draw:0;opacity:var(--z-visible,0)}
-.mc-z-stroke path{
- fill:none;stroke-dasharray:100 100;stroke-dashoffset:calc(100 - var(--z-draw));
- stroke-linecap:butt;stroke-linejoin:round;vector-effect:non-scaling-stroke;
-}
-.mc-z-aura{stroke:#f64e0d;stroke-width:22;opacity:.32;filter:blur(8px)}
-.mc-z-heat{stroke:#ff751b;stroke-width:8;filter:drop-shadow(0 0 8px #ff791d)}
-.mc-z-edge{stroke:url(#mc-z-hot-metal);stroke-width:2.5;filter:drop-shadow(0 0 3px #fff0ab)}
-.mc-z-sparks{opacity:0;filter:drop-shadow(0 0 5px #ff6f13)}
+.mc-z-aura{fill:#ff5814;stroke:#ff5710;stroke-width:14;opacity:.44;filter:blur(12px)}
+.mc-z-scar{fill:url(#mc-z-burn);stroke:#fa681b;stroke-width:1.2;filter:drop-shadow(0 0 7px #ff651e)}
+.mc-z-edge{fill:url(#mc-z-hot-metal);opacity:.98}
+.mc-z-ripple{opacity:var(--z-wake,.2);transform:scaleY(var(--z-ripple,1));transform-origin:0 0}
+.mc-z-wake{fill:none;stroke:#f87024;stroke-width:3.5;stroke-linejoin:bevel}
+.mc-z-wake-fine{fill:none;stroke:#ffc878;stroke-width:1.3;opacity:.68}
+.mc-z-fragments{fill:#ffab4f;opacity:.64}
+.mc-z-impact{opacity:0;pointer-events:none}
+.mc-z-shockwave{vector-effect:non-scaling-stroke}
+.mc-z-impact-rays{opacity:.65}
+.mc-z-sparks{opacity:0;filter:drop-shadow(0 0 4px #ff6f13)}
 .mc-carpet-heading{
  position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);
  width:min(92%,640px);text-align:center;pointer-events:none;opacity:var(--z-title);
@@ -62,10 +65,10 @@ body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after{display:none}
  .mc-carpet-emblem{width:58px;height:58px;font-size:29px}
  .mc-carpet-heading{top:34%}
  .mc-carpet-controls{bottom:max(9%,calc(env(safe-area-inset-bottom) + 18px))}
- .mc-z-aura{stroke-width:16;filter:none;opacity:.22}
- .mc-z-heat{stroke-width:5;filter:none}
- .mc-z-edge{stroke-width:2;filter:none}
- .mc-z-sparks{filter:none}
+ .mc-z-aura{stroke-width:6;filter:none;opacity:.19}
+ .mc-z-scar,.mc-z-sparks{filter:none}
+ .mc-z-wake{stroke-width:2}
+ .mc-z-wake-fine,.mc-z-fragments{display:none}
 }
 @media(max-height:480px){
  .mc-carpet-heading{top:30%}
@@ -75,3 +78,7 @@ body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after{display:none}
  .mc-carpet-enter{min-height:48px;padding:6px 15px}
 }
 @media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-carpet-intro{display:none!important}}
+
+/* The panels stay opaque through the final cut; the landing is never rebuilt.
+   Small, local impact motion only: no full-screen flash or strobing. */
+@media(max-width:600px),(pointer:coarse){.mc-z-aura,.mc-z-scar,.mc-z-sparks{filter:none}.mc-z-blade{transform:none}.mc-z-panel{will-change:auto}}
