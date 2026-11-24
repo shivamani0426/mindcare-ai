@@ -14,6 +14,8 @@ import os
 import random
 import re
 import secrets
+import requests
+from itsdangerous import URLSafeTimedSerializer, BadData
 import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
@@ -564,6 +566,12 @@ def load_user_and_csrf():
     if request.endpoint == "health":
         return
     g.user = db.session.get(User, session["uid"]) if isinstance(session.get("uid"), int) else None
+    if g.user and not hmac.compare_digest(
+            str(session.get("auth_version", "")), password_version(g.user)):
+        session.clear()
+        g.user = None
+    elif "uid" in session and not g.user:
+        session.clear()
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_urlsafe(32)
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -579,7 +587,7 @@ def inject_common():
                 CATEGORIES=CATEGORIES, LEVEL_NAMES=LEVEL_NAMES,
                 patient_prefs=prefs, tr=t_for(prefs), LANGUAGES=LANGUAGE_LABELS,
                 simple_view=is_simple_view(current_user()),
-                google_login_ready=GOOGLE_OAUTH_READY)
+                google_login_ready=GOOGLE_OAUTH_READY, recovery_ready=recovery_ready())
 
 
 @app.after_request
@@ -595,9 +603,9 @@ def security_headers(response):
     response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
-    elif request.endpoint in ("login", "register", "auth_complete", "google_auth_start", "google_auth_callback", "health"):
+    elif request.endpoint in ("login", "register", "auth_complete", "google_auth_start", "google_auth_callback", "health", "forgot_password", "reset_password"):
         response.headers["Cache-Control"] = "no-store"
-    if request.endpoint in ("google_auth_start", "google_auth_callback"):
+    if request.endpoint in ("google_auth_start", "google_auth_callback", "forgot_password", "reset_password"):
         response.headers["Referrer-Policy"] = "no-referrer"
     if request.is_secure or os.getenv("RENDER_EXTERNAL_URL", "").startswith("https://"):
         response.headers["Strict-Transport-Security"] = "max-age=15552000"
@@ -627,9 +635,15 @@ def home():
 AUTH_PENDING_SECONDS = 600
 
 
+def password_version(user):
+    # A password change invalidates previously issued signed session cookies.
+    return _auth_bucket("password-version", user.password_hash)
+
+
 def external_login_session(user):
     session.clear()
     session["uid"] = user.id
+    session["auth_version"] = password_version(user)
     session.permanent = True
 
 
@@ -859,9 +873,7 @@ def register():
                 db.session.rollback()
                 flash("Could not create this account. Please try again or sign in.", "error")
                 return render_template("auth.html", mode="register")
-            session.clear()
-            session["uid"] = user.id
-            session.permanent = True
+            external_login_session(user)
             flash("Your MindCare space is ready!", "success")
             return redirect(url_for("dashboard"))
     return render_template("auth.html", mode="register")
@@ -884,14 +896,104 @@ def login():
             AuthAttempt.query.filter(AuthAttempt.bucket_hash.in_(
                 [buckets[0][0], buckets[2][0]])).delete(synchronize_session=False)
             db.session.commit()
-            session.clear()
-            session["uid"] = user.id
-            session.permanent = True
+            external_login_session(user)
             flash("Welcome back!", "success")
             return redirect(url_for("dashboard"))
         _record_auth_attempts(buckets, LOGIN_WINDOW_SECONDS)
         flash("Email or password was not recognised.", "error")
     return render_template("auth.html", mode="login")
+
+
+RESET_TTL_SECONDS = 900
+
+
+def recovery_ready():
+    return all(os.getenv(key, "").strip() for key in (
+        "RESET_EMAIL_API_KEY", "RESET_FROM_EMAIL"
+    ))
+
+
+def reset_serializer():
+    return URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="mindcare-password-reset-v1")
+
+
+def make_reset_code(user):
+    return reset_serializer().dumps({"uid": user.id, "version": password_version(user)})
+
+
+def send_reset_code(email, code):
+    # No token in a URL, query string or server access log. User pastes code
+    # into the form; a separate verified HTTPS deployment supplies the page.
+    body = ("A MindCare password reset was requested. Copy this code into the Password recovery page on the MindCare website. It expires in 15 minutes. If you did not request it, ignore this message. Never share this code.\n\n" + code)
+    response = requests.post("https://api.resend.com/emails",
+        headers={"Authorization": "Bearer " + os.environ["RESET_EMAIL_API_KEY"]},
+        json={"from": os.environ["RESET_FROM_EMAIL"], "to": [email],
+              "subject": "MindCare password recovery", "text": body},
+        timeout=(3, 5), allow_redirects=False)
+    if not 200 <= response.status_code < 300:
+        raise RequestException("Recovery delivery rejected")
+
+
+@app.route("/auth/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()[:180]
+        buckets = ((_auth_bucket("reset-ip", _auth_client_ip()), 10),
+                   (_auth_bucket("reset-email", email), 3))
+        retry = _auth_retry_after(buckets, RESET_TTL_SECONDS)
+        if retry:
+            return _auth_rate_limited(retry)
+        _record_auth_attempts(buckets, RESET_TTL_SECONDS)
+        if recovery_ready():
+            user = User.query.filter_by(email=email).first()
+            if user and not user.email.endswith("@internal.mindcare.invalid"):
+                try:
+                    send_reset_code(user.email, make_reset_code(user))
+                except (RequestException, OSError, ValueError):
+                    # Never log address, provider response, credentials or reset code.
+                    app.logger.warning("Password recovery delivery failed")
+            flash("If an eligible account exists and email delivery succeeds, you will receive a recovery code.", "info")
+            return redirect(url_for("reset_password"))
+        flash("Email recovery is not configured. Use connected Google sign-in or contact the site administrator.", "info")
+    return render_template("password_recovery.html", mode="request")
+
+
+@app.route("/auth/reset-password", methods=["GET", "POST"])
+def reset_password():
+    if request.method == "POST":
+        buckets = ((_auth_bucket("reset-submit-ip", _auth_client_ip()), 15),)
+        retry = _auth_retry_after(buckets, RESET_TTL_SECONDS)
+        if retry:
+            return _auth_rate_limited(retry)
+        _record_auth_attempts(buckets, RESET_TTL_SECONDS)
+        code = request.form.get("code", "").strip()
+        password = request.form.get("password", "")
+        if not recovery_ready():
+            flash("Email recovery is not configured.", "info")
+        elif not 10 <= len(password) <= 128 or password != request.form.get("confirm_password", ""):
+            flash("Use 10 to 128 characters and enter the same password twice.", "error")
+        else:
+            user = None
+            try:
+                data = reset_serializer().loads(code[:1024], max_age=RESET_TTL_SECONDS)
+                if isinstance(data, dict) and isinstance(data.get("uid"), int):
+                    user = db.session.get(User, data["uid"])
+                if not user or not hmac.compare_digest(str(data.get("version", "")), password_version(user)):
+                    user = None
+            except (BadData, ValueError, TypeError, AttributeError):
+                user = None
+            if user:
+                old_hash = user.password_hash
+                new_hash = generate_password_hash(password)
+                changed = User.query.filter_by(id=user.id, password_hash=old_hash).update(
+                    {User.password_hash: new_hash}, synchronize_session=False)
+                db.session.commit()
+                if changed == 1:
+                    session.clear()
+                    flash("Password updated. Please sign in again.", "success")
+                    return redirect(url_for("login"))
+            flash("This recovery code is invalid, expired or already used. Request a new code.", "error")
+    return render_template("password_recovery.html", mode="reset")
 
 
 @app.route("/logout", methods=["POST"])

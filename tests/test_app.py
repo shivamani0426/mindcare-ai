@@ -1348,3 +1348,91 @@ def test_incomplete_turn_configuration_disables_relay(monkeypatch):
     monkeypatch.delenv("TURN_USERNAME", raising=False)
     monkeypatch.delenv("TURN_PASSWORD", raising=False)
     assert turn_credentials(1) == ("", "", "")
+
+
+def test_recovery_disabled_never_sends(client, monkeypatch):
+    import app as module
+    monkeypatch.setattr(module, "recovery_ready", lambda: False)
+    monkeypatch.setattr(module, "send_reset_code", lambda *args: pytest.fail("Unexpected email"))
+    page = client.get("/auth/forgot-password")
+    assert b"Email recovery unavailable" in page.data
+    assert page.headers["Cache-Control"] == "no-store"
+    assert page.headers["Referrer-Policy"] == "no-referrer"
+    assert client.post("/auth/reset-password", data={}).status_code == 400
+
+
+def test_password_recovery_once_and_revokes_other_sessions(client, monkeypatch):
+    import app as module
+    monkeypatch.setattr(module, "recovery_ready", lambda: True)
+    sent = []
+    monkeypatch.setattr(module, "send_reset_code", lambda email, code: sent.append((email, code)))
+    register(client, "Recovery Test", "recovery@example.org", "patient")
+    other = app.test_client()
+    login(other, "recovery@example.org")
+    assert other.get("/dashboard").status_code == 200
+    logout(client)
+    def request_code(email):
+        return client.post("/auth/forgot-password", data={
+            "csrf_token": token(client, "/auth/forgot-password"), "email": email
+        }, follow_redirects=True)
+    known = request_code("recovery@example.org")
+    unknown = request_code("unknown@example.org")
+    assert known.status_code == unknown.status_code == 200
+    assert b"If an eligible account exists" in known.data and b"If an eligible account exists" in unknown.data
+    assert len(sent) == 1 and sent[0][0] == "recovery@example.org"
+    code = sent[0][1]
+    assert code.encode() not in known.data
+    def reset(value, password="new-demo-password-2026"):
+        return client.post("/auth/reset-password", data={
+            "csrf_token": token(client, "/auth/reset-password"), "code": value,
+            "password": password, "confirm_password": password
+        }, follow_redirects=True)
+    assert b"invalid, expired or already used" in reset(code + "tampered").data
+    assert b"Password updated" in reset(code).data
+    assert other.get("/dashboard").status_code == 302
+    assert b"invalid, expired or already used" in reset(code, "another-demo-password-2026").data
+    assert b"not recognised" in login(client, "recovery@example.org").data
+    result = client.post("/login", data={"csrf_token":token(client,"/login"),
+        "email":"recovery@example.org","password":"new-demo-password-2026"}, follow_redirects=True)
+    assert b"Hello, Recovery" in result.data
+
+
+def test_reset_request_rate_limit_and_expiry(client, monkeypatch):
+    import app as module
+    monkeypatch.setattr(module, "recovery_ready", lambda: True)
+    sent = []
+    monkeypatch.setattr(module, "send_reset_code", lambda email, code: sent.append(code))
+    register(client, "Recovery Test", "reset@example.org", "patient")
+    logout(client)
+    for _ in range(3):
+        assert client.post("/auth/forgot-password", data={
+            "csrf_token": token(client, "/auth/forgot-password"), "email":"reset@example.org"}).status_code == 302
+    assert client.post("/auth/forgot-password", data={
+        "csrf_token": token(client, "/auth/forgot-password"), "email":"reset@example.org"}).status_code == 429
+    monkeypatch.setattr(module, "RESET_TTL_SECONDS", -1)
+    response = client.post("/auth/reset-password", data={
+        "csrf_token": token(client, "/auth/reset-password"), "code":sent[0],
+        "password":"new-demo-password-2026","confirm_password":"new-demo-password-2026"})
+    assert b"invalid, expired or already used" in response.data
+
+
+def test_recovery_https_provider_contract(monkeypatch):
+    import app as module
+    from types import SimpleNamespace
+    from requests.exceptions import RequestException
+    monkeypatch.setenv("RESET_EMAIL_API_KEY", "synthetic-key")
+    monkeypatch.setenv("RESET_FROM_EMAIL", "MindCare <recovery@example.org>")
+    observed = {}
+    def fake_post(url, **kwargs):
+        observed.update(url=url, **kwargs)
+        return SimpleNamespace(status_code=200)
+    monkeypatch.setattr(module.requests, "post", fake_post)
+    assert module.recovery_ready()
+    module.send_reset_code("demo@example.org", "synthetic-reset-code")
+    assert observed["url"] == "https://api.resend.com/emails"
+    assert observed["allow_redirects"] is False
+    assert observed["json"]["to"] == ["demo@example.org"]
+    assert "synthetic-reset-code" in observed["json"]["text"]
+    monkeypatch.setattr(module.requests, "post", lambda *a, **k: SimpleNamespace(status_code=403))
+    with pytest.raises(RequestException):
+        module.send_reset_code("demo@example.org", "synthetic-reset-code")
