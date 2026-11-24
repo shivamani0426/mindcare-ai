@@ -1414,3 +1414,25 @@ def test_reset_request_rate_limit_and_expiry(client, monkeypatch):
         "csrf_token": token(client, "/auth/reset-password"), "code":sent[0],
         "password":"new-demo-password-2026","confirm_password":"new-demo-password-2026"})
     assert b"invalid, expired or already used" in response.data
+
+
+def test_recovery_https_provider_contract(monkeypatch):
+    import app as module
+    from types import SimpleNamespace
+    from requests.exceptions import RequestException
+    monkeypatch.setenv("RESET_EMAIL_API_KEY", "synthetic-key")
+    monkeypatch.setenv("RESET_FROM_EMAIL", "MindCare <recovery@example.org>")
+    observed = {}
+    def fake_post(url, **kwargs):
+        observed.update(url=url, **kwargs)
+        return SimpleNamespace(status_code=200)
+    monkeypatch.setattr(module.requests, "post", fake_post)
+    assert module.recovery_ready()
+    module.send_reset_code("demo@example.org", "synthetic-reset-code")
+    assert observed["url"] == "https://api.resend.com/emails"
+    assert observed["allow_redirects"] is False
+    assert observed["json"]["to"] == ["demo@example.org"]
+    assert "synthetic-reset-code" in observed["json"]["text"]
+    monkeypatch.setattr(module.requests, "post", lambda *a, **k: SimpleNamespace(status_code=403))
+    with pytest.raises(RequestException):
+        module.send_reset_code("demo@example.org", "synthetic-reset-code")
