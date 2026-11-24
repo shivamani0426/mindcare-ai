@@ -57,10 +57,18 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
                 page.evaluate("window.__portalNode = document.getElementById(\"mc-vortex\")")
+                page.evaluate("""() => {
+                    window.__phaseEnds = [];
+                    document.addEventListener('animationend', event => {
+                        if (['mc-vortex-landing-infall','mc-vortex-grow'].includes(event.animationName))
+                            window.__phaseEnds.push(event.animationName);
+                    }, true);
+                }""")
                 page.locator(".mc-hero-enter").click()
                 assert page.locator("#mc-vortex").is_visible()
                 page.wait_for_url("**/login", timeout=10000)
                 assert page.evaluate("window.__portalNode === document.getElementById('mc-vortex')")
+                assert page.evaluate("window.__phaseEnds.includes('mc-vortex-landing-infall') && window.__phaseEnds.includes('mc-vortex-grow')"), (engine, "incomplete synchronized opening")
                 page.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
                 assert page.locator("#auth-email").is_visible()
                 assert page.locator("#mc-vortex").is_hidden()
