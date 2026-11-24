@@ -12,6 +12,7 @@
     controller?.abort();
     controller = null;
     root.classList.remove('mc-vortex-departing','mc-vortex-arriving');
+    root.style.removeProperty('--mc-vortex-scroll-offset');
     stage.hidden = true;
     stage.dataset.phase = 'idle';
     document.querySelector('.site-shell')?.removeAttribute('inert');
@@ -33,20 +34,39 @@
       heading.focus({preventScroll:true});
     }
   };
-  // Wait for the actual opening animation, not a separate page-load timer.
-  const openingFinished = () => new Promise(resolve => {
+  // The landing's contraction and portal growth share a clock. Do not swap
+  // the page until BOTH compositor animations have reached their end.
+  const openingFinished = outgoing => new Promise(resolve => {
     const space = stage.querySelector('.mc-vortex-space');
+    const expected = new Map([[outgoing,'mc-vortex-landing-infall'],[space,'mc-vortex-grow']]);
+    const remaining = new Set(expected.keys());
     let done = false;
     const complete = () => {
       if (done) return;
       done = true;
       clearTimeout(watchdog);
-      space.removeEventListener('animationend', onEnd);
+      expected.forEach((name,element) => element.removeEventListener('animationend',onEnd));
       resolve();
     };
-    const onEnd = event => { if (event.animationName === 'mc-vortex-grow') complete(); };
-    const watchdog = setTimeout(complete, 1000);
-    space.addEventListener('animationend', onEnd);
+    const onEnd = event => {
+      const element = event.currentTarget;
+      if (event.target !== element || event.animationName !== expected.get(element)) return;
+      remaining.delete(element);
+      if (!remaining.size) complete();
+    };
+    const watchdog = setTimeout(() => {
+      // Bounded fallback for throttled tabs: finish the same animations,
+      // rather than starting the incoming sequence while they are midway.
+      expected.forEach((name,element) => {
+        for (const animation of element.getAnimations?.() || []) {
+          if (animation.animationName === name) {
+            try { animation.finish(); } catch (_) {}
+          }
+        }
+      });
+      complete();
+    }, 2200);
+    expected.forEach((name,element) => element.addEventListener('animationend',onEnd));
   });
   const fetchLogin = async url => {
     const response = await fetch(url, {
@@ -69,12 +89,15 @@
     busy = true;
     destination = url.href;
     controller = new AbortController();
-    document.querySelector('.site-shell').inert = true;
+    const outgoing = document.querySelector('.site-shell');
+    // Preserve the visible scroll position before freezing the landing viewport.
+    root.style.setProperty('--mc-vortex-scroll-offset', (-window.scrollY) + 'px');
+    outgoing.inert = true;
     const skip = document.querySelector('.skip');
     if (skip) skip.inert = true;
     stage.hidden = false;
     stage.dataset.phase = 'opening';
-    const opened = openingFinished();
+    const opened = openingFinished(outgoing);
     root.classList.add('mc-vortex-departing');
     timer = setTimeout(fallback, 6000);
     try {
@@ -100,6 +123,7 @@
       window.scrollTo(0,0);
       stage.dataset.phase = 'emerging';
       root.classList.add('mc-vortex-arriving');
+      root.style.removeProperty('--mc-vortex-scroll-offset');
       document.dispatchEvent(new Event('mindcare:login-mounted'));
       // The portal stays alive behind the incoming page until the emergence
       // itself ends. No second portal, flash, restart or arbitrary route delay.
