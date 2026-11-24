@@ -50,10 +50,8 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                             colors.add(Array.from(pixels.subarray(i,i+4)).join(','));
                         }
                         window.gravityTrace.textures.push({width:source.width,height:source.height,colors:colors.size});
-                        const copy=document.createElement('canvas');
-                        copy.width=source.width;copy.height=source.height;
-                        copy.getContext('2d').drawImage(source,0,0);
-                        window.gravitySnapshots.push(copy);
+                        // Retain the already-read typed RGBA array; no second canvas copy.
+                        window.gravitySnapshots.push({width:source.width,height:source.height,pixels});
                     }
                     return originalTexture.apply(this,args);
                 };
@@ -79,6 +77,11 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             page.locator(".mc-hero-enter").click()
             page.wait_for_url("**/login", timeout=30000)
             page.wait_for_function("() => document.getElementById('mc-vortex').hidden", timeout=18000)
+            live = page.evaluate("({trace:window.gravityTrace,snapshots:window.gravitySnapshots.length})")
+            print("Live motion trace:", live, "diagnostics:", diagnostics, flush=True)
+            assert live["trace"]["documentId"] == document_id, live
+            assert live["snapshots"] == 2, ("missing actual page textures", live, diagnostics)
+            assert not live["trace"]["fallbacks"], live
             # Read pixels only after live motion has completed: gl.readPixels
             # forces a synchronous pipeline stall on software-rendered CI.
             # Compile the exact production shader captured above and draw
@@ -116,7 +119,13 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                 gl.uniform1i(gl.getUniformLocation(program,'u_page'),0);
                 gl.uniform1f(gl.getUniformLocation(program,'u_time'),1.25);
                 const draw=(source,pull)=>{
-                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
+                    if(!source||!source.width||!source.height||!source.pixels)throw Error('missing captured RGBA source');
+                    // Typed arrays use the explicit nine-argument WebGL overload.
+                    const flipped=new Uint8Array(source.pixels.length);
+                    const row=source.width*4;
+                    for(let y=0;y<source.height;y++)flipped.set(source.pixels.subarray(y*row,(y+1)*row),(source.height-y-1)*row);
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,flipped);
                     gl.uniform1f(gl.getUniformLocation(program,'u_pull'),pull);
                     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
                     const pixels=new Uint8Array(c.width*c.height*4);
@@ -150,7 +159,6 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                 }
                 trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,warm};
                 gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
-                for(const shot of window.gravitySnapshots){shot.width=1;shot.height=1;}
                 window.gravitySnapshots=[];
             }""")
             trace = page.evaluate("window.gravityTrace")
