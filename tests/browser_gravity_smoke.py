@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             page.goto(base + "/")
             assert page.evaluate("!!window.gravityTrace"), "Test instrumentation did not initialize"
             document_id = page.evaluate("window.gravityTrace.documentId")
-            page.locator("#mc-carpet-skip").click()
+            page.locator("#mc-carpet-intro").wait_for(state="hidden", timeout=6000)
             page.locator(".mc-hero-enter").click()
             page.wait_for_url("**/login", timeout=30000)
             page.wait_for_function("() => document.getElementById('mc-vortex').hidden", timeout=18000)
@@ -195,7 +195,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
             fallback=browser.new_page(viewport={"width":1024,"height":700}, reduced_motion="no-preference")
             fallback.goto(base+"/")
-            fallback.locator("#mc-carpet-skip").click()
+            fallback.locator("#mc-carpet-intro").wait_for(state="hidden", timeout=6000)
             fallback.evaluate("window.MindcareGravity=undefined")
             fallback.locator(".mc-hero-enter").click()
             fallback.wait_for_url("**/login",timeout=12000)
