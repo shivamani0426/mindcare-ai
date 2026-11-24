@@ -1,84 +1,34 @@
-/* Original three-cut entrance. Historic IDs and body classes retain
-   integration with replay, accessibility, and the section-flight engine. */
+/* Automatic comet entrance. Historic overlay ID/class retain existing
+   section-flight and snapshot exclusions. No intro controls or Z panels. */
 body.mc-carpet-active{overflow:hidden;overscroll-behavior:none}
 .mc-carpet-intro[hidden]{display:none!important}
-.mc-carpet-intro{
- --carpet-progress:0;--z-open:0;--z-title:1;--z-controls:1;--z-glow:1;
+.mc-comet-intro{
  position:fixed;inset:0;z-index:150;isolation:isolate;overflow:hidden;
- color:#f6f8fc;touch-action:none;overscroll-behavior:none;
- font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+ background:#030408;pointer-events:none;
 }
-.mc-z-stage,.mc-z-blade{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.mc-z-stage{isolation:isolate;overflow:hidden}
-.mc-z-panel{
- position:absolute;inset:0;
- background:radial-gradient(ellipse at 50% 48%,#111017 0%,#07090f 52%,#020306 100%);
- will-change:transform;
+.mc-comet-flight{position:absolute;left:0;top:0;width:0;height:0;opacity:0;will-change:transform,opacity}
+.mc-comet-art{
+ position:absolute;left:0;top:0;display:block;width:clamp(230px,49vw,750px);height:auto;
+ transform:translate(-96.296296%,-50%);overflow:visible;
 }
-.mc-z-panel-top{
- clip-path:polygon(0 0,100% 0,100% 74.24%,19.8% 74.24%,79.8% 25.92%,0 25.92%);
- transform:translate3d(0,calc(-105% * var(--z-open)),0);
+.mc-comet-halo{fill:#ff540c;opacity:.65;filter:blur(10px)}
+.mc-comet-blade{fill:url(#mc-comet-fire);filter:drop-shadow(0 0 9px #ff711b)}
+.mc-comet-core{fill:url(#mc-comet-core)}
+.mc-comet-point{fill:#fff9ec}
+.mc-comet-filaments{fill:none;stroke:#ff9e3e;stroke-width:1.5;stroke-linejoin:bevel;opacity:.72}
+.mc-comet-sparks{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.mc-comet-spark{
+ position:absolute;top:0;left:0;width:18px;height:4px;opacity:0;
+ background:linear-gradient(90deg,#ff4e08a0,#ff8b19 55%,#fff5c9);
+ clip-path:polygon(0 50%,82% 0,100% 50%,82% 100%);transform-origin:100% 50%;
 }
-.mc-z-panel-bottom{
- clip-path:polygon(0 25.74%,80.2% 25.74%,20.2% 74.08%,100% 74.08%,100% 100%,0 100%);
- transform:translate3d(0,calc(105% * var(--z-open)),0);
+.mc-comet-spark:nth-child(3n){width:10px;height:3px;background:linear-gradient(90deg,#d42a03,#ff9b30)}
+.mc-comet-spark:nth-child(5n){width:25px;height:3px}
+.mc-carpet-active .mc-world-root *,.mc-carpet-active .mc-world-root *::before,.mc-carpet-active .mc-world-root *::after{animation-play-state:paused!important}
+@media(max-width:600px),(pointer:coarse){
+ .mc-comet-art{width:clamp(210px,65vw,380px)}
+ .mc-comet-halo{filter:none;opacity:.19}
+ .mc-comet-blade{filter:none}
+ .mc-comet-spark{height:3px;width:12px}
 }
-.mc-z-blade{overflow:visible;opacity:var(--z-glow);transform:translate3d(var(--z-jolt-x,0px),var(--z-jolt-y,0px),0)}
-.mc-z-stroke{--z-draw:0;opacity:var(--z-visible,0)}
-.mc-z-aura{fill:#ff5814;stroke:#ff5710;stroke-width:14;opacity:.44;filter:blur(12px)}
-.mc-z-scar{fill:url(#mc-z-burn);stroke:#fa681b;stroke-width:1.2;filter:drop-shadow(0 0 7px #ff651e)}
-.mc-z-edge{fill:url(#mc-z-hot-metal);opacity:.98}
-.mc-z-ripple{opacity:var(--z-wake,.2);transform:scaleY(var(--z-ripple,1));transform-origin:0 0}
-.mc-z-wake{fill:none;stroke:#f87024;stroke-width:3.5;stroke-linejoin:bevel}
-.mc-z-wake-fine{fill:none;stroke:#ffc878;stroke-width:1.3;opacity:.68}
-.mc-z-fragments{fill:#ffab4f;opacity:.64}
-.mc-z-impact{opacity:0;pointer-events:none}
-.mc-z-shockwave{vector-effect:non-scaling-stroke}
-.mc-z-impact-rays{opacity:.65}
-.mc-z-sparks{opacity:0;filter:drop-shadow(0 0 4px #ff6f13)}
-.mc-carpet-heading{
- position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);
- width:min(92%,640px);text-align:center;pointer-events:none;opacity:var(--z-title);
-}
-.mc-carpet-emblem{display:inline-grid;place-items:center;width:66px;height:66px;border-radius:50%;background:#171319;border:1px solid #d49a6477;color:#ffbd81;font-size:34px;box-shadow:0 0 30px #ff8e291f}
-.mc-carpet-heading h2{font-size:clamp(36px,7vw,86px);letter-spacing:-.07em;line-height:1.03;margin:20px 0 8px;color:#f3f9f7}
-.mc-carpet-heading h2 span{font-size:.36em;color:#ffb780;vertical-align:top;margin-left:4px}
-.mc-carpet-heading p{color:#cbd2dc;font-size:clamp(14px,1.6vw,18px);margin:0}
-.mc-carpet-controls{
- position:absolute;left:50%;bottom:max(8%,calc(env(safe-area-inset-bottom) + 24px));transform:translateX(-50%);
- width:min(90%,390px);display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;opacity:var(--z-controls);
-}
-.mc-carpet-enter{
- display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:60px;padding:10px 20px;border-radius:99px;
- border:1px solid #e6c0a6;background:#f8e9de;color:#251713;font-size:16px;font-weight:760;
- box-shadow:0 10px 35px #03091380;cursor:pointer;
-}
-.mc-carpet-arrow{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#382117;color:#ffd2ad;font-size:24px}
-#mc-carpet-instructions{color:#cbd2dc;font-size:13px;line-height:1.5}
-.mc-carpet-track{height:3px;width:110px;border-radius:10px;background:#c0d3ca40;overflow:hidden}
-.mc-carpet-track span{display:block;width:100%;height:100%;background:#ffad67;transform:scaleX(var(--carpet-progress));transform-origin:left}
-.mc-carpet-skip{position:absolute;top:max(18px,env(safe-area-inset-top));right:clamp(14px,4vw,54px);min-height:44px;padding:10px 16px;border-radius:99px;border:1px solid #a7b5c65c;background:#10141d;color:#f3f9f7;font:650 13px/1.3 system-ui;cursor:pointer}
-.mc-carpet-intro button:focus-visible{outline:3px solid #fff;outline-offset:4px}
-body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after{display:none}
-.mc-carpet-active .mc-world-hero .mc-hero-art,.mc-carpet-active .mc-world-hero .mc-hero-orb,.mc-carpet-active .mc-world-hero .mc-hero-light-ring{animation-play-state:paused!important}
-@media(max-width:600px){
- .mc-carpet-emblem{width:58px;height:58px;font-size:29px}
- .mc-carpet-heading{top:34%}
- .mc-carpet-controls{bottom:max(9%,calc(env(safe-area-inset-bottom) + 18px))}
- .mc-z-aura{stroke-width:6;filter:none;opacity:.19}
- .mc-z-scar,.mc-z-sparks{filter:none}
- .mc-z-wake{stroke-width:2}
- .mc-z-wake-fine,.mc-z-fragments{display:none}
-}
-@media(max-height:480px){
- .mc-carpet-heading{top:30%}
- .mc-carpet-emblem{display:none}
- .mc-carpet-heading h2{font-size:36px;margin:0 0 5px}
- .mc-carpet-controls{bottom:16px;gap:5px}
- .mc-carpet-enter{min-height:48px;padding:6px 15px}
-}
-@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-carpet-intro{display:none!important}}
-
-/* The panels stay opaque through the final cut; the landing is never rebuilt.
-   Small, local impact motion only: no full-screen flash or strobing. */
-@media(max-width:600px),(pointer:coarse){.mc-z-aura,.mc-z-scar,.mc-z-sparks{filter:none}.mc-z-blade{transform:none}.mc-z-panel{will-change:auto}}
+@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-comet-intro{display:none!important}}
