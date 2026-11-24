@@ -2,7 +2,7 @@
   'use strict';
   if (!document.body.classList.contains('mc-world-page')) return;
 
-  // First-visit portal. The real hero is already mounted behind the textile panels.
+  // First-visit Z-cut entrance. The real hero stays mounted behind the dark panels.
   const carpet = document.getElementById('mc-carpet-intro');
   const enter = document.getElementById('mc-carpet-enter');
   const skip = document.getElementById('mc-carpet-skip');
@@ -12,7 +12,7 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const contrast = matchMedia('(prefers-contrast: more)');
   const forced = matchMedia('(forced-colors: active)');
-  const storageKey = 'mindcare-carpet-entered-v4';
+  const storageKey = 'mindcare-zcut-entered-v1';
   const motionAllowed = () => !reduce.matches && !contrast.matches && !forced.matches &&
     !document.body.classList.contains('reduced-motion');
   let seen = false;
@@ -24,24 +24,75 @@
   const remember = () => { try { sessionStorage.setItem(storageKey, '1'); } catch (_) {} };
   window.addEventListener('mindcare:landing-dispose', stopAfterLanding, {once:true});
   function stopAfterLanding() { stop(); phase = 'disposed'; }
+  // The three cuts share one timeline, with a deliberate beat after each.
+  // Panel movement begins only once the whole Z has been drawn.
+  const cuts = [
+    {start:.06,end:.27,x1:200,y1:155,x2:800,y2:155},
+    {start:.32,end:.51,x1:800,y1:155,x2:200,y2:445},
+    {start:.56,end:.75,x1:200,y1:445,x2:800,y2:445}
+  ];
+  const strokeNodes = carpet ? [...carpet.querySelectorAll('[data-z-cut]')] : [];
+  const sparks = carpet?.querySelector('.mc-z-sparks');
+  const clips = carpet ? [...carpet.querySelectorAll('.mc-z-clip')] : [];
+  const impact = carpet?.querySelector('.mc-z-impact');
+  const lowCost = matchMedia('(max-width:600px),(pointer:coarse)');
+  let deadline = 0;
+  const ease = t => t*t*(3-2*t);
   const paint = () => {
     const set = (key,value) => carpet.style.setProperty(key,value);
     set('--carpet-progress', progress.toFixed(4));
-    set('--carpet-left', (-112 * progress).toFixed(2) + '%');
-    set('--carpet-right', (112 * progress).toFixed(2) + '%');
-    set('--carpet-fold', (1 - progress * .36).toFixed(3));
-    set('--carpet-lift', (-progress * 22).toFixed(2) + '%');
-    set('--carpet-turn', (progress * 13).toFixed(2) + 'deg');
-    set('--carpet-negative-turn', (-progress * 13).toFixed(2) + 'deg');
-    set('--carpet-runway', (progress * 155).toFixed(2) + '%');
-    set('--carpet-title-opacity', Math.max(0,1 - progress * 2.5).toFixed(3));
-    carpet.dataset.progress = progress.toFixed(3);
+    set('--z-open', ease(clamp((progress-.82)/.18)).toFixed(4));
+    set('--z-title', (1-clamp(progress/.055)).toFixed(3));
+    set('--z-controls', (1-.58*clamp(progress/.12)-.42*clamp((progress-.78)/.16)).toFixed(3));
+    set('--z-glow', (1-clamp((progress-.83)/.17)).toFixed(3));
+    let active = false, complete = 0, strongest = 0;
+    let impactPose = null, joltX = 0, joltY = 0;
+    cuts.forEach((cut,index) => {
+      const amount=clamp((progress-cut.start)/(cut.end-cut.start));
+      const node=strokeNodes[index];
+      if(!node)return;
+      node.style.setProperty('--z-draw',(amount*100).toFixed(3));
+      node.style.setProperty('--z-visible',amount>0?'1':'0');
+      clips[index]?.setAttribute('width',String(amount===0?0:35+1000*amount+(amount===1?35:0)));
+      if(amount===1)complete++;
+      // Energy wakes distort outward then settle into a hot jagged scar.
+      const age=Math.max(0,progress-cut.end);
+      const recoil=amount===0?0:amount<1?Math.sin(Math.PI*amount):Math.exp(-age*32);
+      node.style.setProperty('--z-ripple',(1+recoil*(lowCost.matches?.55:1.15)).toFixed(3));
+      node.style.setProperty('--z-wake',(.16+.55*recoil).toFixed(3));
+      const angle=Math.atan2(cut.y2-cut.y1,cut.x2-cut.x1)*180/Math.PI;
+      if(amount>0&&amount<1&&sparks){
+        const x=cut.x1+(cut.x2-cut.x1)*amount,y=cut.y1+(cut.y2-cut.y1)*amount;
+        sparks.setAttribute('transform','translate('+x+' '+y+') rotate('+angle+') scale('+(1+.42*Math.sin(Math.PI*amount))+')');
+        active=true;
+      }
+      // A brief, localized impact travels from the blade tip at completion.
+      const u=(progress-cut.end)/.065;
+      if(u>=0&&u<1){
+        const strength=(1-u)*(1-u);
+        if(strength>strongest){strongest=strength;impactPose={x:cut.x2,y:cut.y2,angle,scale:1+u*3.2};}
+        joltX+=Math.sin(u*15)*strength*5;
+        joltY+=Math.sin(u*12)*strength*3;
+      }
+    });
+    if(sparks)sparks.style.opacity=active?'1':'0';
+    if(impact){
+      impact.style.opacity=(strongest*.8).toFixed(3);
+      if(impactPose)impact.setAttribute('transform','translate('+impactPose.x+' '+impactPose.y+') rotate('+impactPose.angle+') scale('+impactPose.scale+')');
+    }
+    set('--z-jolt-x',lowCost.matches?'0px':joltX.toFixed(2)+'px');
+    set('--z-jolt-y',lowCost.matches?'0px':joltY.toFixed(2)+'px');
+    carpet.dataset.zImpact=strongest.toFixed(3);
+    carpet.dataset.progress=progress.toFixed(3);
+    carpet.dataset.completedCuts=String(complete);
+    carpet.dataset.zPhase=progress>=.82?'revealing':complete===3?'holding':progress>.06?'cutting':'ready';
   };
   const stop = () => {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     lastFrame = 0;
     clearTimeout(heroTimer);
+    clearTimeout(deadline);deadline=0;
     touchY = null;
   };
   const release = () => {
@@ -67,8 +118,7 @@
   };
   const reveal = () => {
     stop();
-    // The hero is already visible behind the parting textile. Do not hide
-    // and rebuild it again once the fabric clears.
+    // The real hero is already visible behind the cut panels. Do not rebuild it.
     phase = 'ready';
     progress = target = 1;
     paint();
@@ -81,12 +131,19 @@
     frame = 0;
     if (phase !== 'carpet') return;
     if (!motionAllowed()) { finishImmediately(); return; }
-    // Elapsed-time easing: a slow browser must not stretch the opening to many seconds.
-    const elapsed = lastFrame ? Math.max(1, now - lastFrame) : 16.7;
-    lastFrame = now;
-    const gap = target - progress;
-    const next = progress + gap * (1 - Math.exp(-elapsed / 95));
-    progress = Math.abs(target - next) < .004 ? target : next;
+    // Follow elapsed wall time on constrained devices rather than counting
+    // slow WebKit frames. A full-entry deadline guarantees accessible content.
+    const elapsed=lastFrame?Math.max(1,now-lastFrame):16.7;
+    lastFrame=now;
+    const gap=target-progress;
+    const step=(lowCost.matches?elapsed:Math.min(160,elapsed))/2400;
+    let next=Math.abs(gap)<=step?target:progress+Math.sign(gap)*step;
+    // Preserve intermediate sequential cut/hold milestones when a frame stalls.
+    if(gap>0){
+      const milestone=[.17,.27,.42,.51,.65,.75,.79,.90].find(n=>n>progress+.00001&&n<next);
+      if(milestone!==undefined)next=milestone;
+    }
+    progress=next;
     paint();
     if (progress === 1) { reveal(); return; }
     if (progress !== target) frame = requestAnimationFrame(animate);
@@ -95,6 +152,8 @@
   const advance = amount => {
     if (phase !== 'carpet') return;
     target = clamp(target + amount);
+    if(target===1&&!deadline)deadline=setTimeout(()=>{if(phase==='carpet'&&target===1)reveal();},4200);
+    else if(target<1&&deadline){clearTimeout(deadline);deadline=0;}
     if (!frame) frame = requestAnimationFrame(animate);
   };
   const showCarpet = () => {
