@@ -62,9 +62,10 @@ body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after{display:none}
  .mc-carpet-emblem{width:58px;height:58px;font-size:29px}
  .mc-carpet-heading{top:34%}
  .mc-carpet-controls{bottom:max(9%,calc(env(safe-area-inset-bottom) + 18px))}
- .mc-z-aura{stroke-width:16;filter:blur(5px)}
- .mc-z-heat{stroke-width:5}
- .mc-z-edge{stroke-width:2}
+ .mc-z-aura{stroke-width:16;filter:none;opacity:.22}
+ .mc-z-heat{stroke-width:5;filter:none}
+ .mc-z-edge{stroke-width:2;filter:none}
+ .mc-z-sparks{filter:none}
 }
 @media(max-height:480px){
  .mc-carpet-heading{top:30%}
