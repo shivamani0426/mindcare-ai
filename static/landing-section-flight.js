@@ -1,5 +1,5 @@
 /* MindCare public landing sections: the patient dashboard's four-edge fly-in
- * language, applied AFTER the existing paper -> bubble -> hero sequence.
+ * language, applied AFTER the door -> bubble -> hero sequence.
  * Does not alter hero, links, accessibility, page layout or backend.
  * Web Animations API only; no third-party assets, timers per card, or scroll polling.
  */
@@ -86,8 +86,7 @@
     });
     section.dataset.mcSectionFlight = 'ready';
   };
-  const heroIsBusy = () => document.body.classList.contains('mc-paper-active') ||
-    document.body.classList.contains('mc-paper-revealing') ||
+  const heroIsBusy = () => document.body.classList.contains('mc-door-active') ||
     document.body.classList.contains('mc-hero-assembling');
   const flush = () => {
     if (heroIsBusy()) return;
