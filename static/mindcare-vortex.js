@@ -106,21 +106,24 @@
     const rendered = gravity?.run(animations,phase,duration);
     if (rendered) await rendered;
     else {
-      // A slow software compositor can otherwise advance hundreds of
-      // milliseconds between paints, skipping the spiral's middle poses.
-      // Drive the fallback group from one capped, monotonic frame clock.
-      // On normal displays this retains the same 1650ms choreography.
-      // A bounded wall deadline keeps navigation usable if frames stall.
-      animations.forEach(a => { a.pause(); a.currentTime = 0; });
+      // Retain compositor-driven motion on ordinary frames. If a slow
+      // renderer skips a large span, resynchronize all effects to a
+      // bounded step, then let the compositor run again.
       const begun = performance.now();
-      let previous = begun, elapsed = 0;
-      while (elapsed < duration && token === generation) {
+      let previous = 0;
+      while (token === generation) {
         const now = await frame();
         if (token !== generation) return false;
+        const current = Number(animations[0].currentTime);
         if (now - begun > duration * 3) break;
-        elapsed = Math.min(duration, elapsed + Math.min(80, Math.max(1, now - previous)));
-        previous = now;
-        animations.forEach(a => { a.currentTime = elapsed; });
+        if (current - previous > 100) {
+          const next = Math.min(duration, previous + 100);
+          animations.forEach(a => { a.currentTime = next; });
+          previous = next;
+        } else {
+          previous = Math.max(previous, current);
+        }
+        if (previous >= duration) break;
       }
     }
     if (token !== generation) return false;
