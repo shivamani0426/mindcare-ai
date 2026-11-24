@@ -94,18 +94,27 @@ structure **without writing an unencrypted copy to disk**:
 The companion `.dump.age.sha256` file must be next to the encrypted archive.
 The verifier fails if either the checksum or decryption/archive parsing fails.
 Successful verification proves the archive is intact and readable; it does NOT
-prove that all tables and relationships can be restored. For a complete restore
-drill, create a NEW disposable PostgreSQL database on your own machine and
-check connectivity and representative counts against the production totals.
-**Never point pg_restore at the live Render database.** Example for a local
-Postgres service configured to accept your local connection:
+prove that all tables and relationships can be restored. For a complete restore drill, use the new local Docker-based rehearsal.
+Install Docker and ensure its active context points to your own local Unix
+socket. Do not use remote Docker contexts. The script uses PostgreSQL 18 in
+a fresh container with networking disabled, no published ports and temporary
+RAM-backed database storage. The container is removed on exit. Run locally
+on a trusted machine with sufficient RAM (and encrypted or disabled swap):
 
-    createdb mindcare_restore_test
-    age --decrypt --identity "$HOME/.config/mindcare/backup-identity.txt" '/path/to/backup.dump.age' | pg_restore --exit-on-error --no-owner --no-acl --dbname=mindcare_restore_test
+    bash scripts/rehearse_postgres_restore.sh \
+      '/path/to/backup.dump.age' \
+      "$HOME/.config/mindcare/backup-identity.txt"
 
-Your local restored database now contains real patient information. Restrict
-access, do not publish it, and securely remove it once the restore rehearsal
-is completed.
+The script checks the exact encrypted archive checksum, decrypts into
+pg_restore, restores in one transaction, and reads representative table
+counts. Compare those counts privately against the source snapshot. Never
+send counts, records, archives or keys to chat or public CI. If local RAM
+is insufficient, arrange an equally isolated encrypted-storage restore
+environment with the administrator rather than restoring to production.
+
+The synthetic recovery CI job uses generated dummy data and an ephemeral
+key only. Passing CI does not establish that the live database is backed
+up, nor that a particular production archive restores successfully.
 
 ## 5. Retention and migration
 
