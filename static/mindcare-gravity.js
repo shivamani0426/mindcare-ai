@@ -49,22 +49,9 @@ void main(){
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
   float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
-  float ring=mix(.025,.205,k);
-  float halo=exp(-abs(r-ring)*22.);
-  vec3 glow=halo*vec3(.15,.46,.63);
-  float thin=exp(-abs(r-ring)*118.);
-  float arc=.55+.45*sin(theta*3.-u_time*1.25);
-  glow+=thin*mix(vec3(.35,.88,1.),vec3(.84,.96,1.),arc)*1.3;
-  // A tilted accretion disk adds a visible 3D depth cue around the dark core.
-  vec2 d=vec2(q.x*.94+q.y*.34,-q.x*.34+q.y*.94);
-  float diskRadius=length(vec2(d.x,d.y*3.1));
-  float disk=exp(-abs(diskRadius-ring*1.22)*84.);
-  glow+=disk*vec3(.21,.65,1.)*(.48+.52*sin(theta+u_time*.65)*sin(theta+u_time*.65));
-  float core=1.-smoothstep(ring*.70,ring*.84,r);
-  float gravity=smoothstep(.02,.28,p);
+  // The original segmented CSS portal is layered over this GPU surface.
+  // Only page distortion and star-field rendering belong in this shader.
   vec3 color=mix(sky,page,matter);
-  color+=glow*gravity*(1.-matter*.45);
-  color=mix(color,vec3(.002,.003,.006),core*gravity);
   // Smooth handoff to/from actual DOM at the unwarped endpoint.
   float alpha=smoothstep(.01,.13,p);
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
@@ -228,7 +215,7 @@ void main(){
       // Update resolution before the following phase, not during animation.
       if(phase==='absorbing'&&quality>0)resize();
       draw(phase==='emitting'?0:1);
-      // Keep the accretion matter orbiting during the login snapshot hold.
+      // Keep the star field alive during the login snapshot hold.
       // Reuse the same RAF handle; run(), fail/cleanup and destroy() stop it.
       if(phase==='absorbing'&&valid){
         const start=performance.now();

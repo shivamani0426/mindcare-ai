@@ -68,7 +68,24 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     return result;
                 };
                 document.addEventListener('mindcare:gravity-fallback',event=>{window.gravityTrace.fallbacks.push(event.detail);console.log('GRAVITY:'+JSON.stringify(event.detail));});
-                document.addEventListener('mindcare:gravity-phase',event=>{window.gravityTrace.phases.push(event.detail);console.log('GRAVITY:'+JSON.stringify(event.detail));});
+                document.addEventListener('mindcare:gravity-phase',event=>{
+                    const stage=document.getElementById('mc-vortex');
+                    const rings=[...stage.querySelectorAll('.mc-vortex-ring')];
+                    const particles=[...stage.querySelectorAll('.mc-vortex-particle')];
+                    const canvas=document.querySelector('.mc-gravity-canvas');
+                    const ringStyle=getComputedStyle(rings[0]);
+                    window.gravityTrace.phases.push({...event.detail,portal:{
+                        rings:rings.length,particles:particles.length,
+                        segmented:rings.every(r=>getComputedStyle(r).backgroundImage.includes('conic-gradient')),
+                        masked:ringStyle.maskImage.includes('radial-gradient'),
+                        rotating:rings.every(r=>getComputedStyle(r).animationName==='mc-vortex-spin'),
+                        suction:particles.every(r=>getComputedStyle(r).animationName==='mc-vortex-suction'),
+                        aboveGpu:Number(getComputedStyle(stage).zIndex)>Number(getComputedStyle(canvas).zIndex),
+                        transparentBackdrop:getComputedStyle(stage.querySelector('.mc-vortex-backdrop')).visibility==='hidden',
+                        visible:!stage.hidden&&getComputedStyle(stage).display!=='none'
+                    }});
+                    console.log('GRAVITY:'+JSON.stringify(event.detail));
+                });
             })()""")
             page.goto(base + "/")
             assert page.evaluate("!!window.gravityTrace"), "Test instrumentation did not initialize"
@@ -144,40 +161,17 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     }
                     trace.colors[phase]=colors.size;
                 }
-                // Check the restored classic ring, tilted disk and cool palette.
-                // The intentionally removed perspective and particle models
-                // are no longer requirements; all live trajectory checks stay.
-                const clock=gl.getUniformLocation(program,'u_time');
-                gl.uniform1f(clock,1.25);
+                // GPU now renders only the distorted page and space. The
+                // classic segmented portal is independently composited in CSS.
                 const sample=draw(window.gravitySnapshots[0],1);
-                const radius=c.height*.205;
-                const sectors=[0,0,0,0];
-                let blue=0,wing=0,warm=0;
+                let bright=0,ringPixels=0;
                 for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
-                    const nx=(x+.5-c.width/2)/radius,ny=(y+.5-c.height/2)/radius;
-                    const rr=Math.hypot(nx,ny);
-                    const dx=nx*.94+ny*.34,dy=-nx*.34+ny*.94;
-                    const dr=Math.hypot(dx,dy*3.1);
+                    const rr=Math.hypot(x+.5-c.width/2,y+.5-c.height/2)/c.height;
                     const [r,g,b]=sample(x,y);
-                    if(rr>.85&&rr<1.38){
-                        if(b>145&&g>65&&b>=r+20){
-                            blue++;
-                            if(rr<1.13)sectors[(nx>=0?1:0)+(ny>=0?2:0)]++;
-                            if(Math.abs(dr-1.22)<.12&&rr>1.12)wing++;
-                        }
-                        if(r>160&&r>b+30)warm++;
-                    }
+                    if(Math.max(r,g,b)>130)bright++;
+                    if(rr>.185&&rr<.225&&b>145&&g>65&&b>=r+20)ringPixels++;
                 }
-                gl.uniform1f(clock,2.65);
-                const rotated=draw(window.gravitySnapshots[0],1);
-                let moving=0;
-                for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
-                    const rr=Math.hypot(x+.5-c.width/2,y+.5-c.height/2)/radius;
-                    if(rr<.88||rr>1.13)continue;
-                    const a=sample(x,y),b=rotated(x,y);
-                    if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>18)moving++;
-                }
-                trace.lensing={center:sample(c.width/2,c.height/2),sectors,wing,blue,warm,moving,rotatedCenter:rotated(c.width/2,c.height/2)};
+                trace.lensing={bright,ringPixels};
                 gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
                 window.gravitySnapshots=[];
             }""")
@@ -190,13 +184,12 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert all(any(.35 < value < .65 for value in trace["pulls"].get(phase,[])) for phase in ("absorbing","emitting")), trace
             assert max(trace["pulls"]["absorbing"]) >= .985 and min(trace["pulls"]["emitting"]) <= .015, trace
             assert not trace["fallbacks"], trace
-            assert trace["lensing"], "no classic portal rendered sample"
-            assert max(trace["lensing"]["center"]) <= 20, trace["lensing"]
-            assert min(trace["lensing"]["sectors"]) >= 15, trace["lensing"]
-            assert trace["lensing"]["wing"] >= 10, trace["lensing"]
-            assert trace["lensing"]["warm"] == 0, trace["lensing"]
-            assert trace["lensing"]["moving"] >= 30, trace["lensing"]
-            assert max(trace["lensing"]["rotatedCenter"]) <= 20, trace["lensing"]
+            assert trace["lensing"], "no GPU endpoint rendered sample"
+            assert trace["lensing"]["ringPixels"] < 200, trace["lensing"]
+            for entry in trace["phases"]:
+                portal = entry["portal"]
+                assert portal["rings"] == 9 and portal["particles"] == 16, portal
+                assert all(portal[k] for k in ("segmented","masked","rotating","suction","aboveGpu","transparentBackdrop","visible")), portal
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
