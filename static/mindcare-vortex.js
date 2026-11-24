@@ -47,6 +47,7 @@
       clearTimeout(watchdog);
       cancelAnimationFrame(raf);
       expected.forEach((name,element) => element.removeEventListener('animationend',onEnd));
+      if (!busy || !root.classList.contains('mc-vortex-departing')) { resolve(); return; }
       // Explicit terminal styles also cover Safari throttling or missing events.
       root.classList.add('mc-vortex-open');
       const landing = getComputedStyle(outgoing);
