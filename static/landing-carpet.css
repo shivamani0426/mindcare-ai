@@ -68,3 +68,8 @@ body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after {display:none}
 
 @media(max-width:600px){.mc-carpet-border{inset:8% 6%}.mc-carpet-runway{width:90vw}}
 body.mc-carpet-arrival.mc-hero-assembling .mc-world-hero::after{display:none}
+
+/* Keep the fabric on isolated compositor layers only while it is being moved. */
+.mc-carpet-active .mc-carpet-fabric,.mc-carpet-active .mc-carpet-runway{will-change:transform}
+.mc-carpet-active .mc-world-hero .mc-hero-art,.mc-carpet-active .mc-world-hero .mc-hero-orb,.mc-carpet-active .mc-world-hero .mc-hero-light-ring{animation-play-state:paused!important}
+@media(max-width:700px){.mc-carpet-weave{background:repeating-linear-gradient(90deg,#07151f18 0 1px,transparent 1px 4px)}.mc-carpet-border{box-shadow:inset 0 0 0 6px #0e253a99,inset 0 0 0 8px #a9bc9d6b}}
