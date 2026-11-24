@@ -106,7 +106,7 @@
     if (!motionAllowed()) { finishImmediately(); return; }
     // Time-based sequential strokes; limit frame steps so slower graphics
     // cannot jump over an entire slash. Partial scroll remains reversible.
-    const elapsed = lastFrame ? Math.min(64,Math.max(1,now-lastFrame)) : 16.7;
+    const elapsed = lastFrame ? Math.min(200,Math.max(1,now-lastFrame)) : 16.7;
     lastFrame=now;
     const gap=target-progress;
     const step=elapsed/2400;
