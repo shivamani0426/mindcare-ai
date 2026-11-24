@@ -105,19 +105,19 @@ void main(){
   float streak=.65+.35*sin(47.*diskR+4.*diskAngle-orbital);
   float turbulence=.78+.22*sin(11.*diskAngle+23.*diskR-orbital*.7);
   float inner=1.-smoothstep(.90,1.95,diskR);
-  vec3 plasma=mix(vec3(.86,.16,.026),vec3(1.,.91,.64),inner);
+  vec3 plasma=mix(vec3(.065,.25,.96),vec3(.72,.91,1.),inner);
   float boost=mix(.55,1.48,smoothstep(-1.1,1.1,hit.x));
   vec3 diskLight=band*plasma*(.54+.38*streak)*turbulence*boost;
   if(band>.002){
     vec2 embers=orbitEmbers(diskR,diskAngle,u_orbit);
-    // Rich red tails, brilliant orange heads and independently orbiting
+    // Electric-blue tails, ice-white heads and independently orbiting
     // lanes. The existing 3D visibility test occludes the rear particles.
-    vec3 hot=vec3(1.,.075,.014)*boost;
+    vec3 hot=vec3(.075,.37,1.)*boost;
     diskLight=mix(diskLight,hot*band,embers.x*.86);
-    diskLight+=band*embers.y*vec3(1.,.55,.13)*boost*.85;
+    diskLight+=band*embers.y*vec3(.49,.91,1.)*boost*.85;
   }
   float rim=(1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93)))*step(.001,diskHit);
-  diskLight+=rim*vec3(1.,.94,.78)*.88*boost;
+  diskLight+=rim*vec3(.83,.95,1.)*.88*boost;
   // Depth test the nearest 3D surface. The rear disk is hidden by the
   // sphere; the near disk remains visible in front of it.
   float front=step(diskHit,sphereHit)*step(.001,diskHit);
@@ -132,16 +132,16 @@ void main(){
   float lensed=farBand*(upper+.29*lower)*arcTexture*lensBoost;
   float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
   float halo=1.-smoothstep(.77,1.82,h);
-  vec3 backGlow=vec3(.32,.115,.035)*halo*.40;
-  backGlow+=lensed*mix(vec3(.92,.24,.035),vec3(1.,.83,.51),1.-smoothstep(.85,1.30,h));
+  vec3 backGlow=vec3(.045,.20,.55)*halo*.40;
+  backGlow+=lensed*mix(vec3(.065,.32,.95),vec3(.68,.92,1.),1.-smoothstep(.85,1.30,h));
   if(farBand>.002){
-    // The bent far-side image carries the same moving red-hot material.
+    // The bent far-side image carries the same moving blue plasma.
     vec2 bent=orbitEmbers(h+.38,theta,u_orbit);
-    backGlow=mix(backGlow,vec3(1.,.095,.018)*lensBoost,
+    backGlow=mix(backGlow,vec3(.065,.36,1.)*lensBoost,
       bent.x*farBand*(upper+.26*lower)*.67);
-    backGlow+=bent.y*farBand*(upper+.26*lower)*vec3(1.,.48,.09)*.52;
+    backGlow+=bent.y*farBand*(upper+.26*lower)*vec3(.47,.85,1.)*.52;
   }
-  backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*lensBoost);
+  backGlow+=photon*vec3(.76,.93,1.)*(.65+.35*lensBoost);
   vec3 color=mix(sky,page,matter);
   color+=backGlow*gravity*(1.-matter*.45);
   color=mix(color,vec3(.001,.001,.002),shadow*gravity);
