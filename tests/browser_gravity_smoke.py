@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
         with sync_playwright() as p:
             browser = p.chromium.launch(args=["--enable-webgl","--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"])
             page = browser.new_page(viewport={"width":1024,"height":700}, reduced_motion="no-preference")
-            page.add_init_script("""() => {
+            page.add_init_script("""(() => {
                 window.gravityTrace={phases:[],textures:[],draws:{},colors:{}};
                 const proto=WebGLRenderingContext.prototype;
                 const originalTexture=proto.texImage2D;
@@ -61,8 +61,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     return result;
                 };
                 document.addEventListener('mindcare:gravity-phase',event=>window.gravityTrace.phases.push(event.detail));
-            }""")
+            })()""")
             page.goto(base + "/")
+            assert page.evaluate("!!window.gravityTrace"), "Test instrumentation did not initialize"
             page.locator("#mc-carpet-skip").click()
             page.locator(".mc-hero-enter").click()
             page.wait_for_url("**/login", timeout=18000)
