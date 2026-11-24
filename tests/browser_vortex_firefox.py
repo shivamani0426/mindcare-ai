@@ -27,6 +27,8 @@ with tempfile.TemporaryDirectory(prefix="mindcare-vacuum-") as tmp:
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(base + "/")
             page.locator("#mc-carpet-skip").click()
+            # Verify the approved compositor fallback independently of WebGL availability.
+            page.evaluate("window.MindcareGravity=undefined")
             page.evaluate("""() => {
                 window.samples = [];
                 window.originalPortal = document.getElementById('mc-vortex');
