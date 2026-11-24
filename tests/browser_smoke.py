@@ -110,7 +110,7 @@ try:
                "Old paper entrance is removed from the public page")
         carpet_tab = ctx.new_page()
         carpet_tab.emulate_media(reduced_motion="no-preference")
-        carpet_tab.add_init_script("""() => {
+        carpet_tab.add_init_script("""(() => {
             window.__cometTrace={frames:[],starts:[],ends:[]};
             document.addEventListener('mindcare:comet-started',e=>{
                 const overlay=document.getElementById('mc-carpet-intro');
@@ -133,7 +133,7 @@ try:
                 requestAnimationFrame(tick);
             });
             document.addEventListener('mindcare:comet-finished',e=>window.__cometTrace.ends.push(e.detail));
-        }""")
+        })()""")
         carpet_tab.goto(base + "/")
         portal = carpet_tab.locator("#mc-carpet-intro")
         portal.wait_for(state="hidden", timeout=6000)
@@ -191,11 +191,11 @@ try:
         carpet_tab.close()
         skip_tab = ctx.new_page()
         skip_tab.emulate_media(reduced_motion="no-preference")
-        skip_tab.add_init_script("""() => {
+        skip_tab.add_init_script("""(() => {
             document.addEventListener('mindcare:comet-started',()=>{
                 document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',cancelable:true}));
             });
-        }""")
+        })()""")
         skip_tab.goto(base + "/")
         verify(skip_tab.locator("#mc-carpet-intro").is_hidden(), "Escape reveals the homepage immediately")
         skip_tab.close()
