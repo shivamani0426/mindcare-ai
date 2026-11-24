@@ -9,8 +9,8 @@
     <span class="auth-onboard-icon" aria-hidden="true">✦</span>
     <span class="eyebrow">JUST ONE MORE STEP</span>
     <h1 id="onboard-title">Welcome to MindCare.</h1>
-    <p>Your {{ 'Google account' if pending.provider == 'google' else 'phone number' }} has been verified. Choose how you'd like to use your new account.</p>
-    <div class="auth-onboard-verified"><span aria-hidden="true">✓</span><span>{{ pending.label if pending.provider == 'google' else 'Mobile number verified by Firebase' }}</span></div>
+    <p>Your Google account has been verified. Choose how you'd like to use your new account.</p>
+    <div class="auth-onboard-verified"><span aria-hidden="true">✓</span><span>{{ pending.label }}</span></div>
     <form action="{{ url_for('auth_complete') }}" method="post" class="auth-onboard-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="auth-form-field"><label for="onboard-name">Your full name</label><input id="onboard-name" type="text" name="name" minlength="2" maxlength="90" autocomplete="name" value="{{ pending.name or '' }}" placeholder="Your full name" required></div>
