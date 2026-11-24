@@ -182,6 +182,8 @@ try:
         vortex_tab.emulate_media(reduced_motion="no-preference")
         vortex_tab.goto(base + "/")
         vortex_tab.locator("#mc-carpet-skip").click()
+        # Dedicated gravity test covers the GPU-driven clock; verify the fallback independently here.
+        vortex_tab.evaluate("window.MindcareGravity=undefined")
         vortex_tab.evaluate("window.__portalDocument = document; window.__portalNode = document.getElementById(\"mc-vortex\")")
         vortex_tab.evaluate("""() => {
             window.__syncTrace = [];
