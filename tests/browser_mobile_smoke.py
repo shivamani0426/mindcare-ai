@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                         const scene = document.querySelector(".mc-vacuum-scene");
                         const a = scene.getAnimations()[0];
                         const b = document.querySelector(".mc-vortex-space").getAnimations()[0];
-                        window.__motionPhases.push({phase:event.detail.phase, shared:a.startTime === b.startTime, duration:a.effect.getTiming().duration});
+                        window.__motionPhases.push({phase:event.detail.phase, shared:a.startTime === b.startTime, duration:a.effect.getTiming().duration,path:a.effect.getKeyframes().map(k=>({transform:k.transform,offset:k.computedOffset}))});
                     });
                     document.addEventListener('mindcare:vortex-opened', event => {
                         window.__openingTerminal = event.detail;
@@ -81,6 +81,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 assert page.locator("#mc-vortex").is_hidden()
                 phases = page.evaluate("window.__motionPhases")
                 assert [phase["phase"] for phase in phases] == ["absorbing", "emitting"] and all(phase["shared"] and phase["duration"] == 1650 for phase in phases), (engine, phases)
+                assert len(phases[0]["path"]) == 33 and len(phases[1]["path"]) == 33 and all(a["transform"] == b["transform"] and abs(a["offset"] + b["offset"] - 1) < .00001 for a,b in zip(phases[0]["path"],reversed(phases[1]["path"]))), (engine, "spiral must reverse exactly")
                 page.emulate_media(reduced_motion="reduce")
                 page.goto(base + "/register")
                 assert page.locator("#main").get_attribute("tabindex") == "-1"

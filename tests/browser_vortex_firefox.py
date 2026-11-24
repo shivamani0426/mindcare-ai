@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-vacuum-") as tmp:
                         const style = getComputedStyle(scene);
                         const m = new DOMMatrixReadOnly(style.transform);
                         const scale = Math.hypot(m.m11,m.m12,m.m13);
-                        window.samples.push({phase,scale,opacity:Number(style.opacity)});
+                        window.samples.push({phase,scale,turn:Math.abs(m.m12)/Math.max(scale,.001),orbit:Math.hypot(m.m41,m.m42),opacity:Number(style.opacity)});
                         requestAnimationFrame(sample);
                     }
                     requestAnimationFrame(sample);
@@ -51,7 +51,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-vacuum-") as tmp:
             assert page.evaluate("window.originalPortal === document.getElementById('mc-vortex')")
             samples = page.evaluate("window.samples")
             for phase, direction in (("absorbing", -1), ("emitting", 1)):
-                values = [s["scale"] for s in samples if s["phase"] == phase]
+                frames = [s for s in samples if s["phase"] == phase]
+                values = [s["scale"] for s in frames]
+                assert any(s["turn"] > .4 and s["orbit"] > 12 and .1 < s["scale"] < .95 for s in frames), (phase, "no visible spiral pose")
                 intermediate = [v for v in values if .1 < v < .9]
                 assert len(intermediate) >= 3 and (values[-1]-values[0])*direction > .45, (phase, values)
                 print(f"Firefox {phase}: {len(values)} rendered samples, {len(intermediate)} intermediate poses")
