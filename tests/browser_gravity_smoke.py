@@ -27,7 +27,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             page.on("console", lambda message: diagnostics.append(message.text) if message.text.startswith("GRAVITY:") else None)
             page.on("pageerror", lambda error: diagnostics.append(str(error)))
             page.add_init_script("""(() => {
-                window.gravityTrace={phases:[],textures:[],draws:{},colors:{},fallbacks:[],pulls:{},documentId:Math.random().toString()};
+                window.gravityTrace={phases:[],textures:[],draws:{},colors:{},fallbacks:[],pulls:{},lensing:null,documentId:Math.random().toString()};
                 const proto=WebGLRenderingContext.prototype;
                 const originalTexture=proto.texImage2D;
                 proto.texImage2D=function(...args){
@@ -66,6 +66,32 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                         }
                         trace.colors[phase]=colors.size;
                     }
+                    if(phase==='absorbing'&&pull>.985&&!trace.lensing){
+                        const w=this.drawingBufferWidth,h=this.drawingBufferHeight;
+                        const pixels=new Uint8Array(w*h*4);
+                        this.readPixels(0,0,w,h,this.RGBA,this.UNSIGNED_BYTE,pixels);
+                        const sample=(x,y)=>{
+                            const i=(Math.floor(y)*w+Math.floor(x))*4;
+                            return [pixels[i],pixels[i+1],pixels[i+2]];
+                        };
+                        const center=sample(w/2,h/2);
+                        let upper=0,wing=0,warm=0;
+                        // Inspect the actual rendered horizon and disk, not a
+                        // mocked draw call or an assertion about shader source.
+                        for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){
+                            const nx=(x-w/2)/(h*.205),ny=(y-h/2)/(h*.205);
+                            const dx=nx*.985+ny*.172,dy=-nx*.172+ny*.985;
+                            const rr=Math.hypot(dx,dy);
+                            const dr=Math.hypot(dx,dy/.245);
+                            const [r,g,b]=sample(x,y);
+                            if(r>150&&g>65&&r>b+35){
+                                warm++;
+                                if(dy>.35&&rr>.77&&rr<1.45)upper++;
+                                if(Math.abs(dx)>1.3&&Math.abs(dy)<.65&&dr<2.95)wing++;
+                            }
+                        }
+                        trace.lensing={center,upper,wing,warm};
+                    }
                     return result;
                 };
                 document.addEventListener('mindcare:gravity-fallback',event=>{window.gravityTrace.fallbacks.push(event.detail);console.log('GRAVITY:'+JSON.stringify(event.detail));});
@@ -85,6 +111,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert len(trace["textures"]) == 2 and all(t["width"]*t["height"] <= 910000 and t["colors"] >= 5 for t in trace["textures"]), trace
             assert all(trace["draws"].get(phase,0) >= 5 and trace["colors"].get(phase,0) >= 3 for phase in ("absorbing","emitting")), trace
             assert all(any(.35 < value < .65 for value in trace["pulls"].get(phase,[])) for phase in ("absorbing","emitting")), trace
+            assert trace["lensing"], "no near-horizon rendered sample"
+            assert max(trace["lensing"]["center"]) <= 20, trace["lensing"]
+            assert trace["lensing"]["upper"] >= 15 and trace["lensing"]["wing"] >= 15, trace["lensing"]
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
