@@ -56,6 +56,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 portal.wait_for(state="hidden", timeout=6000)
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
+                page.evaluate("window.MindcareGravity=undefined")
                 page.evaluate("window.__portalNode = document.getElementById(\"mc-vortex\")")
                 page.evaluate("""() => {
                     window.__openingTerminal = null;

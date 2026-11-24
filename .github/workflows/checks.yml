@@ -34,6 +34,8 @@ jobs:
           node --check static/milo.js
           node --check static/landing-world.js
           node --check static/landing-cinematic.js
+          node --check static/vendor/html2canvas-1.4.1.min.js
+          node --check static/mindcare-gravity.js
           node --check static/mindcare-vortex.js
           node --check static/mindcare-vortex-arrival.js
 
@@ -81,3 +83,15 @@ jobs:
       - run: pip install -r requirements.txt playwright
       - run: python -m playwright install --with-deps firefox
       - run: python tests/browser_vortex_firefox.py
+
+  vortex-gravity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests/browser_gravity_smoke.py

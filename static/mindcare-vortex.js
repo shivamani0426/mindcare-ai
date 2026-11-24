@@ -8,7 +8,8 @@
   const prefs = ['(prefers-reduced-motion: reduce)','(prefers-contrast: more)','(forced-colors: active)'].map(s => matchMedia(s));
   const motion = () => !prefs.some(p => p.matches) && !document.body.classList.contains('reduced-motion');
   let destination = null, controller = null, mounted = false, busy = false, scene = null;
-  let generation = 0, requestTimer = 0, group = [];
+  let generation = 0, requestTimer = 0, group = [], gravity = null;
+  const report = (reason) => document.dispatchEvent(new CustomEvent('mindcare:gravity-fallback',{detail:{reason}}));
   const portalTransform = scale => 'translate3d(-50%,-50%,0) scale(' + scale + ')';
   // One bounded compositor surface follows a tightening spiral, with
   // synchronized rotation, radius, depth tilt and contraction. No DOM
@@ -43,6 +44,7 @@
   const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
   const reset = () => {
     clearTimeout(requestTimer);
+    gravity?.destroy(); gravity = null;
     controller?.abort();
     controller = null;
     group.forEach(a => a.cancel());
@@ -99,8 +101,13 @@
     group = animations;
     const phase = stage.dataset.phase;
     document.dispatchEvent(new CustomEvent('mindcare:vortex-motion',{detail:{phase,duration}}));
-    await Promise.all(animations.map(a => a.finished));
+    // The GPU path advances all three WAAPI effects with one bounded frame clock.
+    // The existing wall-clock compositor path is used when GPU preparation fails.
+    const rendered = gravity?.run(animations,phase,duration);
+    if (rendered) await rendered;
+    else await Promise.all(animations.map(a => a.finished));
     if (token !== generation) return false;
+    gravity?.settle(phase);
     specs.forEach(([element,frames]) => setPose(element,frames[frames.length-1]));
     animations.forEach(a => a.cancel());
     group = [];
@@ -150,11 +157,21 @@
     stage.dataset.phase = 'absorbing';
     // Stop background section animations before the visible scene moves.
     window.dispatchEvent(new Event('mindcare:landing-dispose'));
-    const login = fetchLogin(url);
-    // Handle a network failure immediately, without unhandled rejections.
+    // This deadline is only for HTTP, never for snapshot capture or animation.
+    requestTimer = setTimeout(() => { if (token === generation) controller?.abort(); },12000);
+    const login = fetchLogin(url).finally(() => { if (token === generation) clearTimeout(requestTimer); });
     login.catch(() => {});
-    requestTimer = setTimeout(() => { if (!mounted && token === generation) fallback(); },12000);
     try {
+      // Snapshot preparation is optional and bounded. The existing DOM path
+      // remains authoritative even if WebGL or capture is unavailable.
+      try { gravity = window.MindcareGravity?.create() || null; } catch (error) {
+        document.dispatchEvent(new CustomEvent('mindcare:gravity-fallback',{detail:{reason:'renderer setup: '+String(error.message||error)}}));
+        gravity = null;
+      }
+      const renderer = gravity;
+      const captured = renderer ? await renderer.capture(scene) : false;
+      if (token !== generation) return;
+      if (renderer && !captured) { renderer.destroy(); gravity = null; }
       const absorbed = await play([
         [scene,vacuum],
         [space,[{transform:portalTransform(.035),offset:0},{transform:portalTransform(.48),offset:.28},{transform:portalTransform(.88),offset:.65},{transform:portalTransform(1),offset:1}]],
@@ -193,14 +210,19 @@
       // Give the real login a layout/paint opportunity at the tiny pose.
       await frame();
       if (token !== generation) return;
+      const loginRenderer = gravity;
+      const loginCaptured = loginRenderer ? await loginRenderer.capture(scene) : false;
+      if (token !== generation) return;
+      if (loginRenderer && !loginCaptured) { loginRenderer.destroy(); gravity = null; }
       const emitted = await play([
         [scene,emission],
         [space,[{transform:portalTransform(1),offset:0},{transform:portalTransform(.88),offset:.35},{transform:portalTransform(.48),offset:.72},{transform:portalTransform(.035),offset:1}]],
         [backdrop,[{opacity:1,offset:0},{opacity:0,offset:.65},{opacity:0,offset:1}]]
       ],token);
       if (emitted) finish();
-    } catch (_) {
+    } catch (error) {
       if (token !== generation) return;
+      report('transition: '+String(error.message||error));
       if (mounted) { reset(); location.reload(); }
       else fallback();
     }

@@ -66,3 +66,8 @@ html.mc-vortex-departing,html.mc-vortex-departing body{overflow:hidden;backgroun
 .mc-vacuum-scene[data-scene="landing"] :is(.mc-hero-art,.mc-hero-light-ring,.mc-hero-light-flare){filter:none!important}
 .mc-vacuum-scene[data-scene="landing"] .mc-hero-orb{box-shadow:0 0 24px #83aab455!important}
 .mc-vacuum-scene[data-scene="landing"] .mc-cinematic-orbit{box-shadow:none!important}
+
+/* The GPU surface exists only during a voluntary public-page transition. */
+.mc-gravity-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:205;pointer-events:none;display:block;contain:strict}
+.mc-gravity-canvas[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-gravity-canvas{display:none!important}}
