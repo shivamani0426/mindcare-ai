@@ -161,8 +161,10 @@
       // Snapshot preparation is optional and bounded. The existing DOM path
       // remains authoritative even if WebGL or capture is unavailable.
       try { gravity = window.MindcareGravity?.create() || null; } catch (_) { gravity = null; }
-      if (gravity && !(await gravity.capture(scene))) { gravity.destroy(); gravity = null; }
+      const renderer = gravity;
+      const captured = renderer ? await renderer.capture(scene) : false;
       if (token !== generation) return;
+      if (renderer && !captured) { renderer.destroy(); gravity = null; }
       const absorbed = await play([
         [scene,vacuum],
         [space,[{transform:portalTransform(.035),offset:0},{transform:portalTransform(.48),offset:.28},{transform:portalTransform(.88),offset:.65},{transform:portalTransform(1),offset:1}]],
@@ -201,8 +203,10 @@
       // Give the real login a layout/paint opportunity at the tiny pose.
       await frame();
       if (token !== generation) return;
-      if (gravity && !(await gravity.capture(scene))) { gravity.destroy(); gravity = null; }
+      const loginRenderer = gravity;
+      const loginCaptured = loginRenderer ? await loginRenderer.capture(scene) : false;
       if (token !== generation) return;
+      if (loginRenderer && !loginCaptured) { loginRenderer.destroy(); gravity = null; }
       const emitted = await play([
         [scene,emission],
         [space,[{transform:portalTransform(1),offset:0},{transform:portalTransform(.88),offset:.35},{transform:portalTransform(.48),offset:.72},{transform:portalTransform(.035),offset:1}]],
