@@ -70,6 +70,7 @@ void main(){
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
 }`;
   const cssClass='mc-gravity-canvas';
+  const report=(reason)=>document.dispatchEvent(new CustomEvent('mindcare:gravity-fallback',{detail:{reason}}));
   const frame = () => new Promise(resolve=>requestAnimationFrame(resolve));
   const timeout = (promise,ms) => {
     let timer;
@@ -83,7 +84,7 @@ void main(){
     canvas.hidden=true;
     const gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,stencil:false,
       premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'});
-    if(!gl)return null;
+    if(!gl){report('webgl unavailable');return null;}
     let destroyed=false, valid=false, raf=0, program, buffer, texture, vs, fs;
     let slow=0,last=0,quality=0,epoch=performance.now();
     const fail=()=>{valid=false;canvas.hidden=true;cancelAnimationFrame(raf);};
@@ -107,7 +108,8 @@ void main(){
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
       gl.uniform1i(gl.getUniformLocation(program,'u_page'),0);
-    }catch(_){
+    }catch(error){
+      report('shader initialization: '+String(error.message||error));
       if(program)gl.deleteProgram(program);if(vs)gl.deleteShader(vs);if(fs)gl.deleteShader(fs);
       if(buffer)gl.deleteBuffer(buffer);if(texture)gl.deleteTexture(texture);return null;
     }
@@ -132,7 +134,7 @@ void main(){
       if(destroyed||gl.isContextLost())return false;
       const w=scene.clientWidth,h=scene.clientHeight;
       if(w<1||h<1)return false;
-      const scale=Math.min(1,Math.sqrt(900000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
+      const scale=Math.min(1,Math.sqrt(420000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       try{
         const shot=await timeout(window.html2canvas(scene,{
           width:w,height:h,windowWidth:window.innerWidth,windowHeight:window.innerHeight,
@@ -143,7 +145,7 @@ void main(){
             target.style.visibility='visible';target.style.animation='none';
             target.querySelectorAll('input[type=password],input[type=email]').forEach(input=>{input.value='';});
           }
-        }),1800);
+        }),2400);
         if(destroyed||gl.isContextLost())return false;
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
@@ -151,7 +153,7 @@ void main(){
         // Warm up the fragment program before the motion clock starts.
         if(canvas.hidden){draw(.5);draw(0);}
         return true;
-      }catch(_){fail();return false;}
+      }catch(error){report('capture: '+String(error.message||error));fail();return false;}
     };
     const run=(animation,phase,duration)=>{
       if(!valid||destroyed)return;
