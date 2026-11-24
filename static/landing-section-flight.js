@@ -111,4 +111,5 @@
   reduce.addEventListener?.('change',() => {if (noMotion()) cancelAll()});
   contrast.addEventListener?.('change',() => {if (noMotion()) cancelAll()});
   window.addEventListener('pagehide',cancelAll,{once:true});
+  window.addEventListener('mindcare:landing-dispose',cancelAll,{once:true});
 })();

@@ -3,14 +3,12 @@
 {% block body_class %}mindcare-auth-route{% endblock %}
 {% block head %}
   {% if mode == 'login' %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='mindcare-vortex.css') }}">
-  <script src="{{ url_for('static', filename='mindcare-vortex-arrival.js') }}"></script>
-  <script src="{{ url_for('static', filename='mindcare-vortex.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mindcare-vortex.css', v='sync6') }}">
   {% endif %}
   <script src="{{ url_for('static',filename='auth-ui.js') }}" defer></script>
 {% endblock %}
 {% block content %}
-<section class="auth-v2" aria-labelledby="auth-title">
+<section class="auth-v2" data-auth-mode="{{ mode }}" aria-labelledby="auth-title">
   <aside class="auth-v2-story" aria-label="MindCare world illustration">
     <div class="auth-story-top">
       <span class="auth-story-label"><span class="auth-story-dot"></span> A SPACE FOR EVERYONE</span>

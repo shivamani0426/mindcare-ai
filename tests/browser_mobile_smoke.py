@@ -56,9 +56,19 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 portal.wait_for(state="hidden", timeout=6000)
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
+                page.evaluate("window.__portalNode = document.getElementById(\"mc-vortex\")")
+                page.evaluate("""() => {
+                    window.__openingTerminal = null;
+                    document.addEventListener('mindcare:vortex-opened', event => {
+                        window.__openingTerminal = event.detail;
+                    });
+                }""")
                 page.locator(".mc-hero-enter").click()
                 assert page.locator("#mc-vortex").is_visible()
                 page.wait_for_url("**/login", timeout=10000)
+                assert page.evaluate("window.__portalNode === document.getElementById('mc-vortex')")
+                terminal = page.evaluate("window.__openingTerminal")
+                assert terminal is not None and terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01, (engine, "incomplete synchronized opening", terminal)
                 page.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
                 assert page.locator("#auth-email").is_visible()
                 assert page.locator("#mc-vortex").is_hidden()

@@ -182,6 +182,24 @@ try:
         vortex_tab.emulate_media(reduced_motion="no-preference")
         vortex_tab.goto(base + "/")
         vortex_tab.locator("#mc-carpet-skip").click()
+        vortex_tab.evaluate("window.__portalDocument = document; window.__portalNode = document.getElementById(\"mc-vortex\")")
+        vortex_tab.evaluate("""() => {
+            window.__syncTrace = [];
+            document.addEventListener('mindcare:vortex-opened', event => {
+              window.__syncTrace.push({kind:'terminal',name:'opening',at:performance.now(),...event.detail});
+            });
+            const names = new Set(['mc-vortex-landing-infall','mc-vortex-grow','mc-vortex-auth-emerge']);
+            for (const kind of ['animationstart','animationend']) {
+              document.addEventListener(kind, event => {
+                if (!names.has(event.animationName)) return;
+                const el = event.target;
+                const animation = el.getAnimations().find(a => a.animationName === event.animationName);
+                window.__syncTrace.push({kind,name:event.animationName,at:performance.now(),
+                  start:animation?.startTime ?? null,duration:getComputedStyle(el).animationDuration,
+                  opacity:Number(getComputedStyle(el).opacity)});
+              }, true);
+            }
+        }""")
         vortex_tab.locator(".mc-hero-enter").click()
         verify(vortex_tab.locator("#mc-vortex").is_visible(),
                "Clicking Enter MindCare generates the vortex before navigation")
@@ -191,16 +209,44 @@ try:
                "(el) => getComputedStyle(el).transformStyle === 'preserve-3d'"),
                "Black hole uses a spatial 3D tunnel")
         vortex_tab.wait_for_url("**/login", timeout=10000)
-        verify(vortex_tab.locator("html").evaluate(
-               "(el) => el.classList.contains('mc-vortex-arriving')"),
-               "The real sign-in page emerges from the shared portal")
+        verify(vortex_tab.evaluate("window.__portalDocument === document && window.__portalNode === document.getElementById('mc-vortex')"),
+               "Login uses the same document and the exact same live portal")
+        verify(vortex_tab.locator("[data-auth-mode=login]").count() == 1,
+               "The real server-rendered sign-in page emerges from the shared portal")
         vortex_tab.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
+        trace = vortex_tab.evaluate("window.__syncTrace")
+        def animation_event(name, kind):
+            return next((event for event in trace if event["name"] == name and event["kind"] == kind), None)
+        infall_start = animation_event("mc-vortex-landing-infall", "animationstart")
+        grow_start = animation_event("mc-vortex-grow", "animationstart")
+        terminal = animation_event("opening", "terminal")
+        emerge_start = animation_event("mc-vortex-auth-emerge", "animationstart")
+        verify(all((infall_start, grow_start, terminal, emerge_start)),
+               "Both opening animations start and the login emergence follows a measured terminal state")
+        verify(infall_start["duration"] == grow_start["duration"] and
+               infall_start["start"] is not None and grow_start["start"] is not None and
+               abs(infall_start["start"] - grow_start["start"]) <= 32,
+               "Landing contraction and black hole expansion share one start time and duration")
+        verify(terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01 and
+               emerge_start["at"] >= terminal["at"],
+               "Login emerges only once the landing has been absorbed and portal is fully formed")
         verify(vortex_tab.locator("#mc-vortex").is_hidden(),
                "Portal cleans up when authentication becomes interactive")
         verify(vortex_tab.locator("#auth-email").is_visible() and
                vortex_tab.locator('a[href="/register"]').count() >= 1,
                "Real login and account creation remain available")
-        vortex_tab.reload()
+        verify(vortex_tab.locator("#auth-email-form").get_attribute("action").endswith("/login"),
+               "Real login form posts to the canonical server route")
+        verify(vortex_tab.locator("#auth-email-form input[name=csrf_token]").input_value() == vortex_tab.locator("meta[name=csrf-token]").get_attribute("content"),
+               "Fetched login retains its server-issued CSRF token")
+        vortex_tab.locator(".auth-password-visibility").click()
+        verify(vortex_tab.locator("#auth-password").get_attribute("type") == "text",
+               "Password visibility control works after the continuous transition")
+        vortex_tab.go_back()
+        vortex_tab.wait_for_url("**/")
+        vortex_tab.locator(".mc-hero-enter").wait_for(state="visible", timeout=10000)
+        verify(vortex_tab.locator(".mc-hero-enter").is_visible(), "Back returns to the canonical landing page")
+        vortex_tab.goto(base + "/login")
         verify(vortex_tab.locator("#mc-vortex").is_hidden(),
                "Reload does not replay the consumed transition")
         vortex_tab.close()

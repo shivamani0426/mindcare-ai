@@ -1,52 +1,100 @@
-/* A spatial CSS tunnel, not an image or a flat spinner. Shared across pages. */
-.mc-vortex{position:fixed;inset:0;z-index:200;isolation:isolate;overflow:hidden;pointer-events:none;display:grid;place-items:center;background:radial-gradient(ellipse at center,#101b29 0%,#050912 51%,#020407 100%);opacity:0}
+/* One live portal, one timeline. No animated masks, filters or per-particle loops. */
 .mc-vortex[hidden]{display:none!important}
-.mc-vortex-space{position:absolute;left:50%;top:50%;width:min(77vw,74vh,690px);aspect-ratio:1;transform:translate(-50%,-50%);perspective:850px;perspective-origin:50% 48%}
-.mc-vortex-halo{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,#03060d 0%,#1d40502e 27%,#9dc8b42b 40%,#547ca12e 48%,transparent 68%);opacity:.9}
-.mc-vortex-volume{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(12deg) rotateY(-13deg);animation:mc-vortex-camera 1.9s ease-out both}
-.mc-vortex-ring{position:absolute;display:block;left:50%;top:50%;width:var(--ring-size);aspect-ratio:1;border:1px solid #8faec354;border-radius:50%;opacity:var(--ring-alpha);background:conic-gradient(from 30deg,transparent 0deg,#8cbab5 35deg,#ccebb2 62deg,transparent 95deg,#83a4d1 160deg,transparent 210deg,#c8dfb0 270deg,transparent 320deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));transform:translate(-50%,-50%) translateZ(var(--ring-depth)) rotate(var(--ring-angle));animation:mc-vortex-spin var(--ring-speed) linear infinite}
-.mc-vortex-ring-0{--ring-size:100%;--ring-depth:0px;--ring-alpha:0.95;--ring-speed:3.1s;--ring-angle:0deg}
-.mc-vortex-ring-1{--ring-size:92%;--ring-depth:-34px;--ring-alpha:0.89;--ring-speed:3.4s;--ring-angle:23deg}
-.mc-vortex-ring-2{--ring-size:84%;--ring-depth:-68px;--ring-alpha:0.82;--ring-speed:3.7s;--ring-angle:46deg}
-.mc-vortex-ring-3{--ring-size:76%;--ring-depth:-102px;--ring-alpha:0.75;--ring-speed:4.1s;--ring-angle:69deg}
-.mc-vortex-ring-4{--ring-size:68%;--ring-depth:-136px;--ring-alpha:0.69;--ring-speed:4.4s;--ring-angle:92deg}
-.mc-vortex-ring-5{--ring-size:60%;--ring-depth:-170px;--ring-alpha:0.63;--ring-speed:4.7s;--ring-angle:115deg}
-.mc-vortex-ring-6{--ring-size:52%;--ring-depth:-204px;--ring-alpha:0.56;--ring-speed:5.0s;--ring-angle:138deg}
-.mc-vortex-ring-7{--ring-size:44%;--ring-depth:-238px;--ring-alpha:0.49;--ring-speed:5.3s;--ring-angle:161deg}
-.mc-vortex-ring-8{--ring-size:36%;--ring-depth:-272px;--ring-alpha:0.43;--ring-speed:5.7s;--ring-angle:184deg}
-.mc-vortex-core{position:absolute;left:50%;top:50%;width:46%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%) translateZ(-160px);background:radial-gradient(circle at 48% 52%,#010103 0%,#03050b 54%,#081421 72%,#75a49d 86%,#d7edb6 91%,#1f4651 95%,transparent 100%);box-shadow:0 0 34px #a3c1ac5c,0 0 70px #355a7466}
-.mc-vortex-accretion{position:absolute;left:50%;top:50%;width:115%;height:42%;border-radius:50%;border:2px solid #d9efb6ad;box-shadow:0 0 20px #b6e4c17a,inset 0 0 15px #8bb9ce55;transform:translate(-50%,-50%) rotate(-22deg) rotateX(27deg);animation:mc-vortex-accretion-glow 1.3s ease-in-out infinite alternate}
-.mc-vortex-accretion-b{width:104%;height:36%;border-color:#99b9df9c;transform:translate(-50%,-50%) rotate(24deg) rotateX(40deg);animation-delay:-.7s}
-.mc-vortex-particles{position:absolute;inset:0;transform-style:preserve-3d}
-.mc-vortex-particle{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:#e3f5ce;box-shadow:0 0 8px #d9efb6;animation:mc-vortex-suction 1.65s linear infinite;animation-delay:var(--particle-delay)}
-.mc-vortex-particle-0{--particle-angle:0deg;--particle-delay:-0.00s;--particle-radius:130px}
-.mc-vortex-particle-1{--particle-angle:22.5deg;--particle-delay:-0.15s;--particle-radius:156px}
-.mc-vortex-particle-2{--particle-angle:45deg;--particle-delay:-0.30s;--particle-radius:182px}
-.mc-vortex-particle-3{--particle-angle:67.5deg;--particle-delay:-0.45s;--particle-radius:208px}
-.mc-vortex-particle-4{--particle-angle:90deg;--particle-delay:-0.60s;--particle-radius:130px}
-.mc-vortex-particle-5{--particle-angle:112.5deg;--particle-delay:-0.75s;--particle-radius:156px}
-.mc-vortex-particle-6{--particle-angle:135deg;--particle-delay:-0.90s;--particle-radius:182px}
-.mc-vortex-particle-7{--particle-angle:157.5deg;--particle-delay:-1.05s;--particle-radius:208px}
-.mc-vortex-particle-8{--particle-angle:180deg;--particle-delay:-1.20s;--particle-radius:130px}
-.mc-vortex-particle-9{--particle-angle:202.5deg;--particle-delay:-1.35s;--particle-radius:156px}
-.mc-vortex-particle-10{--particle-angle:225deg;--particle-delay:-1.50s;--particle-radius:182px}
-.mc-vortex-particle-11{--particle-angle:247.5deg;--particle-delay:-1.65s;--particle-radius:208px}
-.mc-vortex-particle-12{--particle-angle:270deg;--particle-delay:-1.80s;--particle-radius:130px}
-.mc-vortex-particle-13{--particle-angle:292.5deg;--particle-delay:-1.95s;--particle-radius:156px}
-.mc-vortex-particle-14{--particle-angle:315deg;--particle-delay:-2.10s;--particle-radius:182px}
-.mc-vortex-particle-15{--particle-angle:337.5deg;--particle-delay:-2.25s;--particle-radius:208px}
-@keyframes mc-vortex-spin{from{transform:translate(-50%,-50%) translateZ(var(--ring-depth)) rotate(var(--ring-angle))}to{transform:translate(-50%,-50%) translateZ(var(--ring-depth)) rotate(calc(var(--ring-angle) + 360deg))}}
-@keyframes mc-vortex-suction{0%{opacity:0;transform:rotate(var(--particle-angle)) translateX(var(--particle-radius)) translateZ(60px) scale(.6)}20%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--particle-angle) + 100deg)) translateX(6px) translateZ(-180px) scale(.1)}}
-@keyframes mc-vortex-camera{from{transform:rotateX(23deg) rotateY(-22deg) scale(.65)}to{transform:rotateX(8deg) rotateY(-6deg) scale(1.12)}}
-@keyframes mc-vortex-accretion-glow{from{opacity:.45}to{opacity:1}}
-@keyframes mc-vortex-depart{0%{opacity:0}24%,100%{opacity:1}}
-@keyframes mc-vortex-grow{0%{transform:translate(-50%,-50%) scale(.08)}45%{transform:translate(-50%,-50%) scale(.92)}100%{transform:translate(-50%,-50%) scale(1.24)}}
-@keyframes mc-vortex-arrive-bg{0%,25%{opacity:1}100%{opacity:0}}
-@keyframes mc-vortex-auth-emerge{0%{opacity:0;transform:perspective(1100px) translateZ(-650px) rotateY(-13deg) scale(.08)}18%{opacity:.18}54%{opacity:1;transform:perspective(1100px) translateZ(-100px) rotateY(4deg) scale(.86)}100%{opacity:1;transform:perspective(1100px) translateZ(0) rotateY(0) scale(1)}}
-.mc-vortex-departing .mc-vortex{animation:mc-vortex-depart 1.35s ease-out both}
-.mc-vortex-departing .mc-vortex-space{animation:mc-vortex-grow 1.35s cubic-bezier(.18,.82,.25,1) both}
-.mc-vortex-arriving .mc-vortex,.mc-vortex-arriving .mc-vortex[hidden]{display:grid!important;animation:mc-vortex-arrive-bg 1.7s ease-out both}
-.mc-vortex-arriving .site-shell{position:relative;z-index:201;transform-origin:50% 44vh;animation:mc-vortex-auth-emerge 1.5s cubic-bezier(.2,.7,.18,1) both}
-.mc-vortex-arriving body{overflow-x:hidden}
-@media(max-width:650px){.mc-vortex-space{width:min(92vw,72vh)}.mc-vortex-particle:nth-child(even){display:none}.mc-vortex-accretion{box-shadow:0 0 10px #b6e4c17a}.mc-vortex-arriving .site-shell{transform-origin:50% 35vh}}
-@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex,.mc-vortex-arriving .mc-vortex[hidden]{display:none!important}.mc-vortex-arriving .site-shell{animation:none!important;transform:none!important;opacity:1!important}}
+.mc-vortex{position:fixed;inset:0;z-index:200;isolation:isolate;overflow:hidden;pointer-events:none;background:transparent;opacity:0}
+.mc-vortex-space{position:absolute;left:50%;top:50%;width:min(76vw,72vh,600px);aspect-ratio:1;transform:translate3d(-50%,-50%,0);perspective:850px}
+.mc-vortex-halo{position:absolute;inset:-17%;border-radius:50%;background:radial-gradient(circle,#020407 0%,#112936 27%,#52746e55 44%,#2a44644a 50%,transparent 68%);}
+.mc-vortex-volume{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(15deg) rotateY(-12deg)}
+.mc-vortex-ring{position:absolute;display:block;left:50%;top:50%;width:var(--ring-size);aspect-ratio:1;border:1.5px solid #8bb5bb77;border-top-color:#e3f6c8;border-right-color:#9fbfbb;border-bottom-color:#50677b44;border-radius:50%;opacity:var(--ring-alpha);transform:translate3d(-50%,-50%,var(--ring-depth)) rotate(var(--ring-angle))}
+.mc-vortex-ring-0{--ring-size:100%;--ring-depth:0px;--ring-angle:0deg;--ring-alpha:0.95}
+.mc-vortex-ring-1{--ring-size:92%;--ring-depth:-31px;--ring-angle:28deg;--ring-alpha:0.89}
+.mc-vortex-ring-2{--ring-size:84%;--ring-depth:-62px;--ring-angle:56deg;--ring-alpha:0.82}
+.mc-vortex-ring-3{--ring-size:76%;--ring-depth:-93px;--ring-angle:84deg;--ring-alpha:0.75}
+.mc-vortex-ring-4{--ring-size:68%;--ring-depth:-124px;--ring-angle:112deg;--ring-alpha:0.69}
+.mc-vortex-ring-5{--ring-size:60%;--ring-depth:-155px;--ring-angle:140deg;--ring-alpha:0.63}
+.mc-vortex-ring-6{--ring-size:52%;--ring-depth:-186px;--ring-angle:168deg;--ring-alpha:0.56}
+.mc-vortex-ring-7{--ring-size:44%;--ring-depth:-217px;--ring-angle:196deg;--ring-alpha:0.49}
+.mc-vortex-ring-8{--ring-size:36%;--ring-depth:-248px;--ring-angle:224deg;--ring-alpha:0.43}
+.mc-vortex-ring-0,.mc-vortex-ring-4{animation:mc-vortex-spin 3.4s linear infinite}
+.mc-vortex-ring-4{animation-duration:2.7s;animation-direction:reverse}
+.mc-vortex-core{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;border-radius:50%;transform:translate3d(-50%,-50%,-180px);background:radial-gradient(circle,#010103 0%,#020409 57%,#0a1822 69%,#72a9a2 82%,#d7edb6 88%,#315762 94%,transparent 100%)}
+.mc-vortex-accretion{position:absolute;left:50%;top:50%;width:113%;height:39%;border-radius:50%;border:2px solid #b6e1c7b0;border-top-color:#e7ffd5;border-bottom-color:#638e9e44;transform:translate(-50%,-50%) rotate(-22deg) rotateX(27deg)}
+.mc-vortex-accretion-b{width:104%;height:36%;border-color:#99b9df8a;border-bottom-color:#3c55644a;transform:translate(-50%,-50%) rotate(24deg) rotateX(40deg)}
+.mc-vortex-particles{position:absolute;inset:0;transform:translateZ(45px);animation:mc-vortex-infall 2s linear infinite}
+.mc-vortex-particle{position:absolute;inset:0;display:block;transform:rotate(var(--particle-angle));pointer-events:none}
+.mc-vortex-particle::before{content:"";position:absolute;top:50%;left:calc(50% + var(--particle-radius));width:3px;height:3px;border-radius:50%;background:#e0f4c9}
+.mc-vortex-particle-0{--particle-angle:0deg;--particle-radius:32%}
+.mc-vortex-particle-1{--particle-angle:22.5deg;--particle-radius:37%}
+.mc-vortex-particle-2{--particle-angle:45deg;--particle-radius:42%}
+.mc-vortex-particle-3{--particle-angle:67.5deg;--particle-radius:47%}
+.mc-vortex-particle-4{--particle-angle:90deg;--particle-radius:32%}
+.mc-vortex-particle-5{--particle-angle:112.5deg;--particle-radius:37%}
+.mc-vortex-particle-6{--particle-angle:135deg;--particle-radius:42%}
+.mc-vortex-particle-7{--particle-angle:157.5deg;--particle-radius:47%}
+.mc-vortex-particle-8{--particle-angle:180deg;--particle-radius:32%}
+.mc-vortex-particle-9{--particle-angle:202.5deg;--particle-radius:37%}
+.mc-vortex-particle-10{--particle-angle:225deg;--particle-radius:42%}
+.mc-vortex-particle-11{--particle-angle:247.5deg;--particle-radius:47%}
+.mc-vortex-particle-12{--particle-angle:270deg;--particle-radius:32%}
+.mc-vortex-particle-13{--particle-angle:292.5deg;--particle-radius:37%}
+.mc-vortex-particle-14{--particle-angle:315deg;--particle-radius:42%}
+.mc-vortex-particle-15{--particle-angle:337.5deg;--particle-radius:47%}
+@keyframes mc-vortex-spin{to{transform:translate3d(-50%,-50%,var(--ring-depth)) rotate(calc(var(--ring-angle) + 360deg))}}
+@keyframes mc-vortex-infall{0%{opacity:0;transform:translateZ(45px) rotate(0deg) scale(1)}16%{opacity:.9}100%{opacity:0;transform:translateZ(-80px) rotate(115deg) scale(.17)}}
+@keyframes mc-vortex-depart{0%{opacity:0}20%{opacity:.9}48%,100%{opacity:1}}
+@keyframes mc-vortex-grow{
+  0%{transform:translate3d(-50%,-50%,0) scale(.035)}
+  24%{transform:translate3d(-50%,-50%,0) scale(.34)}
+  60%{transform:translate3d(-50%,-50%,0) scale(.83)}
+  100%{transform:translate3d(-50%,-50%,0) scale(1)}
+}
+/* The viewport-sized landing scene is drawn into the same center as the portal.
+   The outgoing and incoming scenes are never visible at full size together. */
+@keyframes mc-vortex-landing-infall{
+  0%{opacity:1;transform:scale(1) rotate(0deg)}
+  24%{opacity:1;transform:scale(.91) rotate(-1deg)}
+  60%{opacity:.78;transform:scale(.40) rotate(-4deg)}
+  86%{opacity:.10;transform:scale(.11) rotate(-7deg)}
+  100%{opacity:0;transform:scale(.035) rotate(-9deg)}
+}
+@keyframes mc-vortex-darken{0%,24%{opacity:0}60%{opacity:.25}100%{opacity:1}}
+.mc-vortex::before{content:"";position:absolute;inset:0;z-index:-1;background:#04070c;opacity:0}
+.mc-vortex-departing{--mc-vortex-open-duration:1050ms;--mc-vortex-ease:cubic-bezier(.32,.06,.24,1);background:#04070c}
+html.mc-vortex-departing body.mc-world-page{background:#04070c}
+.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .site-shell{
+  position:fixed;inset:0;width:100%;height:100%;min-height:0;overflow:hidden;
+  transform-origin:50% 50%;z-index:199;
+  animation:mc-vortex-landing-infall var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;
+  will-change:transform,opacity;
+}
+.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .mc-world-main{
+  transform:translate3d(0,var(--mc-vortex-scroll-offset,0px),0);
+}
+.mc-vortex-departing .mc-vortex::before{
+  animation:mc-vortex-darken var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;
+}
+/* The dark backdrop stays at its terminal value for the entire emergence. */
+.mc-vortex-arriving .mc-vortex::before{animation:none;opacity:1}
+
+@keyframes mc-vortex-arrive-bg{0%,40%{opacity:1}100%{opacity:0}}
+/* The origin exactly matches the viewport-centered black hole. No new document paint. */
+@keyframes mc-vortex-auth-emerge{
+  0%{opacity:0;transform:perspective(1100px) translate3d(0,0,-360px) rotateY(-7deg) scale(.035)}
+  22%{opacity:.85;transform:perspective(1100px) translate3d(0,0,-240px) rotateY(-5deg) scale(.27)}
+  60%{opacity:1;transform:perspective(1100px) translate3d(0,0,-75px) rotateY(2deg) scale(.81)}
+  100%{opacity:1;transform:perspective(1100px) translate3d(0,0,0) rotateY(0) scale(1)}
+}
+.mc-vortex-departing .mc-vortex{animation:mc-vortex-depart var(--mc-vortex-open-duration) var(--mc-vortex-ease) both}
+.mc-vortex-departing .mc-vortex-space{animation:mc-vortex-grow var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;will-change:transform}
+.mc-vortex-arriving .mc-vortex{animation:mc-vortex-arrive-bg 1100ms ease-out both}
+.mc-vortex-arriving .site-shell{position:relative;z-index:201;transform-origin:50% 50dvh;animation:mc-vortex-auth-emerge 1100ms cubic-bezier(.16,.72,.2,1) both;will-change:transform,opacity}
+.mc-vortex-departing body,.mc-vortex-arriving body{overflow:hidden}
+.mc-vortex-departing .mc-world-root *{animation-play-state:paused!important}
+.mc-vortex-arriving body.mindcare-auth-route .auth-v2::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2::after,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::after{animation-play-state:paused!important;filter:none!important}
+@media(max-width:650px){.mc-vortex-space{width:min(88vw,66vh)}.mc-vortex-particle:nth-child(even){display:none}.mc-vortex-ring-4{animation:none}}
+@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex{display:none!important}.mc-vortex-arriving .site-shell,.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none!important;transform:none!important;opacity:1!important}}
+
+/* Hold the exact shared endpoint before mounting the incoming scene. */
+.mc-vortex-open:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none;opacity:0;transform:scale(.035) rotate(-9deg)}
+.mc-vortex-open .mc-vortex-space{animation:none;transform:translate3d(-50%,-50%,0) scale(1)}
+.mc-vortex-open:not(.mc-vortex-arriving) .mc-vortex{animation:none;opacity:1}
+.mc-vortex-open .mc-vortex::before{animation:none;opacity:1}

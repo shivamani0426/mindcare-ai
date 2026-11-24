@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const bindPublicControls = () => {
   const fontButton = document.getElementById('font-toggle');
   if (document.body.dataset.patient !== '1') { try { if (localStorage.getItem('mindcare-large-text')==='1') document.body.classList.add('large-text'); } catch (_) {} }
   fontButton?.addEventListener('click', () => {
@@ -10,6 +11,9 @@
   });
   fontButton?.setAttribute('aria-pressed',String(document.body.classList.contains('large-text')));
   document.querySelectorAll('.flash-close').forEach(b => b.addEventListener('click', () => b.closest('.flash')?.remove()));
+  };
+  bindPublicControls();
+  document.addEventListener('mindcare:login-mounted', bindPublicControls);
   document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
     const value = b.dataset.copy || '';
     try { await navigator.clipboard.writeText(value); b.textContent = 'Copied!'; }

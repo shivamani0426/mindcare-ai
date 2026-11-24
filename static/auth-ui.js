@@ -1,6 +1,7 @@
 /* Accessible authentication controls. Forms remain server-side for email/password. */
 (() => {
   'use strict';
+  const initialize = () => {
   document.querySelectorAll('.auth-password-visibility').forEach(button =>
     button.addEventListener('click', () => {
       const target = document.getElementById(button.getAttribute('aria-controls'));
@@ -21,4 +22,7 @@
   }
   choices.forEach(choice => choice.addEventListener('change', updateRole));
   updateRole();
+  };
+  initialize();
+  document.addEventListener('mindcare:login-mounted', initialize);
 })();
