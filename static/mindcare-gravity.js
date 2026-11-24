@@ -86,8 +86,9 @@ void main(){
       premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'});
     if(!gl){report('webgl unavailable');return null;}
     let destroyed=false, valid=false, raf=0, program, buffer, texture, vs, fs;
-    let slow=0,last=0,quality=0,epoch=performance.now();
-    const fail=()=>{valid=false;canvas.hidden=true;cancelAnimationFrame(raf);};
+    let quality=0,resolveRun=null,epoch=performance.now();
+    const stopRun=()=>{cancelAnimationFrame(raf);if(resolveRun){const done=resolveRun;resolveRun=null;done();}};
+    const fail=()=>{valid=false;canvas.hidden=true;};
     const compile=(type,source)=>{
       const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);
       if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){const message=gl.getShaderInfoLog(shader);gl.deleteShader(shader);throw Error(message);}
@@ -116,7 +117,7 @@ void main(){
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
-      const budget=quality===2?90000:quality===1?180000:matchMedia('(max-width:650px)').matches?240000:360000;
+      const budget=quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
       const s=Math.min(1,Math.sqrt(budget/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       canvas.width=Math.max(1,Math.round(w*s));canvas.height=Math.max(1,Math.round(h*s));
       gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(uSize,canvas.width,canvas.height);
@@ -142,7 +143,7 @@ void main(){
           width:w,height:h,windowWidth:window.innerWidth,windowHeight:window.innerHeight,
           scrollX:0,scrollY:0,scale,backgroundColor:'#04070c',logging:false,
           allowTaint:false,useCORS:false,imageTimeout:900,removeContainer:true,
-          ignoreElements:el=>el===canvas||el.classList?.contains(cssClass)||el.id==='mc-vortex',
+          ignoreElements:el=>el===canvas||el.classList?.contains(cssClass)||el.id==='mc-vortex'||el.hasAttribute('data-mc-vacuum-offscreen'),
           onclone:(_,target)=>{
             target.style.transform='none';target.style.opacity='1';
             target.style.visibility='visible';target.style.animation='none';
@@ -153,34 +154,62 @@ void main(){
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
         shot.width=1;shot.height=1;valid=true;
-        // Warm up the fragment program before the motion clock starts.
-        if(canvas.hidden){draw(.5);draw(0);}
         return true;
       }catch(error){report('capture: '+String(error.message||error));fail();return false;}
     };
-    const run=(animation,phase,duration)=>{
-      if(!valid||destroyed)return;
-      cancelAnimationFrame(raf);
+    const run=(animations,phase,duration)=>{
+      if(!valid||destroyed)return null;
+      stopRun();
       if(!canvas.isConnected)document.body.append(canvas);
-      canvas.hidden=false;last=0;slow=0;
+      canvas.hidden=false;
       const reverse=phase==='emitting';
       canvas.dataset.phase=phase;
+      // Pause the compositor clocks and advance them with the same sampled
+      // frame as the shader. Cap elapsed steps so a stalled GPU cannot skip
+      // across the entire middle of the distortion.
+      for(const animation of animations){animation.pause();animation.currentTime=0;}
       document.dispatchEvent(new CustomEvent('mindcare:gravity-phase',{detail:{phase,renderer:'webgl',width:canvas.width,height:canvas.height}}));
-      const tick=now=>{
-        if(!valid||destroyed)return;
-        const t=Math.max(0,Math.min(1,Number(animation.currentTime||0)/duration));
-        const eased=t*t*(3-2*t);
-        draw(reverse?1-eased:eased,now);
-        if(last&&now-last>34)slow++;else slow=Math.max(0,slow-1);
-        last=now;
-        if(slow>=2&&quality<2){quality++;resize();slow=0;draw(reverse?1-eased:eased,now);}
-        if(t<1)raf=requestAnimationFrame(tick);
-      };
-      draw(reverse?1:0);raf=requestAnimationFrame(tick);
+      return new Promise(resolve=>{
+        resolveRun=resolve;
+        let elapsed=0,previous=null,slowFrames=0,totalFrames=0,started=performance.now();
+        const tick=now=>{
+          if(destroyed){stopRun();return;}
+          const delta=previous===null?0:Math.max(0,now-previous);
+          previous=now;
+          elapsed=Math.min(duration,elapsed+Math.min(64,delta));
+          const t=elapsed/duration;
+          const eased=t*t*(3-2*t);
+          for(const animation of animations)animation.currentTime=elapsed;
+          if(valid)draw(reverse?1-eased:eased,now);
+          totalFrames++;
+          if(delta>48)slowFrames++;
+          if(!valid||now-started>duration*3){
+            // Retain the exact DOM pose and let the compositor finish
+            // independently if this graphics device cannot sustain motion.
+            fail();
+            for(const animation of animations)animation.play();
+            Promise.all(animations.map(animation=>animation.finished)).then(stopRun,stopRun);
+            return;
+          }
+          if(t>=1){
+            // Lower the next phase's resolution, never resize a live frame.
+            if(slowFrames>totalFrames/4)quality=Math.min(2,quality+1);
+            stopRun();return;
+          }
+          raf=requestAnimationFrame(tick);
+        };
+        raf=requestAnimationFrame(tick);
+      });
     };
-    const settle=phase=>{cancelAnimationFrame(raf);draw(phase==='emitting'?0:1);};
+    const settle=phase=>{
+      stopRun();
+      // Keep the opaque absorption endpoint visible while login is captured.
+      // Update resolution before the following phase, not during animation.
+      if(phase==='absorbing'&&quality>0)resize();
+      draw(phase==='emitting'?0:1);
+    };
     const destroy=()=>{
-      destroyed=true;valid=false;cancelAnimationFrame(raf);canvas.remove();
+      destroyed=true;valid=false;stopRun();canvas.remove();
       gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
     };
     return {capture,run,settle,destroy};
