@@ -191,7 +191,7 @@ MindCare's refreshed sign-in and registration pages retain working email/passwor
 4. Redeploy the service. The **Continue with Google** button will become enabled. MindCare never sees a user's Google password.
 5. New users select Patient or Caregiver only after Google verifies them. Existing email/password users should sign in first, click their name, and choose **Account security > Connect Google**. To protect existing records, the Google verified email must match the original account's email. Never automatically link solely by email.
 
-**Security and operational cautions:** No password-reset email or automatic SMS alert is implemented. Account linking remains deliberate. Obtain appropriate privacy and security review before real clinical use.
+**Security and operational cautions:** Password recovery supports a configured transactional email API. No automatic SMS alert is implemented. Account linking remains deliberate. Obtain appropriate privacy and security review before real clinical use.
 
 ## Milo 1.0 — roaming companion
 
@@ -264,6 +264,12 @@ A successful encrypted backup *and an isolated restore rehearsal* are
 required before a production-ready claim.
 
 Remaining release blockers: verified off-device backup/restore, durable DB
-plan, live mobile-device review, password-recovery email provider configuration,
+plan, live mobile-device review, live password-recovery email provider configuration,
 cross-network TURN testing, accessibility review, and a final end-to-end release audit.
 Google OAuth was configured and the public login interface verified; repeat authenticated smoke testing after deployment.
+
+## Password recovery and session invalidation
+
+Set RESET_EMAIL_API_KEY and RESET_FROM_EMAIL in Render private environment settings using an authorized Resend account and verified sending domain. The free Render instance blocks outbound SMTP; recovery uses HTTPS. The provider receives only the recipient address and recovery message. Do not include medical or care data in emails. Verify provider privacy terms, limits, sender authorization and delivery before enabling for real users.
+
+Recovery is disabled until both values are present. Users request a code through /auth/forgot-password and enter it at /auth/reset-password. Codes expire after 15 minutes and become invalid upon a successful password change. Session authentication is tied to the current password hash using a server-keyed HMAC; existing pre-upgrade sessions will be signed out once. Password changes invalidate older sessions. No reset code is placed in a URL or logged by the app. Responses do not explicitly reveal account existence; delivery timing can differ. A live mail delivery test is required before claiming recovery is operational.
