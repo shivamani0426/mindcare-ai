@@ -1284,3 +1284,67 @@ def test_local_ignored_spoofed_forwarded_ip_and_https_cache_headers(client):
     secure=client.get("/login",base_url="https://mindcare.example")
     assert secure.headers["Strict-Transport-Security"] == "max-age=15552000"
     assert "Strict-Transport-Security" not in normal.headers
+
+
+def test_health_is_uncached_and_does_not_start_a_session(client):
+    response = client.get("/health")
+    assert response.json == {"status": "ok", "database": "connected"}
+    assert response.headers["Cache-Control"] == "no-store"
+    assert "Set-Cookie" not in response.headers
+
+
+def test_google_start_throttle_and_provider_failure(client, monkeypatch):
+    import app as authapp
+    from types import SimpleNamespace
+    from requests.exceptions import ConnectionError
+    monkeypatch.setattr(authapp, "GOOGLE_OAUTH_READY", True)
+    monkeypatch.setattr(authapp, "OAUTH_LIMIT_PER_IP", 2)
+    monkeypatch.setenv("GOOGLE_REDIRECT_URI", "https://example.org/auth/google/callback")
+    def unavailable(*args):
+        raise ConnectionError("provider unavailable")
+    monkeypatch.setattr(authapp.oauth, "google", SimpleNamespace(
+        authorize_redirect=unavailable, authorize_access_token=unavailable), raising=False)
+    for _ in range(2):
+        response = client.get("/auth/google")
+        assert response.status_code == 302
+        assert response.headers["Cache-Control"] == "no-store"
+        assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert client.get("/auth/google").status_code == 429
+    assert client.get("/auth/google/callback").status_code == 302
+
+
+def test_turn_shared_secret_is_never_rendered_and_requires_consent(client, monkeypatch):
+    import app as authapp
+    import base64, hmac, hashlib, time
+    secret = "synthetic-relay-secret-not-for-production"
+    monkeypatch.setenv("TURN_SHARED_SECRET", secret)
+    monkeypatch.setenv("TURN_URL", "turns:relay.example.org:5349")
+    pid, cid, link_id = connect_accounts(client)
+    address = client.post("/calls/start", data={
+        "csrf_token": token(client), "contact_id": str(cid)
+    }).location
+    page = client.get(address)
+    assert page.status_code == 200
+    assert secret.encode() not in page.data
+    assert b"turns:relay.example.org:5349" in page.data
+    url, username, credential = authapp.turn_credentials(pid)
+    expiry, subject = username.split(":")
+    assert subject == str(pid)
+    assert 3500 < int(expiry) - int(time.time()) <= 3600
+    assert credential == base64.b64encode(hmac.new(secret.encode(), username.encode(),
+        hashlib.sha1).digest()).decode()
+    assert page.headers["Cache-Control"] == "private, no-store"
+    client.post(f"/caregiver/revoke/{link_id}", data={"csrf_token": token(client)})
+    assert client.get(address).status_code == 404
+
+
+def test_incomplete_turn_configuration_disables_relay(monkeypatch):
+    from app import turn_credentials
+    monkeypatch.setenv("TURN_URL", "https://invalid.example")
+    monkeypatch.setenv("TURN_SHARED_SECRET", "synthetic")
+    assert turn_credentials(1) == ("", "", "")
+    monkeypatch.setenv("TURN_URL", "turn:relay.example.org")
+    monkeypatch.delenv("TURN_SHARED_SECRET")
+    monkeypatch.delenv("TURN_USERNAME", raising=False)
+    monkeypatch.delenv("TURN_PASSWORD", raising=False)
+    assert turn_credentials(1) == ("", "", "")
