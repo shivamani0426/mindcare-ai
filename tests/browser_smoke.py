@@ -168,13 +168,25 @@ try:
                 const cuts=[...el.querySelectorAll('[data-z-cut]')].map(n=>+n.style.getPropertyValue('--z-draw'));
                 const opened=+el.style.getPropertyValue('--z-open');
                 const panelY=new DOMMatrixReadOnly(getComputedStyle(el.querySelector('.mc-z-panel-top')).transform).m42;
-                window.__zTrace.push({cuts,opened,panelY,phase:el.dataset.zPhase});
+                const impact=+el.dataset.zImpact;
+                const ripple=Math.max(...[...el.querySelectorAll('[data-z-cut]')].map(n=>+n.style.getPropertyValue('--z-ripple')));
+                const clips=[...el.querySelectorAll('.mc-z-clip')].map(n=>+n.getAttribute('width'));
+                window.__zTrace.push({cuts,opened,panelY,impact,ripple,clips,phase:el.dataset.zPhase});
             });
             observer.observe(el,{attributes:true,attributeFilter:['data-progress','hidden']});
         }""")
         carpet_tab.locator("#mc-carpet-enter").click()
         portal.wait_for(state="hidden", timeout=6000)
         z_trace = carpet_tab.evaluate("window.__zTrace")
+        verify(carpet_tab.locator(".mc-z-scar").count() == 3 and carpet_tab.locator(".mc-z-edge").count() == 3,
+               "Each cut is a filled irregular scar with a separate tapered hot core")
+        verify(carpet_tab.locator(".mc-z-scar").evaluate_all(
+               "els => els.every(e => e.getAttribute('d').endsWith('Z') && e.getAttribute('d').length > 250)"),
+               "Blade scars are complex closed outlines rather than three straight strokes")
+        verify(any(t["impact"] > .2 for t in z_trace) and any(t["ripple"] > 1.4 for t in z_trace),
+               "Sword impacts and outward energy distortion occur during the sequence")
+        verify(all(any(35 < t["clips"][i] < 1035 for t in z_trace) for i in range(3)),
+               "Jagged scars are progressively revealed by their real clip geometry")
         verify(all(any(0 < t["cuts"][i] < 100 for t in z_trace) for i in range(3)),
                "Every sword cut draws through intermediate frames")
         verify(all(all(t["cuts"][j] == 100 for j in range(i)) for t in z_trace for i in range(3) if t["cuts"][i] > 0),
