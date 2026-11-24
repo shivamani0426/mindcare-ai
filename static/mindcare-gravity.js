@@ -12,8 +12,6 @@ uniform sampler2D u_page;
 uniform vec2 u_size;
 uniform float u_pull;
 uniform float u_time;
-uniform float u_view;
-uniform float u_orbit;
 #define PI 3.14159265359
 float hash(vec2 p){vec3 v=fract(vec3(p.xyx)*.1031);v+=dot(v,v.yzx+33.33);return fract((v.x+v.y)*v.z);}
 float star(vec2 p,float cells,float seed){
@@ -24,27 +22,6 @@ float star(vec2 p,float cells,float seed){
   float strength=smoothstep(.73,.98,h);
   return (1.-smoothstep(.015,.12,d))*strength*(.72+.28*sin(u_time*1.1+h*24.));
 }
-// A periodic particle field in the disk's own 3D polar coordinates.
- // The time-dependent angular coordinate advects entire glowing streaks
- // around the hole, instead of merely pulsing a stationary ring.
- vec2 orbitEmbers(float radius,float angle,float clock){
-   float lanes=(radius-.76)*5.2;
-   float lane=floor(lanes);
-   float radial=fract(lanes);
-   float speed=2.55/pow(max(.85,radius),1.35);
-   float sectors=(angle+clock*speed)/(2.*PI)*14.;
-   float sector=mod(floor(sectors),14.);
-   float along=fract(sectors);
-   float seed=hash(vec2(lane+17.,sector+3.));
-   float mid=.28+.44*seed;
-   float thickness=.10+.10*seed;
-   float across=1.-smoothstep(thickness,thickness+.13,abs(radial-mid));
-   float head=.72+.14*seed;
-   float tail=smoothstep(head-.64,head-.30,along)*(1.-smoothstep(head-.05,head+.04,along));
-   float core=1.-smoothstep(.025,.085,abs(along-head+.035));
-   float active=smoothstep(.13,.34,seed);
-   return vec2(tail,core)*across*active;
- }
 void main(){
   float p=clamp(u_pull,0.,1.);
   float k=p*p*(3.-2.*p);
@@ -72,80 +49,22 @@ void main(){
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
   float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
-  // Perspective 3D scene in normalized black-hole coordinates. Each pixel
-  // traces a camera ray through a real sphere and inclined annular disk.
-  // The photon arc is a bounded artistic lensing approximation, not a
-  // numerical integration of Einstein's equations.
   float ring=mix(.025,.205,k);
-  vec2 n=q/ring;
-  vec2 d=vec2(n.x*.985+n.y*.172,-n.x*.172+n.y*.985);
-  float h=length(d);
-  float aa=max(.008,1.25/(u_size.y*ring));
+  float halo=exp(-abs(r-ring)*22.);
+  vec3 glow=halo*vec3(.15,.46,.63);
+  float thin=exp(-abs(r-ring)*118.);
+  float arc=.55+.45*sin(theta*3.-u_time*1.25);
+  glow+=thin*mix(vec3(.35,.88,1.),vec3(.84,.96,1.),arc)*1.3;
+  // A tilted accretion disk adds a visible 3D depth cue around the dark core.
+  vec2 d=vec2(q.x*.94+q.y*.34,-q.x*.34+q.y*.94);
+  float diskRadius=length(vec2(d.x,d.y*3.1));
+  float disk=exp(-abs(diskRadius-ring*1.22)*84.);
+  glow+=disk*vec3(.21,.65,1.)*(.48+.52*sin(theta+u_time*.65)*sin(theta+u_time*.65));
+  float core=1.-smoothstep(ring*.70,ring*.84,r);
   float gravity=smoothstep(.02,.28,p);
-  vec3 eye=vec3(0.,0.,6.);
-  vec3 ray=normalize(vec3(d,-6.));
-  float sphereRadius=.715;
-  float b=dot(eye,ray);
-  float discriminant=b*b-dot(eye,eye)+sphereRadius*sphereRadius;
-  float sphereHit=-b-sqrt(max(0.,discriminant));
-  float shadow=smoothstep(-aa*.8,aa*.8,discriminant);
-  // Camera pitch changes the actual plane normal. No painted ellipse.
-  float inclination=.235+.018*sin(u_time*.55)+u_view;
-  vec3 normal=normalize(vec3(0.,1.,inclination));
-  float denom=dot(ray,normal);
-  float safeDenom=abs(denom)<.0001?(denom<0.?-.0001:.0001):denom;
-  float diskHit=-dot(eye,normal)/safeDenom;
-  vec3 hit=eye+ray*max(diskHit,0.);
-  float diskR=length(hit);
-  float diskAngle=atan(hit.z,hit.x);
-  float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
-  band*=step(.001,diskHit);
-  // Kepler-inspired differential rotation makes inner plasma move faster.
-  float orbital=u_orbit*2.2/max(.75,diskR);
-  float streak=.65+.35*sin(47.*diskR+4.*diskAngle-orbital);
-  float turbulence=.78+.22*sin(11.*diskAngle+23.*diskR-orbital*.7);
-  float inner=1.-smoothstep(.90,1.95,diskR);
-  vec3 plasma=mix(vec3(.065,.25,.96),vec3(.72,.91,1.),inner);
-  float boost=mix(.55,1.48,smoothstep(-1.1,1.1,hit.x));
-  vec3 diskLight=band*plasma*(.54+.38*streak)*turbulence*boost;
-  if(band>.002){
-    vec2 embers=orbitEmbers(diskR,diskAngle,u_orbit);
-    // Electric-blue tails, ice-white heads and independently orbiting
-    // lanes. The existing 3D visibility test occludes the rear particles.
-    vec3 hot=vec3(.075,.37,1.)*boost;
-    diskLight=mix(diskLight,hot*band,embers.x*.86);
-    diskLight+=band*embers.y*vec3(.49,.91,1.)*boost*.85;
-  }
-  float rim=(1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93)))*step(.001,diskHit);
-  diskLight+=rim*vec3(.83,.95,1.)*.88*boost;
-  // Depth test the nearest 3D surface. The rear disk is hidden by the
-  // sphere; the near disk remains visible in front of it.
-  float front=step(diskHit,sphereHit)*step(.001,diskHit);
-  float visibility=1.-shadow*(1.-front);
-  // Lensed images of the far disk arc around the apparent shadow.
-  // Inclination shapes the image; the hot inner edge forms the photon ring.
-  float upper=smoothstep(-.10,.36,d.y);
-  float lower=1.-smoothstep(-.42,-.06,d.y);
-  float farBand=smoothstep(.76,.84,h)*(1.-smoothstep(1.12,1.49,h));
-  float arcTexture=.70+.30*sin(31.*h+3.*theta-u_orbit*3.4);
-  float lensBoost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
-  float lensed=farBand*(upper+.29*lower)*arcTexture*lensBoost;
-  float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
-  float halo=1.-smoothstep(.77,1.82,h);
-  vec3 backGlow=vec3(.045,.20,.55)*halo*.40;
-  backGlow+=lensed*mix(vec3(.065,.32,.95),vec3(.68,.92,1.),1.-smoothstep(.85,1.30,h));
-  if(farBand>.002){
-    // The bent far-side image carries the same moving blue plasma.
-    vec2 bent=orbitEmbers(h+.38,theta,u_orbit);
-    backGlow=mix(backGlow,vec3(.065,.36,1.)*lensBoost,
-      bent.x*farBand*(upper+.26*lower)*.67);
-    backGlow+=bent.y*farBand*(upper+.26*lower)*vec3(.47,.85,1.)*.52;
-  }
-  backGlow+=photon*vec3(.76,.93,1.)*(.65+.35*lensBoost);
   vec3 color=mix(sky,page,matter);
-  color+=backGlow*gravity*(1.-matter*.45);
-  color=mix(color,vec3(.001,.001,.002),shadow*gravity);
-  color+=diskLight*visibility*gravity;
+  color+=glow*gravity*(1.-matter*.45);
+  color=mix(color,vec3(.002,.003,.006),core*gravity);
   // Smooth handoff to/from actual DOM at the unwarped endpoint.
   float alpha=smoothstep(.01,.13,p);
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
@@ -201,8 +120,6 @@ void main(){
       if(buffer)gl.deleteBuffer(buffer);if(texture)gl.deleteTexture(texture);return null;
     }
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
-    gl.uniform1f(gl.getUniformLocation(program,'u_view'),0);
-    const uOrbit=gl.getUniformLocation(program,'u_orbit');
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
       const budget=software?Math.min(85000,quality===2?50000:quality===1?65000:85000):quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
@@ -218,7 +135,6 @@ void main(){
     const draw=(pull,now=performance.now())=>{
       if(!valid||destroyed||gl.isContextLost())return;
       gl.uniform1f(uPull,pull);gl.uniform1f(uTime,(now-epoch)/1000);
-      gl.uniform1f(uOrbit,(now-epoch)/1000);
       canvas.dataset.pull=pull.toFixed(3);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     };
