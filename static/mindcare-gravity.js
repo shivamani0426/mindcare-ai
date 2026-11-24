@@ -13,6 +13,7 @@ uniform vec2 u_size;
 uniform float u_pull;
 uniform float u_time;
 uniform float u_view;
+uniform float u_orbit;
 #define PI 3.14159265359
 float hash(vec2 p){vec3 v=fract(vec3(p.xyx)*.1031);v+=dot(v,v.yzx+33.33);return fract((v.x+v.y)*v.z);}
 float star(vec2 p,float cells,float seed){
@@ -23,6 +24,27 @@ float star(vec2 p,float cells,float seed){
   float strength=smoothstep(.73,.98,h);
   return (1.-smoothstep(.015,.12,d))*strength*(.72+.28*sin(u_time*1.1+h*24.));
 }
+// A periodic particle field in the disk's own 3D polar coordinates.
+ // The time-dependent angular coordinate advects entire glowing streaks
+ // around the hole, instead of merely pulsing a stationary ring.
+ vec2 orbitEmbers(float radius,float angle,float clock){
+   float lanes=(radius-.76)*5.2;
+   float lane=floor(lanes);
+   float radial=fract(lanes);
+   float speed=2.55/pow(max(.85,radius),1.35);
+   float sectors=(angle+clock*speed)/(2.*PI)*14.;
+   float sector=mod(floor(sectors),14.);
+   float along=fract(sectors);
+   float seed=hash(vec2(lane+17.,sector+3.));
+   float mid=.28+.44*seed;
+   float thickness=.10+.10*seed;
+   float across=1.-smoothstep(thickness,thickness+.13,abs(radial-mid));
+   float head=.72+.14*seed;
+   float tail=smoothstep(head-.64,head-.30,along)*(1.-smoothstep(head-.05,head+.04,along));
+   float core=1.-smoothstep(.025,.085,abs(along-head+.035));
+   float active=smoothstep(.13,.34,seed);
+   return vec2(tail,core)*across*active;
+ }
 void main(){
   float p=clamp(u_pull,0.,1.);
   float k=p*p*(3.-2.*p);
@@ -79,13 +101,21 @@ void main(){
   float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
   band*=step(.001,diskHit);
   // Kepler-inspired differential rotation makes inner plasma move faster.
-  float orbital=u_time*1.15/max(.75,diskR);
-  float streak=.62+.38*sin(47.*diskR+4.*diskAngle-orbital);
+  float orbital=u_orbit*2.2/max(.75,diskR);
+  float streak=.65+.35*sin(47.*diskR+4.*diskAngle-orbital);
   float turbulence=.78+.22*sin(11.*diskAngle+23.*diskR-orbital*.7);
   float inner=1.-smoothstep(.90,1.95,diskR);
   vec3 plasma=mix(vec3(.86,.16,.026),vec3(1.,.91,.64),inner);
   float boost=mix(.55,1.48,smoothstep(-1.1,1.1,hit.x));
-  vec3 diskLight=band*plasma*(.78+.48*streak)*turbulence*boost;
+  vec3 diskLight=band*plasma*(.54+.38*streak)*turbulence*boost;
+  if(band>.002){
+    vec2 embers=orbitEmbers(diskR,diskAngle,u_orbit);
+    // Rich red tails, brilliant orange heads and independently orbiting
+    // lanes. The existing 3D visibility test occludes the rear particles.
+    vec3 hot=vec3(1.,.075,.014)*boost;
+    diskLight=mix(diskLight,hot*band,embers.x*.86);
+    diskLight+=band*embers.y*vec3(1.,.55,.13)*boost*.85;
+  }
   float rim=(1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93)))*step(.001,diskHit);
   diskLight+=rim*vec3(1.,.94,.78)*.88*boost;
   // Depth test the nearest 3D surface. The rear disk is hidden by the
@@ -97,13 +127,20 @@ void main(){
   float upper=smoothstep(-.10,.36,d.y);
   float lower=1.-smoothstep(-.42,-.06,d.y);
   float farBand=smoothstep(.76,.84,h)*(1.-smoothstep(1.12,1.49,h));
-  float arcTexture=.70+.30*sin(31.*h+3.*theta-u_time*1.1);
+  float arcTexture=.70+.30*sin(31.*h+3.*theta-u_orbit*3.4);
   float lensBoost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
   float lensed=farBand*(upper+.29*lower)*arcTexture*lensBoost;
   float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
   float halo=1.-smoothstep(.77,1.82,h);
   vec3 backGlow=vec3(.32,.115,.035)*halo*.40;
   backGlow+=lensed*mix(vec3(.92,.24,.035),vec3(1.,.83,.51),1.-smoothstep(.85,1.30,h));
+  if(farBand>.002){
+    // The bent far-side image carries the same moving red-hot material.
+    vec2 bent=orbitEmbers(h+.38,theta,u_orbit);
+    backGlow=mix(backGlow,vec3(1.,.095,.018)*lensBoost,
+      bent.x*farBand*(upper+.26*lower)*.67);
+    backGlow+=bent.y*farBand*(upper+.26*lower)*vec3(1.,.48,.09)*.52;
+  }
   backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*lensBoost);
   vec3 color=mix(sky,page,matter);
   color+=backGlow*gravity*(1.-matter*.45);
@@ -165,6 +202,7 @@ void main(){
     }
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
     gl.uniform1f(gl.getUniformLocation(program,'u_view'),0);
+    const uOrbit=gl.getUniformLocation(program,'u_orbit');
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
       const budget=software?Math.min(85000,quality===2?50000:quality===1?65000:85000):quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
@@ -180,6 +218,7 @@ void main(){
     const draw=(pull,now=performance.now())=>{
       if(!valid||destroyed||gl.isContextLost())return;
       gl.uniform1f(uPull,pull);gl.uniform1f(uTime,(now-epoch)/1000);
+      gl.uniform1f(uOrbit,(now-epoch)/1000);
       canvas.dataset.pull=pull.toFixed(3);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     };
@@ -273,6 +312,18 @@ void main(){
       // Update resolution before the following phase, not during animation.
       if(phase==='absorbing'&&quality>0)resize();
       draw(phase==='emitting'?0:1);
+      // Keep the accretion matter orbiting during the login snapshot hold.
+      // Reuse the same RAF handle; run(), fail/cleanup and destroy() stop it.
+      if(phase==='absorbing'&&valid){
+        const start=performance.now();
+        let last=start;
+        const hold=now=>{
+          if(!valid||destroyed||gl.isContextLost()||now-start>8000)return;
+          if(now-last>=(software?83:33)){draw(1,now);last=now;}
+          raf=requestAnimationFrame(hold);
+        };
+        raf=requestAnimationFrame(hold);
+      }
     };
     const destroy=()=>{
       destroyed=true;valid=false;stopRun();canvas.remove();
