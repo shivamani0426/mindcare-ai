@@ -49,22 +49,45 @@ void main(){
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
   float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
+  // Analytic, cinematic approximation of a lensed accretion disk.
+  // No ray-marching, extra texture, render pass, or added motion clock.
   float ring=mix(.025,.205,k);
-  float halo=exp(-abs(r-ring)*22.);
-  vec3 glow=halo*vec3(.15,.46,.63);
-  float thin=exp(-abs(r-ring)*118.);
-  float arc=.55+.45*sin(theta*3.-u_time*1.25);
-  glow+=thin*mix(vec3(.35,.88,1.),vec3(1.,.83,.43),arc)*1.3;
-  // A tilted accretion disk adds a visible 3D depth cue around the dark core.
-  vec2 d=vec2(q.x*.94+q.y*.34,-q.x*.34+q.y*.94);
-  float diskRadius=length(vec2(d.x,d.y*3.1));
-  float disk=exp(-abs(diskRadius-ring*1.22)*84.);
-  glow+=disk*vec3(1.,.68,.28)*(.48+.52*sin(theta+u_time*.65)*sin(theta+u_time*.65));
-  float core=1.-smoothstep(ring*.70,ring*.84,r);
+  vec2 n=q/ring;
+  vec2 d=vec2(n.x*.985+n.y*.172,-n.x*.172+n.y*.985);
+  float h=length(d);
+  float aa=max(.008,1.25/(u_size.y*ring));
+  float shadow=1.-smoothstep(.715-aa,.715+aa,h);
   float gravity=smoothstep(.02,.28,p);
+  // The upper image of the far disk is bent around the shadow. Its weaker
+  // lower counterpart and the narrow photon ring outline the horizon.
+  float upper=smoothstep(-.10,.36,d.y);
+  float lower=1.-smoothstep(-.42,-.06,d.y);
+  float farBand=smoothstep(.76,.84,h)*(1.-smoothstep(1.12,1.49,h));
+  float arcTexture=.68+.32*sin(31.*h+3.*theta-u_time*1.1);
+  float boost=mix(.54,1.48,smoothstep(-1.1,1.1,d.x));
+  float lensed=farBand*(upper+.29*lower)*arcTexture*boost;
+  float photon=1.-smoothstep(aa,aa+.047,abs(h-.755));
+  float halo=1.-smoothstep(.77,1.82,h);
+  vec3 backGlow=vec3(.32,.115,.035)*halo*.40;
+  backGlow+=lensed*mix(vec3(.92,.24,.035),vec3(1.,.83,.51),1.-smoothstep(.85,1.30,h));
+  backGlow+=photon*vec3(1.,.88,.67)*(.65+.35*boost);
+  // Project a thin, extended, inclined disk into the image plane. Radial
+  // filaments suggest orbiting hot plasma and an asymmetric Doppler glow.
+  float diskR=length(vec2(d.x,d.y/.245));
+  float band=smoothstep(.79,.92,diskR)*(1.-smoothstep(2.25,2.92,diskR));
+  float streak=.57+.43*sin(47.*diskR+4.*theta-u_time*1.5);
+  float inner=1.-smoothstep(.90,1.95,diskR);
+  vec3 plasma=mix(vec3(.80,.14,.025),vec3(1.,.87,.59),inner);
+  vec3 diskLight=band*plasma*(.74+.44*streak)*boost;
+  float rim=1.-smoothstep(aa*1.5,.13+aa,abs(diskR-.93));
+  diskLight+=rim*vec3(1.,.94,.78)*.85*boost;
+  float front=1.-smoothstep(-aa,aa,d.y);
   vec3 color=mix(sky,page,matter);
-  color+=glow*gravity*(1.-matter*.45);
-  color=mix(color,vec3(.002,.003,.006),core*gravity);
+  // Occlude the rear disk at the event-horizon shadow, then lay the nearer
+  // accretion stream across it. This ordering provides the 3D depth cue.
+  color+=(backGlow+diskLight*(1.-front))*gravity*(1.-matter*.45);
+  color=mix(color,vec3(.001,.001,.002),shadow*gravity);
+  color+=diskLight*front*gravity;
   // Smooth handoff to/from actual DOM at the unwarped endpoint.
   float alpha=smoothstep(.01,.13,p);
   gl_FragColor=vec4(clamp(color,0.,1.),alpha);
