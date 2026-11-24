@@ -77,7 +77,7 @@ void main(){
     return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('snapshot deadline')),ms);})]).finally(()=>clearTimeout(timer));
   };
   function create(){
-    if(typeof window.html2canvas!=='function')return null;
+    if(typeof window.html2canvas!=='function'){report('capture library unavailable');return null;}
     const canvas=document.createElement('canvas');
     canvas.className=cssClass;
     canvas.setAttribute('aria-hidden','true');
@@ -122,8 +122,10 @@ void main(){
       gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(uSize,canvas.width,canvas.height);
     };
     resize();
-    document.body.append(canvas);
-    canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();fail();},{once:true});
+    // Do not insert the WebGL surface until the first capture is complete.
+    // html2canvas clones the document and copying a live WebGL canvas can
+    // trigger a synchronous readback, particularly on software graphics.
+    canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();report('context lost');fail();},{once:true});
     const draw=(pull,now=performance.now())=>{
       if(!valid||destroyed||gl.isContextLost())return;
       gl.uniform1f(uPull,pull);gl.uniform1f(uTime,(now-epoch)/1000);
@@ -131,22 +133,23 @@ void main(){
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     };
     const capture=async(scene)=>{
-      if(destroyed||gl.isContextLost())return false;
+      if(destroyed||gl.isContextLost()){report('context unavailable before capture');return false;}
       const w=scene.clientWidth,h=scene.clientHeight;
-      if(w<1||h<1)return false;
+      if(w<1||h<1){report('empty capture dimensions');return false;}
       const scale=Math.min(1,Math.sqrt(420000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       try{
         const shot=await timeout(window.html2canvas(scene,{
           width:w,height:h,windowWidth:window.innerWidth,windowHeight:window.innerHeight,
           scrollX:0,scrollY:0,scale,backgroundColor:'#04070c',logging:false,
           allowTaint:false,useCORS:false,imageTimeout:900,removeContainer:true,
+          ignoreElements:el=>el===canvas||el.classList?.contains(cssClass)||el.id==='mc-vortex',
           onclone:(_,target)=>{
             target.style.transform='none';target.style.opacity='1';
             target.style.visibility='visible';target.style.animation='none';
             target.querySelectorAll('input[type=password],input[type=email]').forEach(input=>{input.value='';});
           }
         }),2400);
-        if(destroyed||gl.isContextLost())return false;
+        if(destroyed||gl.isContextLost()){report('context unavailable after capture');return false;}
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
         shot.width=1;shot.height=1;valid=true;
@@ -157,7 +160,9 @@ void main(){
     };
     const run=(animation,phase,duration)=>{
       if(!valid||destroyed)return;
-      cancelAnimationFrame(raf);canvas.hidden=false;last=0;slow=0;
+      cancelAnimationFrame(raf);
+      if(!canvas.isConnected)document.body.append(canvas);
+      canvas.hidden=false;last=0;slow=0;
       const reverse=phase==='emitting';
       canvas.dataset.phase=phase;
       document.dispatchEvent(new CustomEvent('mindcare:gravity-phase',{detail:{phase,renderer:'webgl',width:canvas.width,height:canvas.height}}));
