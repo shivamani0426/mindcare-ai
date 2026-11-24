@@ -2,219 +2,91 @@
   'use strict';
   if (!document.body.classList.contains('mc-world-page')) return;
 
-  // First-visit Z-cut entrance. The real hero stays mounted behind the dark panels.
-  const carpet = document.getElementById('mc-carpet-intro');
-  const enter = document.getElementById('mc-carpet-enter');
-  const skip = document.getElementById('mc-carpet-skip');
-  const replay = document.getElementById('mc-hero-replay');
-  const world = document.querySelector('.mc-world-root');
-  const skipLink = document.querySelector('.skip');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  const contrast = matchMedia('(prefers-contrast: more)');
-  const forced = matchMedia('(forced-colors: active)');
-  const storageKey = 'mindcare-zcut-entered-v1';
-  const motionAllowed = () => !reduce.matches && !contrast.matches && !forced.matches &&
-    !document.body.classList.contains('reduced-motion');
-  let seen = false;
-  try { seen = sessionStorage.getItem(storageKey) === '1'; } catch (_) {}
-  let phase = 'ready', target = 0, progress = 0, frame = 0, heroTimer = 0;
-  let lastFrame = 0;
-  let touchY = null, focusAfter = false;
-  const clamp = value => Math.max(0, Math.min(1, value));
-  const remember = () => { try { sessionStorage.setItem(storageKey, '1'); } catch (_) {} };
-  window.addEventListener('mindcare:landing-dispose', stopAfterLanding, {once:true});
-  function stopAfterLanding() { stop(); phase = 'disposed'; }
-  // The three cuts share one timeline, with a deliberate beat after each.
-  // Panel movement begins only once the whole Z has been drawn.
-  const cuts = [
-    {start:.06,end:.27,x1:200,y1:155,x2:800,y2:155},
-    {start:.32,end:.51,x1:800,y1:155,x2:200,y2:445},
-    {start:.56,end:.75,x1:200,y1:445,x2:800,y2:445}
-  ];
-  const strokeNodes = carpet ? [...carpet.querySelectorAll('[data-z-cut]')] : [];
-  const sparks = carpet?.querySelector('.mc-z-sparks');
-  const clips = carpet ? [...carpet.querySelectorAll('.mc-z-clip')] : [];
-  const impact = carpet?.querySelector('.mc-z-impact');
-  const lowCost = matchMedia('(max-width:600px),(pointer:coarse)');
-  let deadline = 0;
-  const ease = t => t*t*(3-2*t);
-  const paint = () => {
-    const set = (key,value) => carpet.style.setProperty(key,value);
-    set('--carpet-progress', progress.toFixed(4));
-    set('--z-open', ease(clamp((progress-.82)/.18)).toFixed(4));
-    set('--z-title', (1-clamp(progress/.055)).toFixed(3));
-    set('--z-controls', (1-.58*clamp(progress/.12)-.42*clamp((progress-.78)/.16)).toFixed(3));
-    set('--z-glow', (1-clamp((progress-.83)/.17)).toFixed(3));
-    let active = false, complete = 0, strongest = 0;
-    let impactPose = null, joltX = 0, joltY = 0;
-    cuts.forEach((cut,index) => {
-      const amount=clamp((progress-cut.start)/(cut.end-cut.start));
-      const node=strokeNodes[index];
-      if(!node)return;
-      node.style.setProperty('--z-draw',(amount*100).toFixed(3));
-      node.style.setProperty('--z-visible',amount>0?'1':'0');
-      clips[index]?.setAttribute('width',String(amount===0?0:35+1000*amount+(amount===1?35:0)));
-      if(amount===1)complete++;
-      // Energy wakes distort outward then settle into a hot jagged scar.
-      const age=Math.max(0,progress-cut.end);
-      const recoil=amount===0?0:amount<1?Math.sin(Math.PI*amount):Math.exp(-age*32);
-      node.style.setProperty('--z-ripple',(1+recoil*(lowCost.matches?.55:1.15)).toFixed(3));
-      node.style.setProperty('--z-wake',(.16+.55*recoil).toFixed(3));
-      const angle=Math.atan2(cut.y2-cut.y1,cut.x2-cut.x1)*180/Math.PI;
-      if(amount>0&&amount<1&&sparks){
-        const x=cut.x1+(cut.x2-cut.x1)*amount,y=cut.y1+(cut.y2-cut.y1)*amount;
-        sparks.setAttribute('transform','translate('+x+' '+y+') rotate('+angle+') scale('+(1+.42*Math.sin(Math.PI*amount))+')');
-        active=true;
-      }
-      // A brief, localized impact travels from the blade tip at completion.
-      const u=(progress-cut.end)/.065;
-      if(u>=0&&u<1){
-        const strength=(1-u)*(1-u);
-        if(strength>strongest){strongest=strength;impactPose={x:cut.x2,y:cut.y2,angle,scale:1+u*3.2};}
-        joltX+=Math.sin(u*15)*strength*5;
-        joltY+=Math.sin(u*12)*strength*3;
-      }
-    });
-    if(sparks)sparks.style.opacity=active?'1':'0';
-    if(impact){
-      impact.style.opacity=(strongest*.8).toFixed(3);
-      if(impactPose)impact.setAttribute('transform','translate('+impactPose.x+' '+impactPose.y+') rotate('+impactPose.angle+') scale('+impactPose.scale+')');
-    }
-    set('--z-jolt-x',lowCost.matches?'0px':joltX.toFixed(2)+'px');
-    set('--z-jolt-y',lowCost.matches?'0px':joltY.toFixed(2)+'px');
-    carpet.dataset.zImpact=strongest.toFixed(3);
-    carpet.dataset.progress=progress.toFixed(3);
-    carpet.dataset.completedCuts=String(complete);
-    carpet.dataset.zPhase=progress>=.82?'revealing':complete===3?'holding':progress>.06?'cutting':'ready';
-  };
-  const stop = () => {
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
-    lastFrame = 0;
-    clearTimeout(heroTimer);
-    clearTimeout(deadline);deadline=0;
-    touchY = null;
-  };
-  const release = () => {
-    carpet.hidden = true;
-    world.inert = false;
-    if (skipLink) skipLink.inert = false;
-    document.body.classList.remove('mc-carpet-active');
-    remember();
-    if (focusAfter) {
-      world.querySelector('.mc-hero-enter')?.focus({preventScroll:true});
-      focusAfter = false;
-    }
-  };
-  const finishImmediately = () => {
-    const hadCarpet = phase === 'carpet';
-    stop();
-    phase = 'ready';
-    if (hadCarpet) focusAfter = true;
-    release();
-    document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
-    document.body.classList.add('mc-hero-resting');
-    if (replay) replay.hidden = !motionAllowed();
-  };
-  const reveal = () => {
-    stop();
-    // The real hero is already visible behind the cut panels. Do not rebuild it.
-    phase = 'ready';
-    progress = target = 1;
-    paint();
-    document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
-    document.body.classList.add('mc-hero-resting');
-    release();
-    if (replay) replay.hidden = !motionAllowed();
-  };
-  const animate = now => {
-    frame = 0;
-    if (phase !== 'carpet') return;
-    if (!motionAllowed()) { finishImmediately(); return; }
-    // Follow elapsed wall time on constrained devices rather than counting
-    // slow WebKit frames. A full-entry deadline guarantees accessible content.
-    const elapsed=lastFrame?Math.max(1,now-lastFrame):16.7;
-    lastFrame=now;
-    const gap=target-progress;
-    const step=(lowCost.matches?elapsed:Math.min(160,elapsed))/2400;
-    let next=Math.abs(gap)<=step?target:progress+Math.sign(gap)*step;
-    // Preserve intermediate sequential cut/hold milestones when a frame stalls.
-    if(gap>0){
-      const milestone=[.17,.27,.42,.51,.65,.75,.79,.90].find(n=>n>progress+.00001&&n<next);
-      if(milestone!==undefined)next=milestone;
-    }
-    progress=next;
-    paint();
-    if (progress === 1) { reveal(); return; }
-    if (progress !== target) frame = requestAnimationFrame(animate);
-    else lastFrame = 0;
-  };
-  const advance = amount => {
-    if (phase !== 'carpet') return;
-    target = clamp(target + amount);
-    if(target===1&&!deadline)deadline=setTimeout(()=>{if(phase==='carpet'&&target===1)reveal();},4200);
-    else if(target<1&&deadline){clearTimeout(deadline);deadline=0;}
-    if (!frame) frame = requestAnimationFrame(animate);
-  };
-  const showCarpet = () => {
-    if (!motionAllowed()) { finishImmediately(); return; }
-    stop();
-    phase = 'carpet';
-    focusAfter = true;
-    progress = target = 0;
-    paint();
+  // Play on arrival at the actual homepage, not on an entry-button click.
+  // One short compositor timeline; no frame-count-dependent animation loop.
+  const intro=document.getElementById('mc-carpet-intro');
+  const flight=intro?.querySelector('.mc-comet-flight');
+  const sparks=intro?.querySelector('.mc-comet-sparks');
+  const world=document.querySelector('.mc-world-root');
+  const skipLink=document.querySelector('.skip');
+  const preferences=['(prefers-reduced-motion: reduce)','(prefers-contrast: more)','(forced-colors: active)'].map(q=>matchMedia(q));
+  const mobile=matchMedia('(max-width:600px),(pointer:coarse)');
+  const motionAllowed=()=>!preferences.some(p=>p.matches)&&!document.body.classList.contains('reduced-motion');
+  const storageKey='mindcare-comet-entered-v1';
+  let seen=false, active=false, disposed=false, timer=0, animations=[], started=0;
+  try{seen=sessionStorage.getItem(storageKey)==='1';}catch(_){}
+  const notify=(phase,detail={})=>document.dispatchEvent(new CustomEvent('mindcare:comet-'+phase,{detail}));
+  function finish(reason='complete'){
+    const wasActive=active;
+    active=false;clearTimeout(timer);timer=0;
+    for(const animation of animations)animation.cancel();
+    animations=[];
+    if(intro)intro.hidden=true;
+    if(sparks)sparks.replaceChildren();
+    if(world)world.inert=false;
+    if(skipLink)skipLink.inert=false;
+    document.body.classList.remove('mc-carpet-active','mc-carpet-arrival','mc-hero-assembling');
+    if(!disposed)document.body.classList.add('mc-hero-resting');
+    if(wasActive)notify('finished',{reason,elapsed:performance.now()-started});
+  }
+  function play(){
+    if(!intro||!flight||!sparks||!world||!motionAllowed()||typeof flight.animate!=='function'){finish('unsupported');return;}
+    const w=window.innerWidth,h=window.innerHeight;
+    if(w<=0||h<=0){finish('empty-viewport');return;}
+    // Travel from just outside the top-right to outside the bottom-left.
+    // The hot tip points exactly along the physical viewport diagonal.
+    const x0=w*1.04,y0=-h*.04,x1=-w*.20,y1=h*1.20;
+    const dx=x1-x0,dy=y1-y0,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length;
+    const angle=Math.atan2(dy,dx)*180/Math.PI;
+    const delay=55,travel=445,revealStart=delay+travel+25,revealDuration=300;
+    const count=mobile.matches?14:30;
+    const pose=(x,y,a)=>'translate3d('+x+'px,'+y+'px,0) rotate('+a+'deg)';
+    const startPose=pose(x0,y0,angle),endPose=pose(x1,y1,angle);
+    active=true;started=performance.now();
+    try{sessionStorage.setItem(storageKey,'1');}catch(_){}
+    intro.hidden=false;world.inert=true;if(skipLink)skipLink.inert=true;
     document.body.classList.remove('mc-hero-assembling','mc-hero-resting','mc-carpet-arrival');
     document.body.classList.add('mc-carpet-active');
-    carpet.hidden = false;
-    world.inert = true;
-    if (skipLink) skipLink.inert = true;
-    if (replay) replay.hidden = true;
-    window.scrollTo(0,0);
-    enter.focus({preventScroll:true});
-  };
-  if (carpet && enter && skip && world) {
-    carpet.addEventListener('wheel', event => {
-      if (phase !== 'carpet' || event.ctrlKey) return;
-      event.preventDefault();
-      const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-      advance(pixels / Math.max(360, innerHeight * .65));
-    }, {passive:false});
-    carpet.addEventListener('touchstart', event => {
-      touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
-    }, {passive:true});
-    carpet.addEventListener('touchmove', event => {
-      if (phase !== 'carpet' || touchY === null || event.touches.length !== 1) return;
-      const y = event.touches[0].clientY;
-      const delta = touchY - y;
-      if (Math.abs(delta) > 1) {
-        event.preventDefault();
-        advance(delta / Math.max(180, Math.min(carpet.clientHeight, window.visualViewport?.height || innerHeight) * .38));
-        touchY = y;
+    // A hard wall-clock release protects WebKit and interrupted animations.
+    timer=setTimeout(()=>finish('deadline'),1600);
+    try{
+      const comet=flight.animate([
+        {transform:startPose,opacity:1,offset:0},
+        {transform:pose(x0+dx*.92,y0+dy*.92,angle),opacity:1,offset:.92},
+        {transform:endPose,opacity:.35,offset:1}
+      ],{duration:travel,delay,fill:'both',easing:'linear'});
+      animations.push(comet);
+      // World-space embers detach from the blade and scatter backward;
+      // each has independent emission time, velocity, spread and lifetime.
+      const fragment=document.createDocumentFragment(),particles=[];
+      for(let i=0;i<count;i++){
+        const node=document.createElement('span');node.className='mc-comet-spark';fragment.append(node);
+        const t=.08+.78*i/(count-1),side=i%2===0?1:-1;
+        const spread=side*(18+(i*31%104)),drift=38+(i*47%132);
+        const sx=x0+dx*t-ux*24,sy=y0+dy*t-uy*24;
+        const ex=sx-ux*drift-uy*spread,ey=sy-uy*drift+ux*spread+22;
+        particles.push({node,t,sx,sy,ex,ey,rotation:Math.atan2(ey-sy,ex-sx)*180/Math.PI});
       }
-    }, {passive:false});
-    ['touchend','touchcancel'].forEach(name => carpet.addEventListener(name, () => {touchY = null;}));
-    enter.addEventListener('click', () => advance(1));
-    skip.addEventListener('click', finishImmediately);
-    carpet.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); finishImmediately(); }
-      else if (['ArrowDown','PageDown','End','ArrowUp','PageUp','Home'].includes(event.key)) {
-        event.preventDefault();
-        const step = {ArrowDown:.2,PageDown:.6,End:1,ArrowUp:-.2,PageUp:-.6,Home:-1}[event.key];
-        advance(step);
-      } else if (event.key === 'Tab') {
-        event.preventDefault();
-        (document.activeElement === enter ? skip : enter).focus();
+      sparks.append(fragment);
+      for(const p of particles){
+        animations.push(p.node.animate([
+          {transform:pose(p.sx,p.sy,p.rotation)+' scaleX(.65)',opacity:.9,offset:0},
+          {transform:pose(p.sx+(p.ex-p.sx)*.36,p.sy+(p.ey-p.sy)*.36,p.rotation)+' scaleX(1.35)',opacity:1,offset:.32},
+          {transform:pose(p.ex,p.ey,p.rotation)+' scaleX(.22)',opacity:0,offset:1}
+        ],{delay:delay+travel*p.t,duration:190+((particles.indexOf(p)*37)%110),fill:'none',easing:'ease-out'}));
       }
-    });
-    replay?.addEventListener('click', showCarpet);
-    [reduce,contrast,forced].forEach(pref => pref.addEventListener?.('change', () => {
-      if (phase === 'disposed') return;
-      if (!motionAllowed() && phase !== 'ready') finishImmediately();
-      else if (phase === 'ready' && replay) replay.hidden = !motionAllowed();
-    }));
-    if (motionAllowed() && !seen && !location.hash) showCarpet();
-    else finishImmediately();
+      const reveal=intro.animate([{opacity:1},{opacity:0}],{delay:revealStart,duration:revealDuration,fill:'both',easing:'ease-out'});
+      animations.push(reveal);
+      notify('started',{x0,y0,x1,y1,angle,travel,delay,revealStart,revealDuration,count});
+      reveal.finished.then(()=>{if(active)finish();},()=>{if(active)finish('cancelled');});
+    }catch(_){finish('unsupported');}
   }
+  document.addEventListener('keydown',event=>{if(active&&event.key==='Escape'){event.preventDefault();finish('escape');}});
+  preferences.forEach(pref=>pref.addEventListener?.('change',()=>{if(active&&!motionAllowed())finish('preference');}));
+  window.addEventListener('pagehide',()=>{if(active)finish('pagehide');});
+  window.addEventListener('mindcare:landing-dispose',()=>{disposed=true;finish('disposed');},{once:true});
+  // A new tab/first visit plays once. Refresh, back and deep links remain immediate.
+  if(!seen&&!location.hash&&motionAllowed())play();else finish('bypass');
 
   // Three fully accessible, keyboard-operable capability tabs.
   const tabs = [...document.querySelectorAll('.mc-cap-tab[role="tab"]')];

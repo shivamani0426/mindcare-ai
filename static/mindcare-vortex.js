@@ -105,7 +105,36 @@
     // The existing wall-clock compositor path is used when GPU preparation fails.
     const rendered = gravity?.run(animations,phase,duration);
     if (rendered) await rendered;
-    else await Promise.all(animations.map(a => a.finished));
+    else {
+      // Preserve normal compositor playback, but bound gaps between poses
+      // on slow renderers. A real timer (not RAF) guarantees that a
+      // throttled/background tab cannot delay navigation indefinitely.
+      let raf = 0, deadline = 0, previous = 0;
+      await new Promise(resolve => {
+        let done = false;
+        const complete = () => {
+          if (done) return;
+          done = true;
+          cancelAnimationFrame(raf);
+          clearTimeout(deadline);
+          resolve();
+        };
+        const tick = () => {
+          if (token !== generation) { complete(); return; }
+          const current = Number(animations[0].currentTime);
+          if (current - previous > 100) {
+            previous = Math.min(duration, previous + 100);
+            animations.forEach(a => { a.currentTime = previous; });
+          } else {
+            previous = Math.max(previous, current);
+          }
+          if (previous >= duration) complete();
+          else raf = requestAnimationFrame(tick);
+        };
+        deadline = setTimeout(complete, duration * 2.6);
+        raf = requestAnimationFrame(tick);
+      });
+    }
     if (token !== generation) return false;
     gravity?.settle(phase);
     specs.forEach(([element,frames]) => setPose(element,frames[frames.length-1]));

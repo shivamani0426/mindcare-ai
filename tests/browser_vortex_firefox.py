@@ -25,8 +25,10 @@ with tempfile.TemporaryDirectory(prefix="mindcare-vacuum-") as tmp:
             page = browser.new_page(viewport={"width":1280,"height":720}, reduced_motion="no-preference")
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
+            # Isolate the established vortex test from the independently tested comet.
+            page.add_init_script("try { sessionStorage.setItem('mindcare-comet-entered-v1', '1'); } catch (_) {}")
             page.goto(base + "/")
-            page.locator("#mc-carpet-skip").click()
+            assert page.locator("#mc-carpet-intro").is_hidden()
             # Verify the approved compositor fallback independently of WebGL availability.
             page.evaluate("window.MindcareGravity=undefined")
             page.evaluate("""() => {

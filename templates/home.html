@@ -4,98 +4,40 @@
 {% block head %}
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='landing-carpet.css', v='zcut19') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-carpet.css', v='comet20') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css', v='rebuild2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-cinematic.css') }}">
   <script src="{{ url_for('static', filename='landing-cinematic.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='landing-world.js', v='zcut19') }}" defer></script>
+  <script src="{{ url_for('static', filename='landing-world.js', v='comet20') }}" defer></script>
   <script src="{{ url_for('static', filename='landing-section-flight.js', v='fabric4') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='auth-world.css') }}">
   <script src="{{ url_for('static', filename='auth-ui.js', v='vacuum7') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mindcare-vortex.css', v='portal16') }}">
   <script src="{{ url_for('static', filename='vendor/html2canvas-1.4.1.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='mindcare-gravity.js', v='portal16') }}" defer></script>
-  <script src="{{ url_for('static', filename='mindcare-vortex.js', v='gravity10') }}" defer></script>
+  <script src="{{ url_for('static', filename='mindcare-vortex.js', v='fallback22') }}" defer></script>
 {% endblock %}
 {% block content %}
-<!-- Original sword-cut entrance. The real landing stays mounted beneath the cut panels. -->
-<div class="mc-carpet-intro mc-z-intro" id="mc-carpet-intro" role="dialog" aria-modal="true" aria-labelledby="mc-carpet-title" hidden>
-  <div class="mc-z-stage" aria-hidden="true">
-    <div class="mc-z-panel mc-z-panel-top"></div>
-    <div class="mc-z-panel mc-z-panel-bottom"></div>
-    <svg class="mc-z-blade" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+<!-- Automatic decorative comet; the real landing remains mounted beneath it. -->
+<div class="mc-carpet-intro mc-comet-intro" id="mc-carpet-intro" aria-hidden="true" hidden>
+  <div class="mc-comet-flight">
+    <svg class="mc-comet-art" viewBox="-520 -80 540 160" focusable="false" aria-hidden="true">
       <defs>
-        <linearGradient id="mc-z-hot-metal" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0" stop-color="#ff731e"/><stop offset=".22" stop-color="#ffd07a"/><stop offset=".48" stop-color="#fff7df"/><stop offset=".78" stop-color="#ffcc64"/><stop offset="1" stop-color="#ff7426"/>
+        <linearGradient id="mc-comet-fire" x1="0%" x2="100%" y1="0%" y2="0%">
+          <stop offset="0" stop-color="#fb3603" stop-opacity="0"/><stop offset=".3" stop-color="#fb4b08" stop-opacity=".65"/><stop offset=".72" stop-color="#ff8a18"/><stop offset=".94" stop-color="#ffcf75"/><stop offset="1" stop-color="#fff4d2"/>
         </linearGradient>
-        <linearGradient id="mc-z-burn" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0" stop-color="#8f2406"/><stop offset=".32" stop-color="#ff6b13"/><stop offset=".5" stop-color="#ffca68"/><stop offset=".72" stop-color="#f04a08"/><stop offset="1" stop-color="#551406"/>
+        <linearGradient id="mc-comet-core" x1="0%" x2="100%" y1="0%" y2="0%">
+          <stop offset="0" stop-color="#ff7b11" stop-opacity="0"/><stop offset=".57" stop-color="#ffbb57"/><stop offset=".87" stop-color="#fff7d9"/><stop offset="1" stop-color="#ffffff"/>
         </linearGradient>
-        <clipPath id="mc-z-clip-1" clipPathUnits="userSpaceOnUse"><rect class="mc-z-clip" x="-35" y="-130" width="0" height="260"/></clipPath>
-        <clipPath id="mc-z-clip-2" clipPathUnits="userSpaceOnUse"><rect class="mc-z-clip" x="-35" y="-130" width="0" height="260"/></clipPath>
-        <clipPath id="mc-z-clip-3" clipPathUnits="userSpaceOnUse"><rect class="mc-z-clip" x="-35" y="-130" width="0" height="260"/></clipPath>
       </defs>
-      <g class="mc-z-stroke mc-z-stroke-1" data-z-cut="1" transform="translate(200 155) rotate(0.0000) scale(0.60000 1)">
-        <g clip-path="url(#mc-z-clip-1)">
-          <path class="mc-z-aura" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-scar" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-edge" d="M0 0 L72 -1 130 -4 198 -2 251 -6 310 -3 372 -9 427 -4 478 -10 539 -5 592 -9 650 -3 706 -7 764 -2 825 -5 886 -1 950 -2 1000 0 L947 2 876 3 817 2 752 5 691 3 632 8 571 5 512 10 456 5 401 7 344 3 287 6 230 2 171 4 101 1 Z"/>
-          <g class="mc-z-ripple">
-            <path class="mc-z-wake" d="M42 -10 L124 -19 191 -13 251 -29 327 -20 393 -40 463 -23 523 -37 594 -20 666 -32 737 -13 812 -22 906 -5 M115 13 L185 24 252 15 329 34 391 20 461 41 531 23 605 35 673 19 746 27 815 12 910 6"/>
-            <path class="mc-z-wake-fine" d="M15 -2 Q140 -37 260 -17 T490 -32 T730 -17 T985 0 M22 5 Q190 37 320 16 T600 33 T980 1"/>
-          </g>
-          <path class="mc-z-fragments" d="M123 -16 l17 -13 -5 17 Z M283 20 l-13 23 31 -13 Z M448 -25 l15 -27 8 21 Z M644 18 l-8 23 25 -17 Z M808 -13 l19 -16 -8 21 Z"/>
-        </g>
-      </g>
-      <g class="mc-z-stroke mc-z-stroke-2" data-z-cut="2" transform="translate(800 155) rotate(154.2040) scale(0.66641 1)">
-        <g clip-path="url(#mc-z-clip-2)">
-          <path class="mc-z-aura" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-scar" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-edge" d="M0 0 L72 -1 130 -4 198 -2 251 -6 310 -3 372 -9 427 -4 478 -10 539 -5 592 -9 650 -3 706 -7 764 -2 825 -5 886 -1 950 -2 1000 0 L947 2 876 3 817 2 752 5 691 3 632 8 571 5 512 10 456 5 401 7 344 3 287 6 230 2 171 4 101 1 Z"/>
-          <g class="mc-z-ripple">
-            <path class="mc-z-wake" d="M42 -10 L124 -19 191 -13 251 -29 327 -20 393 -40 463 -23 523 -37 594 -20 666 -32 737 -13 812 -22 906 -5 M115 13 L185 24 252 15 329 34 391 20 461 41 531 23 605 35 673 19 746 27 815 12 910 6"/>
-            <path class="mc-z-wake-fine" d="M15 -2 Q140 -37 260 -17 T490 -32 T730 -17 T985 0 M22 5 Q190 37 320 16 T600 33 T980 1"/>
-          </g>
-          <path class="mc-z-fragments" d="M123 -16 l17 -13 -5 17 Z M283 20 l-13 23 31 -13 Z M448 -25 l15 -27 8 21 Z M644 18 l-8 23 25 -17 Z M808 -13 l19 -16 -8 21 Z"/>
-        </g>
-      </g>
-      <g class="mc-z-stroke mc-z-stroke-3" data-z-cut="3" transform="translate(200 445) rotate(0.0000) scale(0.60000 1)">
-        <g clip-path="url(#mc-z-clip-3)">
-          <path class="mc-z-aura" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-scar" d="M0 0 L29 -2 65 -7 102 -4 141 -12 183 -7 219 -15 257 -9 299 -20 336 -11 379 -18 426 -10 469 -25 512 -14 548 -22 590 -12 627 -20 672 -9 706 -17 747 -7 784 -14 824 -5 859 -11 903 -3 940 -6 1000 0 L960 3 925 7 883 4 845 12 804 8 764 16 720 9 681 22 640 12 602 25 561 14 518 21 477 13 438 24 396 10 353 18 308 8 267 16 228 6 188 12 147 5 105 9 64 3 31 4 Z"/>
-          <path class="mc-z-edge" d="M0 0 L72 -1 130 -4 198 -2 251 -6 310 -3 372 -9 427 -4 478 -10 539 -5 592 -9 650 -3 706 -7 764 -2 825 -5 886 -1 950 -2 1000 0 L947 2 876 3 817 2 752 5 691 3 632 8 571 5 512 10 456 5 401 7 344 3 287 6 230 2 171 4 101 1 Z"/>
-          <g class="mc-z-ripple">
-            <path class="mc-z-wake" d="M42 -10 L124 -19 191 -13 251 -29 327 -20 393 -40 463 -23 523 -37 594 -20 666 -32 737 -13 812 -22 906 -5 M115 13 L185 24 252 15 329 34 391 20 461 41 531 23 605 35 673 19 746 27 815 12 910 6"/>
-            <path class="mc-z-wake-fine" d="M15 -2 Q140 -37 260 -17 T490 -32 T730 -17 T985 0 M22 5 Q190 37 320 16 T600 33 T980 1"/>
-          </g>
-          <path class="mc-z-fragments" d="M123 -16 l17 -13 -5 17 Z M283 20 l-13 23 31 -13 Z M448 -25 l15 -27 8 21 Z M644 18 l-8 23 25 -17 Z M808 -13 l19 -16 -8 21 Z"/>
-        </g>
-      </g>
-      <g class="mc-z-impact" aria-hidden="true">
-        <ellipse class="mc-z-shockwave" rx="39" ry="17" fill="none" stroke="#ff9244" stroke-width="2"/>
-        <path class="mc-z-impact-rays" d="M-8 -2 L-108 -14 -27 -5 -79 -28 -12 -7 -42 -48 -3 -13 4 -56 8 -9 35 -37 17 -4 69 -9 20 2 46 29 8 11 -8 48 -10 11 -46 32 -20 6 -111 17 -14 1 Z" fill="#ffb45f"/>
-      </g>
-      <g class="mc-z-sparks" aria-hidden="true">
-        <path d="M-90 0 L-16 -9 5 0 -16 9 Z M-45 -15 L-7 -4 -28 -6 Z M-61 19 L-10 4 -22 13 Z" fill="#ff7f24"/>
-        <path d="M-26 0 L-4 -3 7 0 -4 3 Z" fill="#fff7dc"/>
-        <path d="M -12 0 L -48 -11 M -8 -3 L -31 -20 M -10 4 L -37 17 M -3 -7 L -14 -30 M -6 8 L -22 32 M 4 -3 L 18 -12" fill="none" stroke="#ffae55" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="-27" cy="-8" r="2.5" fill="#ff8a32"/><circle cx="-22" cy="24" r="2" fill="#ffe0a1"/>
-      </g>
+      <path class="mc-comet-halo" d="M-520 0 L-375 -10 -306 -5 -238 -26 -178 -19 -112 -42 -63 -24 -25 -15 0 0 -25 15 -63 24 -112 42 -178 19 -238 26 -306 5 -375 10 Z"/>
+      <path class="mc-comet-blade" d="M-500 0 L-382 -5 -410 -13 -297 -9 -324 -21 -226 -13 -254 -32 -154 -22 -181 -42 -93 -27 -115 -49 -47 -22 -28 -13 0 0 -28 13 -48 21 -108 45 -88 25 -168 37 -150 19 -248 30 -222 12 -331 20 -292 8 -415 13 -385 4 Z"/>
+      <path class="mc-comet-core" d="M-420 0 L-266 -4 -298 -10 -165 -8 -189 -17 -80 -12 -95 -21 -32 -8 0 0 -32 8 -93 20 -77 11 -183 16 -164 7 -298 10 -265 4 Z"/>
+      <path class="mc-comet-filaments" d="M-490 -14 L-313 -29 -342 -19 -192 -41 -224 -25 -72 -24 M-470 16 L-312 28 -340 18 -170 36 -201 22 -60 18 M-390 -37 L-235 -53 -267 -41 -118 -41 M-350 39 L-226 52 -249 40 -110 33"/>
+      <path class="mc-comet-point" d="M-83 -4 L-18 -4 0 0 -18 4 -83 4 -56 0 Z"/>
     </svg>
   </div>
-  <div class="mc-carpet-heading">
-    <span class="mc-carpet-emblem" aria-hidden="true">✦</span>
-    <h2 id="mc-carpet-title">MINDCARE<span>AI</span></h2>
-    <p>Every memory deserves a little wonder.</p>
-  </div>
-  <div class="mc-carpet-controls">
-    <button class="mc-carpet-enter" id="mc-carpet-enter" type="button" aria-describedby="mc-carpet-instructions">
-      <span class="mc-carpet-arrow" aria-hidden="true">↗</span><span>Enter MindCare</span>
-    </button>
-    <span id="mc-carpet-instructions">Select Enter, scroll down or swipe up to reveal MindCare.</span>
-    <div class="mc-carpet-track" aria-hidden="true"><span></span></div>
-  </div>
-  <button type="button" class="mc-carpet-skip" id="mc-carpet-skip">Skip introduction</button>
+  <div class="mc-comet-sparks" aria-hidden="true"></div>
 </div>
 <div class="mc-world-root" id="top">
   <section class="mc-world-hero" aria-labelledby="mc-hero-heading">
@@ -124,7 +66,6 @@
       <a class="mc-pill mc-pill-light mc-pixel mc-hero-enter" href="{{ url_for('login') }}" data-mc-vortex-link>ENTER MINDCARE <span aria-hidden="true">↗</span></a>
       <a class="mc-hero-signin" href="{{ url_for('login') }}" data-mc-vortex-link>Already part of MindCare? Sign in</a>
     </div>
-    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the cinematic Z-cut introduction">↻ Replay introduction</button>
     <a class="mc-hero-scroll" href="#overview"><span>EXPLORE THE WORLD</span><span aria-hidden="true">↓</span></a>
     <span class="mc-hero-corner mc-hero-corner-left" aria-hidden="true">01 — A WORLD OF CARE</span>
     <span class="mc-hero-corner mc-hero-corner-right" aria-hidden="true">✳ BUILT WITH FAMILIES IN MIND</span>

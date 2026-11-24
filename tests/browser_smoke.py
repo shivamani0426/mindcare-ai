@@ -110,95 +110,70 @@ try:
                "Old paper entrance is removed from the public page")
         carpet_tab = ctx.new_page()
         carpet_tab.emulate_media(reduced_motion="no-preference")
+        carpet_tab.add_init_script("""(() => {
+            window.__cometTrace={frames:[],starts:[],ends:[]};
+            document.addEventListener('mindcare:comet-started',e=>{
+                const overlay=document.getElementById('mc-carpet-intro');
+                const flight=overlay.querySelector('.mc-comet-flight');
+                const spark=overlay.querySelector('.mc-comet-spark');
+                const fa=flight.getAnimations()[0],sa=spark.getAnimations()[0];
+                window.__cometTrace.starts.push({...e.detail,
+                    covered:!overlay.hidden&&document.querySelector('.mc-world-root').inert,
+                    sparkFrames:sa.effect.getKeyframes().map(k=>k.transform),
+                    flightFrames:fa.effect.getKeyframes().map(k=>k.transform),
+                    revealDelay:overlay.getAnimations()[0].effect.getTiming().delay,
+                    sparks:overlay.querySelectorAll('.mc-comet-spark').length});
+                const tick=()=>{
+                    if(overlay.hidden)return;
+                    const m=new DOMMatrixReadOnly(getComputedStyle(flight).transform);
+                    window.__cometTrace.frames.push({x:m.m41,y:m.m42,opacity:+getComputedStyle(overlay).opacity,
+                        sparkOpacity:+getComputedStyle(spark).opacity});
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+            document.addEventListener('mindcare:comet-finished',e=>window.__cometTrace.ends.push(e.detail));
+        })()""")
         carpet_tab.goto(base + "/")
         portal = carpet_tab.locator("#mc-carpet-intro")
-        verify(portal.is_visible(), "First visit displays cinematic Z-cut entrance")
-        verify(carpet_tab.locator(".mc-carpet-fabric").count() == 0,
-               "Old carpet panels are removed")
-        verify(carpet_tab.locator(".mc-z-panel").count() == 2 and carpet_tab.locator("[data-z-cut]").count() == 3,
-               "Entrance has three sword cuts and two split panels")
-        verify(carpet_tab.locator("#mc-carpet-enter").inner_text().strip().endswith("Enter MindCare"),
-               "Entrance offers a clear action")
-        verify(carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "Underlying controls cannot receive focus before entry")
-        carpet_tab.mouse.move(640, 300)
-        carpet_tab.mouse.wheel(0, 180)
-        carpet_tab.wait_for_function(
-            "() => +document.querySelector('#mc-carpet-intro').dataset.progress > .15")
-        verify(portal.is_visible() and float(portal.get_attribute("data-progress")) < 1,
-               "Partial scroll draws the first blade cut without dismissing the intro")
-        verify(carpet_tab.locator("[data-z-cut='1']").evaluate(
-               "(el) => +el.style.getPropertyValue('--z-draw') > 0"),
-               "First sword cut draws with scroll progress")
-        verify(carpet_tab.locator(".mc-z-panel-top").evaluate(
-               "(el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42 === 0"),
-               "Landing stays covered before Z is complete")
-        verify(carpet_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the closed entrance")
-        carpet_tab.mouse.wheel(0, 1000)
-        carpet_tab.wait_for_function(
-            "() => document.getElementById('mc-carpet-intro').hidden", timeout=6000)
-        verify(not carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "The real homepage becomes interactive after the completed Z opens")
+        portal.wait_for(state="hidden", timeout=6000)
+        trace = carpet_tab.evaluate("window.__cometTrace")
+        verify(len(trace["starts"]) == 1 and len(trace["ends"]) == 1 and trace["starts"][0]["covered"],
+               "Homepage link automatically starts and completes the comet without user input")
+        start = trace["starts"][0]
+        verify(start["x0"] > 0 > start["x1"] and start["y0"] < 0 < start["y1"] and start["travel"] <= 500,
+               "Comet travels rapidly from outside the top-right to outside the bottom-left")
+        verify(start["revealDelay"] >= start["delay"] + start["travel"] and trace["ends"][0]["reason"] == "complete",
+               "Landing reveal begins after the comet finishes crossing")
+        verify(any(a["x"] - b["x"] > 8 and b["y"] - a["y"] > 8 for a,b in zip(trace["frames"],trace["frames"][1:])),
+               "Actual rendered comet frames travel diagonally down and left")
+        verify(any(0 < t["opacity"] < 1 for t in trace["frames"]),
+               "Actual overlay fades continuously into landing")
+        verify(start["sparks"] == 30 and len(set(start["sparkFrames"])) == 3
+               and any(t["sparkOpacity"] > .1 for t in trace["frames"]),
+               "Thirty independent sharp sparks animate away from the comet")
+        verify(carpet_tab.locator(".mc-comet-blade").evaluate(
+               "e => e.getAttribute('d').endsWith('Z') && e.getAttribute('d').includes('-28 -13 0 0 -28 13')"),
+               "Comet uses a jagged closed polygon with a needle-sharp tip")
+        verify(carpet_tab.locator("#mc-carpet-enter,#mc-carpet-skip,#mc-hero-replay,.mc-z-stroke,.mc-carpet-fabric").count() == 0,
+               "All old entrance buttons, replay and Z-cut/carpet visuals are removed")
+        verify(not carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert")
+               and carpet_tab.locator(".mc-comet-spark").count() == 0,
+               "Comet releases the original landing and cleans up all particles")
         verify(carpet_tab.locator(".mc-hero-enter").is_visible(),
-               "Sign-in action survives cinematic entrance")
-        verify(carpet_tab.locator(".mc-hero-orb").count() == 1,
-               "Original hero keeps the animated central orb")
-        verify(carpet_tab.locator(".mc-hero-light-ring").count() == 2,
-               "Hero retains two luminous rings")
+               "Landing sign-in action survives the automatic entrance")
+        verify(carpet_tab.locator(".mc-hero-orb").count() == 1 and carpet_tab.locator(".mc-hero-light-ring").count() == 2,
+               "Original hero orb and two luminous rings remain")
         verify(carpet_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
                "Original hero artwork is preserved")
         carpet_tab.wait_for_function(
             "() => document.body.classList.contains('mc-hero-resting')", timeout=6000)
-        verify(carpet_tab.locator("#mc-hero-replay").is_visible(),
-               "Replay is available after the cinematic reveal")
         carpet_tab.mouse.move(1100, 240)
         carpet_tab.wait_for_function(
             "() => !!document.querySelector('.mc-cinematic-depth').style.getPropertyValue('--mc-tilt-y')")
         verify(carpet_tab.locator(".mc-cinematic-depth").evaluate(
                "(el) => parseFloat(el.style.getPropertyValue('--mc-tilt-y')) > 0"),
                "Fine pointer interaction tilts the constellation in 3D")
-        carpet_tab.locator("#mc-hero-replay").click()
-        verify(portal.is_visible(), "Replay opens the Z-cut experience again")
-        # Verify one full click-driven sequence, not just the scroll shortcut.
-        carpet_tab.evaluate("""() => {
-            const el=document.getElementById('mc-carpet-intro');
-            window.__zTrace=[];
-            const observer=new MutationObserver(()=>{
-                if(el.hidden){observer.disconnect();return;}
-                const cuts=[...el.querySelectorAll('[data-z-cut]')].map(n=>+n.style.getPropertyValue('--z-draw'));
-                const opened=+el.style.getPropertyValue('--z-open');
-                const panelY=new DOMMatrixReadOnly(getComputedStyle(el.querySelector('.mc-z-panel-top')).transform).m42;
-                const impact=+el.dataset.zImpact;
-                const ripple=Math.max(...[...el.querySelectorAll('[data-z-cut]')].map(n=>+n.style.getPropertyValue('--z-ripple')));
-                const clips=[...el.querySelectorAll('.mc-z-clip')].map(n=>+n.getAttribute('width'));
-                window.__zTrace.push({cuts,opened,panelY,impact,ripple,clips,phase:el.dataset.zPhase});
-            });
-            observer.observe(el,{attributes:true,attributeFilter:['data-progress','hidden']});
-        }""")
-        carpet_tab.locator("#mc-carpet-enter").click()
-        portal.wait_for(state="hidden", timeout=6000)
-        z_trace = carpet_tab.evaluate("window.__zTrace")
-        verify(carpet_tab.locator(".mc-z-scar").count() == 3 and carpet_tab.locator(".mc-z-edge").count() == 3,
-               "Each cut is a filled irregular scar with a separate tapered hot core")
-        verify(carpet_tab.locator(".mc-z-scar").evaluate_all(
-               "els => els.every(e => e.getAttribute('d').endsWith('Z') && e.getAttribute('d').length > 250)"),
-               "Blade scars are complex closed outlines rather than three straight strokes")
-        verify(any(t["impact"] > .2 for t in z_trace) and any(t["ripple"] > 1.4 for t in z_trace),
-               "Sword impacts and outward energy distortion occur during the sequence")
-        verify(all(any(35 < t["clips"][i] < 1035 for t in z_trace) for i in range(3)),
-               "Jagged scars are progressively revealed by their real clip geometry")
-        verify(all(any(0 < t["cuts"][i] < 100 for t in z_trace) for i in range(3)),
-               "Every sword cut draws through intermediate frames")
-        verify(all(all(t["cuts"][j] == 100 for j in range(i)) for t in z_trace for i in range(3) if t["cuts"][i] > 0),
-               "The three cuts form the Z in strict sequential order")
-        verify(any(t["phase"] == "holding" and t["cuts"] == [100,100,100] for t in z_trace),
-               "Completed Z is held before landing emergence")
-        verify(all(t["opened"] == 0 or t["cuts"] == [100,100,100] for t in z_trace)
-               and any(t["opened"] > 0 and t["panelY"] < -1 for t in z_trace),
-               "The split panels move only after the completed Z")
-        carpet_tab.locator("#mc-hero-replay").click()
-        carpet_tab.keyboard.press("Escape")
-        verify(portal.is_hidden(), "Escape immediately bypasses the introduction")
         carpet_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
         carpet_tab.wait_for_function(
             "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'", timeout=6000)
@@ -216,15 +191,19 @@ try:
         carpet_tab.close()
         skip_tab = ctx.new_page()
         skip_tab.emulate_media(reduced_motion="no-preference")
+        skip_tab.add_init_script("""(() => {
+            document.addEventListener('mindcare:comet-started',()=>{
+                document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',cancelable:true}));
+            });
+        })()""")
         skip_tab.goto(base + "/")
-        skip_tab.locator("#mc-carpet-skip").click()
-        verify(skip_tab.locator("#mc-carpet-intro").is_hidden(), "Skip reveals the homepage immediately")
+        verify(skip_tab.locator("#mc-carpet-intro").is_hidden(), "Escape reveals the homepage immediately")
         skip_tab.close()
 
         vortex_tab = ctx.new_page()
         vortex_tab.emulate_media(reduced_motion="no-preference")
         vortex_tab.goto(base + "/")
-        vortex_tab.locator("#mc-carpet-skip").click()
+        vortex_tab.locator("#mc-carpet-intro").wait_for(state="hidden", timeout=6000)
         # Dedicated gravity test covers the GPU-driven clock; verify the fallback independently here.
         vortex_tab.evaluate("window.MindcareGravity=undefined")
         vortex_tab.evaluate("window.__portalDocument = document; window.__portalNode = document.getElementById(\"mc-vortex\")")
