@@ -192,6 +192,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                 assert all(portal[k] for k in ("segmented","masked","rotating","suction","aboveGpu","transparentBackdrop","visible")), portal
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
+            # Close the completed GPU page before opening an independent fallback page.
+            # This avoids competing background animation clocks in the software browser.
+            page.close()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
             fallback=browser.new_page(viewport={"width":1024,"height":700}, reduced_motion="no-preference")
             fallback.goto(base+"/")
