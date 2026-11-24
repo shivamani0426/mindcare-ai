@@ -211,6 +211,7 @@ try:
                "Password visibility control works after the continuous transition")
         vortex_tab.go_back()
         vortex_tab.wait_for_url("**/")
+        vortex_tab.locator(".mc-hero-enter").wait_for(state="visible", timeout=10000)
         verify(vortex_tab.locator(".mc-hero-enter").is_visible(), "Back returns to the canonical landing page")
         vortex_tab.goto(base + "/login")
         verify(vortex_tab.locator("#mc-vortex").is_hidden(),
