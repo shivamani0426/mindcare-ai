@@ -105,7 +105,24 @@
     // The existing wall-clock compositor path is used when GPU preparation fails.
     const rendered = gravity?.run(animations,phase,duration);
     if (rendered) await rendered;
-    else await Promise.all(animations.map(a => a.finished));
+    else {
+      // A slow software compositor can otherwise advance hundreds of
+      // milliseconds between paints, skipping the spiral's middle poses.
+      // Drive the fallback group from one capped, monotonic frame clock.
+      // On normal displays this retains the same 1650ms choreography.
+      // A bounded wall deadline keeps navigation usable if frames stall.
+      animations.forEach(a => { a.pause(); a.currentTime = 0; });
+      const begun = performance.now();
+      let previous = begun, elapsed = 0;
+      while (elapsed < duration && token === generation) {
+        const now = await frame();
+        if (token !== generation) return false;
+        if (now - begun > duration * 3) break;
+        elapsed = Math.min(duration, elapsed + Math.min(80, Math.max(1, now - previous)));
+        previous = now;
+        animations.forEach(a => { a.currentTime = elapsed; });
+      }
+    }
     if (token !== generation) return false;
     gravity?.settle(phase);
     specs.forEach(([element,frames]) => setPose(element,frames[frames.length-1]));
