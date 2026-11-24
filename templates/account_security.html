@@ -17,6 +17,7 @@
       {% else %}<p class="auth-fineprint">Google OAuth credentials need to be configured by the site administrator.</p>{% endif %}
     </article>
   </div>
-  <p class="clinical-note">For your privacy, another Google account can never be silently attached based on a matching email. This page is not a password reset system.</p>
+  <p><a class="button button-outline" href="{{ url_for('forgot_password') }}">Password recovery</a></p>
+  <p class="clinical-note">For your privacy, another Google account can never be silently attached based on a matching email. To recover your password, use the recovery page.</p>
 </section>
 {% endblock %}
