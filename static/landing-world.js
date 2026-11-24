@@ -149,6 +149,7 @@
     });
     replay?.addEventListener('click', showCarpet);
     [reduce,contrast,forced].forEach(pref => pref.addEventListener?.('change', () => {
+      if (phase === 'disposed') return;
       if (!motionAllowed() && phase !== 'ready') finishImmediately();
       else if (phase === 'ready' && replay) replay.hidden = !motionAllowed();
     }));
