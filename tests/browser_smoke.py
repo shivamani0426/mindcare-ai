@@ -186,19 +186,24 @@ try:
         vortex_tab.evaluate("""() => {
             window.__syncTrace = [];
             document.addEventListener('mindcare:vortex-opened', event => {
-              window.__syncTrace.push({kind:'terminal',name:'opening',at:performance.now(),...event.detail});
+              window.__syncTrace.push({phase:'terminal',at:performance.now(),...event.detail});
             });
-            const names = new Set(['mc-vortex-landing-infall','mc-vortex-grow','mc-vortex-auth-emerge']);
-            for (const kind of ['animationstart','animationend']) {
-              document.addEventListener(kind, event => {
-                if (!names.has(event.animationName)) return;
-                const el = event.target;
-                const animation = el.getAnimations().find(a => a.animationName === event.animationName);
-                window.__syncTrace.push({kind,name:event.animationName,at:performance.now(),
-                  start:animation?.startTime ?? null,duration:getComputedStyle(el).animationDuration,
-                  opacity:Number(getComputedStyle(el).opacity)});
-              }, true);
-            }
+            document.addEventListener('mindcare:vortex-motion', event => {
+              const scene = document.querySelector('.mc-vacuum-scene');
+              const space = document.querySelector('.mc-vortex-space');
+              const a = scene.getAnimations()[0];
+              const b = space.getAnimations()[0];
+              window.__syncTrace.push({phase:event.detail.phase,at:performance.now(),
+                start:a.startTime,portalStart:b.startTime,duration:a.effect.getTiming().duration,
+                portalDuration:b.effect.getTiming().duration});
+              const probe = () => {
+                if (!scene.isConnected || a.playState !== 'running') return;
+                const scale = Math.hypot(...(() => {const m = new DOMMatrixReadOnly(getComputedStyle(scene).transform);return [m.m11,m.m12,m.m13]})());
+                window.__syncTrace.push({phase:event.detail.phase+'-frame',scale,opacity:Number(getComputedStyle(scene).opacity)});
+                requestAnimationFrame(probe);
+              };
+              requestAnimationFrame(probe);
+            });
         }""")
         vortex_tab.locator(".mc-hero-enter").click()
         verify(vortex_tab.locator("#mc-vortex").is_visible(),
@@ -215,21 +220,20 @@ try:
                "The real server-rendered sign-in page emerges from the shared portal")
         vortex_tab.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
         trace = vortex_tab.evaluate("window.__syncTrace")
-        def animation_event(name, kind):
-            return next((event for event in trace if event["name"] == name and event["kind"] == kind), None)
-        infall_start = animation_event("mc-vortex-landing-infall", "animationstart")
-        grow_start = animation_event("mc-vortex-grow", "animationstart")
-        terminal = animation_event("opening", "terminal")
-        emerge_start = animation_event("mc-vortex-auth-emerge", "animationstart")
-        verify(all((infall_start, grow_start, terminal, emerge_start)),
-               "Both opening animations start and the login emergence follows a measured terminal state")
-        verify(infall_start["duration"] == grow_start["duration"] and
-               infall_start["start"] is not None and grow_start["start"] is not None and
-               abs(infall_start["start"] - grow_start["start"]) <= 32,
-               "Landing contraction and black hole expansion share one start time and duration")
-        verify(terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01 and
-               emerge_start["at"] >= terminal["at"],
-               "Login emerges only once the landing has been absorbed and portal is fully formed")
+        def phase(name):
+            return next((event for event in trace if event["phase"] == name), None)
+        absorb, terminal, emit = phase("absorbing"), phase("terminal"), phase("emitting")
+        verify(all((absorb, terminal, emit)),
+               "Vacuum absorption, measured endpoint and emission all execute")
+        verify(all(event["start"] == event["portalStart"] and event["duration"] == event["portalDuration"]
+                   for event in (absorb, emit)), "Scene and vortex share exact timeline start and duration in both directions")
+        verify(terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01 and emit["at"] >= terminal["at"],
+               "Login begins only after absorption is complete")
+        for name, direction in (("absorbing-frame", -1), ("emitting-frame", 1)):
+            scales = [event["scale"] for event in trace if event["phase"] == name]
+            verify(len([v for v in scales if .1 < v < .9]) >= 3 and
+                   len(scales) >= 5 and (scales[-1] - scales[0]) * direction > .45,
+                   "Actual intermediate rendered poses progress smoothly instead of jumping: " + name)
         verify(vortex_tab.locator("#mc-vortex").is_hidden(),
                "Portal cleans up when authentication becomes interactive")
         verify(vortex_tab.locator("#auth-email").is_visible() and
