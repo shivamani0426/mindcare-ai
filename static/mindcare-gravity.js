@@ -13,7 +13,7 @@ uniform vec2 u_size;
 uniform float u_pull;
 uniform float u_time;
 #define PI 3.14159265359
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float hash(vec2 p){vec3 v=fract(vec3(p.xyx)*.1031);v+=dot(v,v.yzx+33.33);return fract((v.x+v.y)*v.z);}
 float star(vec2 p,float cells,float seed){
   vec2 g=p*cells, id=floor(g), f=fract(g)-.5;
   float h=hash(id+seed);
@@ -47,7 +47,7 @@ void main(){
   // parameter reverses when the incoming page is reconstructed.
   float sa=theta+2.9*k/(.13+r*2.4);
   vec2 st=vec2(cos(sa),sin(sa))*r*(1.+1.8*k);
-  float stars=star(st,36.,2.)+.65*star(st+vec2(.8,.1),57.,7.);
+  float stars=star(st,43.,2.);
   vec3 sky=vec3(.011,.019,.035)+stars*vec3(.82,.92,1.);
   float ring=mix(.025,.205,k);
   float halo=exp(-abs(r-ring)*22.);
@@ -85,7 +85,7 @@ void main(){
       premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'});
     if(!gl)return null;
     let destroyed=false, valid=false, raf=0, program, buffer, texture, vs, fs;
-    let slow=0,last=0, reduced=false, epoch=performance.now();
+    let slow=0,last=0,quality=0,epoch=performance.now();
     const fail=()=>{valid=false;canvas.hidden=true;cancelAnimationFrame(raf);};
     const compile=(type,source)=>{
       const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);
@@ -114,7 +114,7 @@ void main(){
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
-      const budget=reduced?240000:matchMedia('(max-width:650px)').matches?380000:720000;
+      const budget=quality===2?90000:quality===1?180000:matchMedia('(max-width:650px)').matches?240000:360000;
       const s=Math.min(1,Math.sqrt(budget/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       canvas.width=Math.max(1,Math.round(w*s));canvas.height=Math.max(1,Math.round(h*s));
       gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(uSize,canvas.width,canvas.height);
@@ -125,8 +125,8 @@ void main(){
     const draw=(pull,now=performance.now())=>{
       if(!valid||destroyed||gl.isContextLost())return;
       gl.uniform1f(uPull,pull);gl.uniform1f(uTime,(now-epoch)/1000);
-      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
       canvas.dataset.pull=pull.toFixed(3);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     };
     const capture=async(scene)=>{
       if(destroyed||gl.isContextLost())return false;
@@ -148,6 +148,8 @@ void main(){
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
         shot.width=1;shot.height=1;valid=true;
+        // Warm up the fragment program before the motion clock starts.
+        if(canvas.hidden){draw(.5);draw(0);}
         return true;
       }catch(_){fail();return false;}
     };
@@ -162,9 +164,9 @@ void main(){
         const t=Math.max(0,Math.min(1,Number(animation.currentTime||0)/duration));
         const eased=t*t*(3-2*t);
         draw(reverse?1-eased:eased,now);
-        if(last&&now-last>48)slow++;else slow=Math.max(0,slow-1);
+        if(last&&now-last>34)slow++;else slow=Math.max(0,slow-1);
         last=now;
-        if(slow>=5&&!reduced){reduced=true;resize();slow=0;draw(reverse?1-eased:eased,now);}
+        if(slow>=2&&quality<2){quality++;resize();slow=0;draw(reverse?1-eased:eased,now);}
         if(t<1)raf=requestAnimationFrame(tick);
       };
       draw(reverse?1:0);raf=requestAnimationFrame(tick);
