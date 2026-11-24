@@ -144,6 +144,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     }
                     trace.colors[phase]=colors.size;
                 }
+                const view=gl.getUniformLocation(program,'u_view');
+                if(view===null)throw Error('3D camera inclination uniform missing');
+                gl.uniform1f(view,0);
                 const sample=draw(window.gravitySnapshots[0],1);
                 let upper=0,wing=0,warm=0;
                 for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
@@ -157,7 +160,16 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                         if(Math.abs(dx)>1.3&&Math.abs(dy)<.65&&dr<2.95)wing++;
                     }
                 }
-                trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,warm};
+                // Inspect the same scene from a different 3D viewing angle.
+                // The projected disk must change while the central sphere stays dark.
+                gl.uniform1f(view,.30);
+                const tilted=draw(window.gravitySnapshots[0],1);
+                let viewChanges=0;
+                for(let y=0;y<c.height;y+=2)for(let x=0;x<c.width;x+=2){
+                    const a=sample(x,y),b=tilted(x,y);
+                    if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>45)viewChanges++;
+                }
+                trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,warm,viewChanges,tiltedCenter:tilted(c.width/2,c.height/2)};
                 gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
                 window.gravitySnapshots=[];
             }""")
@@ -173,6 +185,8 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert trace["lensing"], "no near-horizon rendered sample"
             assert max(trace["lensing"]["center"]) <= 20, trace["lensing"]
             assert trace["lensing"]["upper"] >= 15 and trace["lensing"]["wing"] >= 15, trace["lensing"]
+            assert trace["lensing"]["viewChanges"] >= 100, trace["lensing"]
+            assert max(trace["lensing"]["tiltedCenter"]) <= 20, trace["lensing"]
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
