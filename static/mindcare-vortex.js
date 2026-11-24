@@ -3,18 +3,45 @@
   const root = document.documentElement;
   const stage = document.getElementById('mc-vortex');
   if (!stage || !document.body.classList.contains('mc-world-page')) return;
+  const space = stage.querySelector('.mc-vortex-space');
+  const backdrop = stage.querySelector('.mc-vortex-backdrop');
   const prefs = ['(prefers-reduced-motion: reduce)','(prefers-contrast: more)','(forced-colors: active)'].map(s => matchMedia(s));
   const motion = () => !prefs.some(p => p.matches) && !document.body.classList.contains('reduced-motion');
-  let destination = null, controller = null, mounted = false, busy = false;
-  let timer = 0, generation = 0;
-  const clear = () => {
-    clearTimeout(timer);
+  let destination = null, controller = null, mounted = false, busy = false, scene = null;
+  let generation = 0, requestTimer = 0, group = [];
+  const tiny = 'translate3d(0,0,0) rotate(-28deg) scale(.035)';
+  const full = 'translate3d(0,0,0) rotate(0deg) scale(1)';
+  const portalTransform = scale => 'translate3d(-50%,-50%,0) scale(' + scale + ')';
+  // These exact same poses are traversed backwards when the login is emitted.
+  const vacuum = [
+    {transform:full,opacity:1,offset:0},
+    {transform:'translate3d(0,0,0) rotate(-2deg) scale(.91)',opacity:1,offset:.18},
+    {transform:'translate3d(0,0,0) rotate(-9deg) scale(.63)',opacity:1,offset:.43},
+    {transform:'translate3d(0,0,0) rotate(-19deg) scale(.26)',opacity:.85,offset:.72},
+    {transform:tiny,opacity:0,offset:1}
+  ];
+  const emission = vacuum.slice().reverse().map(k => ({...k,offset:1-k.offset}));
+  const duration = 1650;
+  const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+  const reset = () => {
+    clearTimeout(requestTimer);
     controller?.abort();
     controller = null;
+    group.forEach(a => a.cancel());
+    group = [];
+    if (scene?.isConnected) {
+      scene.querySelectorAll('[data-mc-vacuum-offscreen]').forEach(el => el.removeAttribute('data-mc-vacuum-offscreen'));
+      const shell = scene.querySelector('.site-shell');
+      if (shell) scene.replaceWith(shell);
+      else scene.remove();
+    }
+    scene = null;
     root.classList.remove('mc-vortex-departing','mc-vortex-arriving','mc-vortex-open');
     root.style.removeProperty('--mc-vortex-scroll-offset');
     stage.hidden = true;
     stage.dataset.phase = 'idle';
+    space.style.removeProperty('transform');
+    backdrop.style.removeProperty('opacity');
     document.querySelector('.site-shell')?.removeAttribute('inert');
     document.querySelector('.skip')?.removeAttribute('inert');
     destination = null;
@@ -23,60 +50,44 @@
   const fallback = () => {
     const url = destination;
     ++generation;
-    clear();
+    reset();
     if (url && !mounted) location.assign(url);
   };
   const finish = () => {
-    clear();
+    ++generation;
+    reset();
     const heading = document.getElementById('auth-title');
     if (heading) {
       heading.tabIndex = -1;
       heading.focus({preventScroll:true});
     }
   };
-  // The landing's contraction and portal growth share a clock. Do not swap
-  // the page until BOTH compositor animations have reached their end.
-  const openingFinished = outgoing => new Promise(resolve => {
-    const space = stage.querySelector('.mc-vortex-space');
-    const expected = new Map([[outgoing,'mc-vortex-landing-infall'],[space,'mc-vortex-grow']]);
-    const remaining = new Set(expected.keys());
-    let done = false, watchdog, raf;
-    const complete = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(watchdog);
-      cancelAnimationFrame(raf);
-      expected.forEach((name,element) => element.removeEventListener('animationend',onEnd));
-      if (!busy || !root.classList.contains('mc-vortex-departing')) { resolve(); return; }
-      // Explicit terminal styles also cover Safari throttling or missing events.
-      root.classList.add('mc-vortex-open');
-      const landing = getComputedStyle(outgoing);
-      const portal = getComputedStyle(space);
-      const matrix = new DOMMatrixReadOnly(portal.transform);
-      document.dispatchEvent(new CustomEvent('mindcare:vortex-opened', {detail:{
-        landingOpacity:Number(landing.opacity),
-        portalScale:Math.hypot(matrix.m11,matrix.m12,matrix.m13)
-      }}));
-      resolve();
-    };
-    const ended = element => {
-      remaining.delete(element);
-      if (!remaining.size) complete();
-    };
-    const onEnd = event => {
-      const element = event.currentTarget;
-      if (event.target === element && event.animationName === expected.get(element)) ended(element);
-    };
-    expected.forEach((name,element) => element.addEventListener('animationend',onEnd));
-    // Observe finished promises as well as DOM events; WebKit can delay events.
-    raf = requestAnimationFrame(() => {
-      expected.forEach((name,element) => {
-        const animation = element.getAnimations?.().find(a => a.animationName === name);
-        animation?.finished.then(() => ended(element), () => {});
-      });
+  const setPose = (element, pose) => {
+    if (pose.transform) element.style.transform = pose.transform;
+    if (pose.opacity !== undefined) element.style.opacity = String(pose.opacity);
+  };
+  // All three compositor animations share one start time. Commit their
+  // terminal poses BEFORE cancelling; no animationend race or cleanup timer.
+  const play = async (specs, token) => {
+    for (const [element,frames] of specs) setPose(element,frames[0]);
+    await frame();
+    if (token !== generation) return false;
+    const start = document.timeline.currentTime;
+    const animations = specs.map(([element,frames]) => {
+      const a = element.animate(frames,{duration,easing:'cubic-bezier(.42,0,.58,1)',fill:'both'});
+      a.startTime = start;
+      return a;
     });
-    watchdog = setTimeout(complete, 2200);
-  });
+    group = animations;
+    const phase = stage.dataset.phase;
+    document.dispatchEvent(new CustomEvent('mindcare:vortex-motion',{detail:{phase,duration}}));
+    await Promise.all(animations.map(a => a.finished));
+    if (token !== generation) return false;
+    specs.forEach(([element,frames]) => setPose(element,frames[frames.length-1]));
+    animations.forEach(a => a.cancel());
+    group = [];
+    return true;
+  };
   const fetchLogin = async url => {
     const response = await fetch(url, {
       credentials:'same-origin', cache:'no-store', signal:controller.signal,
@@ -99,27 +110,49 @@
     destination = url.href;
     controller = new AbortController();
     const outgoing = document.querySelector('.site-shell');
-    // Preserve the visible scroll position before freezing the landing viewport.
-    root.style.setProperty('--mc-vortex-scroll-offset', (-window.scrollY) + 'px');
-    outgoing.inert = true;
     const skip = document.querySelector('.skip');
+    const scroll = window.scrollY;
+    // Cull the long landing's below-fold sections before promoting its viewport.
+    // Their layout below the visible slice is not part of the vacuum effect.
+    const below = [...outgoing.querySelectorAll('.mc-world-root > *')].filter(el => el.getBoundingClientRect().top >= window.innerHeight);
+    below.forEach(el => el.setAttribute('data-mc-vacuum-offscreen',''));
+    scene = document.createElement('div');
+    scene.className = 'mc-vacuum-scene';
+    scene.dataset.scene = 'landing';
+    setPose(scene,vacuum[0]);
+    root.style.setProperty('--mc-vortex-scroll-offset', (-scroll) + 'px');
+    outgoing.inert = true;
     if (skip) skip.inert = true;
-    stage.hidden = false;
-    stage.dataset.phase = 'opening';
-    const opened = openingFinished(outgoing);
+    outgoing.before(scene);
+    scene.append(outgoing);
     root.classList.add('mc-vortex-departing');
-    timer = setTimeout(fallback, 6000);
+    stage.hidden = false;
+    stage.dataset.phase = 'absorbing';
+    // Stop background section animations before the visible scene moves.
+    window.dispatchEvent(new Event('mindcare:landing-dispose'));
+    const login = fetchLogin(url);
+    // Handle a network failure immediately, without unhandled rejections.
+    login.catch(() => {});
+    requestTimer = setTimeout(() => { if (!mounted && token === generation) fallback(); },12000);
     try {
-      const [page] = await Promise.all([fetchLogin(url), opened]);
+      const absorbed = await play([
+        [scene,vacuum],
+        [space,[{transform:portalTransform(.035),offset:0},{transform:portalTransform(.48),offset:.28},{transform:portalTransform(.88),offset:.65},{transform:portalTransform(1),offset:1}]],
+        [backdrop,[{opacity:0,offset:0},{opacity:0,offset:.35},{opacity:1,offset:1}]]
+      ],token);
+      if (!absorbed) return;
+      stage.dataset.phase = 'holding';
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(space).transform);
+      document.dispatchEvent(new CustomEvent('mindcare:vortex-opened',{detail:{
+        landingOpacity:Number(getComputedStyle(scene).opacity),portalScale:Math.hypot(matrix.m11,matrix.m12,matrix.m13)
+      }}));
+      const page = await login;
       if (token !== generation) return;
       if (!motion()) { fallback(); return; }
-      clearTimeout(timer);
+      clearTimeout(requestTimer);
       const next = document.importNode(page.shell,true);
       next.inert = true;
       next.querySelector('#auth-email-form').action = url.href;
-      // Keep the same document and the same portal node. Only swap the real,
-      // same-origin server-rendered page below it, including its CSRF token.
-      window.dispatchEvent(new Event('mindcare:landing-dispose'));
       history.pushState({mindcareLogin:true},'',url.href);
       mounted = true;
       document.title = page.doc.title;
@@ -128,42 +161,47 @@
       document.body.className = page.doc.body.className;
       if (larger) document.body.classList.add('large-text');
       document.body.dataset.patient = '0';
-      document.querySelector('.site-shell').replaceWith(next);
-      window.scrollTo(0,0);
-      stage.dataset.phase = 'emerging';
-      root.classList.add('mc-vortex-arriving');
+      // Swap only while the viewport scene is invisible and tiny. It keeps
+      // the same transform origin, actual dimensions and depth plane.
+      scene.replaceChildren(next);
+      scene.dataset.scene = 'login';
       root.style.removeProperty('--mc-vortex-scroll-offset');
+      window.scrollTo(0,0);
+      root.classList.add('mc-vortex-arriving');
+      stage.dataset.phase = 'emitting';
       document.dispatchEvent(new Event('mindcare:login-mounted'));
-      // The portal stays alive behind the incoming page until the emergence
-      // itself ends. No second portal, flash, restart or arbitrary route delay.
-      next.addEventListener('animationend', event => {
-        if (event.target === next && event.animationName === 'mc-vortex-auth-emerge') finish();
-      });
-      timer = setTimeout(finish, 1800);
+      // Give the real login a layout/paint opportunity at the tiny pose.
+      await frame();
+      if (token !== generation) return;
+      const emitted = await play([
+        [scene,emission],
+        [space,[{transform:portalTransform(1),offset:0},{transform:portalTransform(.88),offset:.35},{transform:portalTransform(.48),offset:.72},{transform:portalTransform(.035),offset:1}]],
+        [backdrop,[{opacity:1,offset:0},{opacity:0,offset:.65},{opacity:0,offset:1}]]
+      ],token);
+      if (emitted) finish();
     } catch (_) {
-      if (token === generation) {
-        if (mounted) { clear(); location.reload(); }
-        else fallback();
-      }
+      if (token !== generation) return;
+      if (mounted) { reset(); location.reload(); }
+      else fallback();
     }
   };
   document.querySelectorAll('a[data-mc-vortex-link]').forEach(link => {
     link.addEventListener('click', event => {
       if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey ||
-          event.shiftKey || event.altKey || link.target || !motion() || !window.fetch || !window.AbortController) return;
-      const url = new URL(link.href, location.href);
+          event.shiftKey || event.altKey || link.target || !motion() ||
+          !window.fetch || !window.AbortController || !Element.prototype.animate || !document.timeline) return;
+      const url = new URL(link.href,location.href);
       if (url.origin !== location.origin || url.pathname !== '/login') return;
       event.preventDefault();
       if (!busy) open(url);
     });
   });
-  prefs.forEach(p => p.addEventListener?.('change', () => {
+  prefs.forEach(p => p.addEventListener?.('change',() => {
     if (!motion() && busy) { if (mounted) finish(); else fallback(); }
   }));
-  document.addEventListener('keydown', event => {
+  document.addEventListener('keydown',event => {
     if (event.key === 'Escape' && busy) { if (mounted) finish(); else fallback(); }
   });
-  // Back/forward across this enhanced navigation uses the canonical server page.
-  window.addEventListener('popstate', () => { if (mounted) location.reload(); });
-  window.addEventListener('pageshow', event => { if (event.persisted) clear(); });
+  window.addEventListener('popstate',() => { if (mounted || busy) location.reload(); });
+  window.addEventListener('pageshow',event => { if (event.persisted) { ++generation; reset(); } });
 })();

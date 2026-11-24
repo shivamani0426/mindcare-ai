@@ -40,61 +40,29 @@
 .mc-vortex-particle-15{--particle-angle:337.5deg;--particle-radius:47%}
 @keyframes mc-vortex-spin{to{transform:translate3d(-50%,-50%,var(--ring-depth)) rotate(calc(var(--ring-angle) + 360deg))}}
 @keyframes mc-vortex-infall{0%{opacity:0;transform:translateZ(45px) rotate(0deg) scale(1)}16%{opacity:.9}100%{opacity:0;transform:translateZ(-80px) rotate(115deg) scale(.17)}}
-@keyframes mc-vortex-depart{0%{opacity:0}20%{opacity:.9}48%,100%{opacity:1}}
-@keyframes mc-vortex-grow{
-  0%{transform:translate3d(-50%,-50%,0) scale(.035)}
-  24%{transform:translate3d(-50%,-50%,0) scale(.34)}
-  60%{transform:translate3d(-50%,-50%,0) scale(.83)}
-  100%{transform:translate3d(-50%,-50%,0) scale(1)}
-}
-/* The viewport-sized landing scene is drawn into the same center as the portal.
-   The outgoing and incoming scenes are never visible at full size together. */
-@keyframes mc-vortex-landing-infall{
-  0%{opacity:1;transform:scale(1) rotate(0deg)}
-  24%{opacity:1;transform:scale(.91) rotate(-1deg)}
-  60%{opacity:.78;transform:scale(.40) rotate(-4deg)}
-  86%{opacity:.10;transform:scale(.11) rotate(-7deg)}
-  100%{opacity:0;transform:scale(.035) rotate(-9deg)}
-}
-@keyframes mc-vortex-darken{0%,24%{opacity:0}60%{opacity:.25}100%{opacity:1}}
-.mc-vortex::before{content:"";position:absolute;inset:0;z-index:-1;background:#04070c;opacity:0}
-.mc-vortex-departing{--mc-vortex-open-duration:1050ms;--mc-vortex-ease:cubic-bezier(.32,.06,.24,1);background:#04070c}
-html.mc-vortex-departing body.mc-world-page{background:#04070c}
-.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .site-shell{
-  position:fixed;inset:0;width:100%;height:100%;min-height:0;overflow:hidden;
-  transform-origin:50% 50%;z-index:199;
-  animation:mc-vortex-landing-infall var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;
-  will-change:transform,opacity;
-}
-.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .mc-world-main{
-  transform:translate3d(0,var(--mc-vortex-scroll-offset,0px),0);
-}
-.mc-vortex-departing .mc-vortex::before{
-  animation:mc-vortex-darken var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;
-}
-/* The dark backdrop stays at its terminal value for the entire emergence. */
-.mc-vortex-arriving .mc-vortex::before{animation:none;opacity:1}
 
-@keyframes mc-vortex-arrive-bg{0%,40%{opacity:1}100%{opacity:0}}
-/* The origin exactly matches the viewport-centered black hole. No new document paint. */
-@keyframes mc-vortex-auth-emerge{
-  0%{opacity:0;transform:perspective(1100px) translate3d(0,0,-360px) rotateY(-7deg) scale(.035)}
-  22%{opacity:.85;transform:perspective(1100px) translate3d(0,0,-240px) rotateY(-5deg) scale(.27)}
-  60%{opacity:1;transform:perspective(1100px) translate3d(0,0,-75px) rotateY(2deg) scale(.81)}
-  100%{opacity:1;transform:perspective(1100px) translate3d(0,0,0) rotateY(0) scale(1)}
+/* Only a viewport-sized scene is transformed, never the long document.
+   Motion is driven by Web Animations on the same document timeline. */
+.mc-vortex{opacity:1;background:transparent}
+.mc-vortex-backdrop{position:absolute;inset:0;background:#04070c;opacity:0;pointer-events:none}
+.mc-vortex-space{transform:translate3d(-50%,-50%,0) scale(.035)}
+.mc-vacuum-scene{
+ position:fixed;inset:0;z-index:199;overflow:hidden;
+ width:100%;height:100%;transform-origin:50% 50%;
+ isolation:isolate;will-change:transform,opacity;pointer-events:none;
 }
-.mc-vortex-departing .mc-vortex{animation:mc-vortex-depart var(--mc-vortex-open-duration) var(--mc-vortex-ease) both}
-.mc-vortex-departing .mc-vortex-space{animation:mc-vortex-grow var(--mc-vortex-open-duration) var(--mc-vortex-ease) both;will-change:transform}
-.mc-vortex-arriving .mc-vortex{animation:mc-vortex-arrive-bg 1100ms ease-out both}
-.mc-vortex-arriving .site-shell{position:relative;z-index:201;transform-origin:50% 50dvh;animation:mc-vortex-auth-emerge 1100ms cubic-bezier(.16,.72,.2,1) both;will-change:transform,opacity}
-.mc-vortex-departing body,.mc-vortex-arriving body{overflow:hidden}
-.mc-vortex-departing .mc-world-root *{animation-play-state:paused!important}
+.mc-vacuum-scene>.site-shell{width:100%;min-height:100%;margin:0}
+.mc-vacuum-scene[data-scene="landing"]>.site-shell{transform:translate3d(0,var(--mc-vortex-scroll-offset,0px),0)}
+.mc-vacuum-scene[data-scene="login"]{z-index:201}
+html.mc-vortex-departing,html.mc-vortex-departing body{overflow:hidden;background:#04070c}
+.mc-vortex-departing .mc-world-root *,.mc-vortex-departing .mc-world-root *::before,.mc-vortex-departing .mc-world-root *::after{animation-play-state:paused!important}
 .mc-vortex-arriving body.mindcare-auth-route .auth-v2::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2::after,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::after{animation-play-state:paused!important;filter:none!important}
 @media(max-width:650px){.mc-vortex-space{width:min(88vw,66vh)}.mc-vortex-particle:nth-child(even){display:none}.mc-vortex-ring-4{animation:none}}
-@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex{display:none!important}.mc-vortex-arriving .site-shell,.mc-vortex-departing:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none!important;transform:none!important;opacity:1!important}}
+@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex{display:none!important}}
 
-/* Hold the exact shared endpoint before mounting the incoming scene. */
-.mc-vortex-open:not(.mc-vortex-arriving) body.mc-world-page .site-shell{animation:none;opacity:0;transform:scale(.035) rotate(-9deg)}
-.mc-vortex-open .mc-vortex-space{animation:none;transform:translate3d(-50%,-50%,0) scale(1)}
-.mc-vortex-open:not(.mc-vortex-arriving) .mc-vortex{animation:none;opacity:1}
-.mc-vortex-open .mc-vortex::before{animation:none;opacity:1}
+/* Paint only the visible viewport; the remaining document never enters the GPU layer. */
+.mc-vacuum-scene{contain:strict}
+.mc-vacuum-scene[data-scene="landing"] [data-mc-vacuum-offscreen]{display:none!important}
+.mc-vacuum-scene[data-scene="landing"] :is(.mc-hero-art,.mc-hero-light-ring,.mc-hero-light-flare){filter:none!important}
+.mc-vacuum-scene[data-scene="landing"] .mc-hero-orb{box-shadow:0 0 24px #83aab455!important}
+.mc-vacuum-scene[data-scene="landing"] .mc-cinematic-orbit{box-shadow:none!important}

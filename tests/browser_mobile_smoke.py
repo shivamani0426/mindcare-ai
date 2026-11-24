@@ -59,6 +59,13 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 page.evaluate("window.__portalNode = document.getElementById(\"mc-vortex\")")
                 page.evaluate("""() => {
                     window.__openingTerminal = null;
+                    window.__motionPhases = [];
+                    document.addEventListener("mindcare:vortex-motion", event => {
+                        const scene = document.querySelector(".mc-vacuum-scene");
+                        const a = scene.getAnimations()[0];
+                        const b = document.querySelector(".mc-vortex-space").getAnimations()[0];
+                        window.__motionPhases.push({phase:event.detail.phase, shared:a.startTime === b.startTime, duration:a.effect.getTiming().duration});
+                    });
                     document.addEventListener('mindcare:vortex-opened', event => {
                         window.__openingTerminal = event.detail;
                     });
@@ -72,6 +79,8 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 page.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
                 assert page.locator("#auth-email").is_visible()
                 assert page.locator("#mc-vortex").is_hidden()
+                phases = page.evaluate("window.__motionPhases")
+                assert [phase["phase"] for phase in phases] == ["absorbing", "emitting"] and all(phase["shared"] and phase["duration"] == 1650 for phase in phases), (engine, phases)
                 page.emulate_media(reduced_motion="reduce")
                 page.goto(base + "/register")
                 assert page.locator("#main").get_attribute("tabindex") == "-1"
