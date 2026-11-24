@@ -137,19 +137,34 @@ void main(){
       if(destroyed||gl.isContextLost()){report('context unavailable before capture');return false;}
       const w=scene.clientWidth,h=scene.clientHeight;
       if(w<1||h<1){report('empty capture dimensions');return false;}
-      const scale=Math.min(1,Math.sqrt(420000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
+      const scale=Math.min(1,Math.sqrt(300000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
+      // Clone only the visible public scene plus its style/ancestor chain.
+      // Avoid expensive hidden entrance, below-fold content and live overlays.
+      const captureIgnore=el=>{
+        if(el===scene||el.contains(scene)||el.tagName==='HEAD'||document.head.contains(el))return false;
+        if(!scene.contains(el))return true;
+        return el.hidden||el.hasAttribute('data-mc-vacuum-offscreen')||el.id==='mc-carpet-intro'||el.tagName==='SCRIPT';
+      };
       try{
         const shot=await timeout(window.html2canvas(scene,{
           width:w,height:h,windowWidth:window.innerWidth,windowHeight:window.innerHeight,
           scrollX:0,scrollY:0,scale,backgroundColor:'#04070c',logging:false,
           allowTaint:false,useCORS:false,imageTimeout:900,removeContainer:true,
-          ignoreElements:el=>el===canvas||el.classList?.contains(cssClass)||el.id==='mc-vortex'||el.hasAttribute('data-mc-vacuum-offscreen'),
+          ignoreElements:captureIgnore,
           onclone:(_,target)=>{
             target.style.transform='none';target.style.opacity='1';
             target.style.visibility='visible';target.style.animation='none';
+            // Snapshot renderer cannot reproduce expensive live filters exactly.
+            // Retain backgrounds, colors, geometry, text and image content.
+            for(const el of target.querySelectorAll('*')){
+              if(!el.style)continue;
+              el.style.animation='none';el.style.transition='none';
+              el.style.filter='none';el.style.backdropFilter='none';
+              el.style.boxShadow='none';el.style.textShadow='none';
+            }
             target.querySelectorAll('input[type=password],input[type=email]').forEach(input=>{input.value='';});
           }
-        }),2400);
+        }),4800);
         if(destroyed||gl.isContextLost()){report('context unavailable after capture');return false;}
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
