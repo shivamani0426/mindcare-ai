@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.emulate_media(reduced_motion="no-preference")
-                page.add_init_script("""() => {
+                page.add_init_script("""(() => {
                     window.__mobileComet={starts:[],ends:[]};
                     document.addEventListener('mindcare:comet-started',e=>{
                         const el=document.getElementById('mc-carpet-intro');
@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                             covered:document.querySelector('.mc-world-root').inert});
                     });
                     document.addEventListener('mindcare:comet-finished',e=>window.__mobileComet.ends.push(e.detail));
-                }""")
+                })()""")
                 page.goto(base + "/")
                 portal = page.locator("#mc-carpet-intro")
                 portal.wait_for(state="hidden", timeout=6000)
