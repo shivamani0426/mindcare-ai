@@ -30,6 +30,33 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 page = ctx.new_page()
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
+                page.emulate_media(reduced_motion="no-preference")
+                page.goto(base + "/")
+                portal = page.locator("#mc-door-intro")
+                assert portal.is_visible()
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 3")
+                # Synthetic touch events exercise swipe handling in both engines.
+                portal.evaluate("""el => {
+                  function touch(name, y) {
+                    const event = new Event(name, {bubbles:true,cancelable:true});
+                    Object.defineProperty(event, 'touches', {value:[{clientY:y}]});
+                    el.dispatchEvent(event);
+                  }
+                  touch('touchstart', 600);
+                  touch('touchmove', 500);
+                }""")
+                page.wait_for_function("() => +document.querySelector('#mc-door-intro').dataset.progress > .08")
+                assert portal.is_visible()
+                portal.evaluate("""el => {
+                  const event = new Event('touchmove', {bubbles:true,cancelable:true});
+                  Object.defineProperty(event, 'touches', {value:[{clientY:80}]});
+                  el.dispatchEvent(event);
+                  el.dispatchEvent(new Event('touchend'));
+                }""")
+                portal.wait_for(state="hidden", timeout=6000)
+                assert page.locator(".mc-hero-enter").is_visible()
+                assert not page.locator(".mc-world-root").evaluate("el => el.inert")
+                page.emulate_media(reduced_motion="reduce")
                 page.goto(base + "/register")
                 assert page.locator("#main").get_attribute("tabindex") == "-1"
                 assert page.locator(".skip").count() == 1
