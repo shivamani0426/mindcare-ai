@@ -185,6 +185,9 @@ try:
         vortex_tab.evaluate("window.__portalDocument = document; window.__portalNode = document.getElementById(\"mc-vortex\")")
         vortex_tab.evaluate("""() => {
             window.__syncTrace = [];
+            document.addEventListener('mindcare:vortex-opened', event => {
+              window.__syncTrace.push({kind:'terminal',name:'opening',at:performance.now(),...event.detail});
+            });
             const names = new Set(['mc-vortex-landing-infall','mc-vortex-grow','mc-vortex-auth-emerge']);
             for (const kind of ['animationstart','animationend']) {
               document.addEventListener(kind, event => {
@@ -216,17 +219,16 @@ try:
             return next((event for event in trace if event["name"] == name and event["kind"] == kind), None)
         infall_start = animation_event("mc-vortex-landing-infall", "animationstart")
         grow_start = animation_event("mc-vortex-grow", "animationstart")
-        infall_end = animation_event("mc-vortex-landing-infall", "animationend")
-        grow_end = animation_event("mc-vortex-grow", "animationend")
+        terminal = animation_event("opening", "terminal")
         emerge_start = animation_event("mc-vortex-auth-emerge", "animationstart")
-        verify(all((infall_start, grow_start, infall_end, grow_end, emerge_start)),
-               "All three phases emit actual compositor animation events")
+        verify(all((infall_start, grow_start, terminal, emerge_start)),
+               "Both opening animations start and the login emergence follows a measured terminal state")
         verify(infall_start["duration"] == grow_start["duration"] and
                infall_start["start"] is not None and grow_start["start"] is not None and
                abs(infall_start["start"] - grow_start["start"]) <= 32,
                "Landing contraction and black hole expansion share one start time and duration")
-        verify(infall_end["opacity"] <= .01 and
-               emerge_start["at"] >= max(infall_end["at"], grow_end["at"]),
+        verify(terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01 and
+               emerge_start["at"] >= terminal["at"],
                "Login emerges only once the landing has been absorbed and portal is fully formed")
         verify(vortex_tab.locator("#mc-vortex").is_hidden(),
                "Portal cleans up when authentication becomes interactive")
