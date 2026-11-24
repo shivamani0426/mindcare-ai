@@ -31,7 +31,6 @@ jobs:
           node --check static/game-i18n.js
           node --check static/caregiver-dashboard.js
           node --check static/auth-ui.js
-          node --check static/auth-phone.js
           node --check static/milo.js
           node --check static/landing-world.js
 

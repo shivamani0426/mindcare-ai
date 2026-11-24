@@ -3,7 +3,6 @@
 {% block body_class %}mindcare-auth-route{% endblock %}
 {% block head %}
   <script src="{{ url_for('static',filename='auth-ui.js') }}" defer></script>
-  {% if phone_login_ready %}<script type="module" src="{{ url_for('static',filename='auth-phone.js') }}"></script>{% endif %}
 {% endblock %}
 {% block content %}
 <section class="auth-v2" aria-labelledby="auth-title">
@@ -38,11 +37,6 @@
       {% endif %}
 
       <div class="auth-separator"><span>or continue securely with</span></div>
-      <div class="auth-method-tabs" role="group" aria-label="Choose sign-in method">
-        <button class="auth-method-tab" type="button" data-auth-tab="email" aria-pressed="true">✉ Email & password</button>
-        <button class="auth-method-tab" type="button" data-auth-tab="phone" aria-pressed="false">☎ Phone OTP{% if not phone_login_ready %} <small>Setup needed</small>{% endif %}</button>
-      </div>
-
       <div class="auth-method-panel" data-auth-panel="email">
         <form method="post" class="auth-v2-email-form" id="auth-email-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -62,29 +56,6 @@
           <button class="button auth-submit-button" type="submit">{{ 'Create my account' if mode == 'register' else 'Sign in securely' }} <span aria-hidden="true">→</span></button>
         </form>
       </div>
-
-      <div class="auth-method-panel" data-auth-panel="phone" hidden>
-        {% if phone_login_ready %}
-        <section class="auth-phone-flow" data-phone-auth data-firebase-config='{{ firebase_web_config|tojson }}' aria-label="Phone number sign-in">
-          <p class="auth-phone-intro">We'll send a one-time verification code to your mobile phone. Choose your country code and enter the full number.</p>
-          <form class="auth-phone-send" id="phone-send-form">
-            <div class="auth-form-field"><label for="auth-phone-number">Mobile number with country code</label><input id="auth-phone-number" type="tel" name="phone" placeholder="+919876543210" autocomplete="tel" inputmode="tel" pattern="\+[1-9][0-9]{7,14}" required></div>
-            <div id="auth-recaptcha" class="auth-recaptcha" aria-label="Security verification"></div>
-            <button type="submit" class="button auth-submit-button" id="phone-send-button">Send verification code →</button>
-          </form>
-          <form class="auth-phone-verify" id="phone-verify-form" hidden>
-            <div class="auth-form-field"><label for="auth-sms-code">6-digit SMS verification code</label><input id="auth-sms-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456" required></div>
-            <button type="submit" class="button auth-submit-button">Verify and continue →</button>
-            <button type="button" class="auth-phone-again" id="phone-try-again">Use a different number</button>
-          </form>
-          <p id="auth-phone-status" class="auth-phone-status" role="status" aria-live="polite"></p>
-          <p class="auth-fineprint">SMS delivery is handled by Firebase and may incur provider charges. Phone-only login can be less secure than Google or a password.</p>
-        </section>
-        {% else %}
-        <div class="auth-phone-not-ready" role="status"><span aria-hidden="true">📱</span><h3>Phone OTP sign-in</h3><p>This option needs a verified SMS provider to protect your account. It hasn't been connected yet. You can sign in with email now.</p><button class="button button-outline" type="button" data-auth-return-email>Use email instead</button></div>
-        {% endif %}
-      </div>
-
 
       <div class="auth-form-bottom"><p>{{ 'Already have a MindCare account?' if mode == 'register' else 'New to MindCare?' }} <a href="{{ url_for('login') if mode == 'register' else url_for('register') }}">{{ 'Sign in instead →' if mode == 'register' else 'Create your account →' }}</a></p><p class="auth-trust-caption"><span aria-hidden="true">◈</span> Your information stays private and is shared only with caregivers you approve.</p></div>
     </div>

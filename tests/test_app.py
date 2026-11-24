@@ -913,8 +913,8 @@ def test_auth_v3_professional_page_preserves_email_password_and_roles(client):
     assert b"auth-v2" in login_page.data
     assert b'auth-email-form' in login_page.data
     assert b"Google sign-in" in login_page.data
-    assert b"Phone OTP" in login_page.data
-    assert b"auth-phone-not-ready" in login_page.data
+    assert b"Phone OTP" not in login_page.data
+    assert b"auth-phone.js" not in login_page.data
     assert b'href="/auth/google"' not in login_page.data
     assert b'auth-role-selector' in register_page.data
     assert b'value="caregiver"' in register_page.data
@@ -923,7 +923,7 @@ def test_auth_v3_professional_page_preserves_email_password_and_roles(client):
     assert client.get("/auth/google").status_code == 302
     assert client.post("/auth/phone-session", json={
         "id_token":"fake" * 70
-    }, headers={"X-CSRF-Token": token(client,"/login")}).status_code == 503
+    }, headers={"X-CSRF-Token": token(client,"/login")}).status_code == 404
     register(client, "Patient Sana", "auth-legacy@example.org", "patient")
     security = client.get("/account/security")
     assert security.status_code == 200
@@ -934,61 +934,18 @@ def test_auth_v3_professional_page_preserves_email_password_and_roles(client):
     assert b"Hello, Patient" in client.get("/dashboard").data
 
 
-def test_phone_otp_server_requires_verified_identity_before_account_creation(client, monkeypatch):
-    import app as authapp
-    assert client.get("/auth/complete").status_code == 302
-    assert client.post("/auth/complete", data={
-        "csrf_token": token(client, "/login"), "role":"caregiver", "name":"Attacker"
-    }).status_code == 302
-    client.get("/login")
+def test_removed_phone_auth_cannot_create_accounts(client):
     csrf = token(client, "/login")
-    monkeypatch.setattr(authapp, "firebase_phone_ready", lambda: True)
-    monkeypatch.setattr(authapp, "firebase_public_config", lambda: {"apiKey":"test", "authDomain":"test.firebaseapp.com", "projectId":"test", "appId":"test"})
-    monkeypatch.setattr(authapp, "verify_firebase_phone_id_token",
-        lambda token: ("phone-provider-uid-123", "+919876543210")
-        if token == "verified-firebase-id-token-"+"x"*90
-        else (_ for _ in ()).throw(ValueError("bad token")))
-    rejected = client.post("/auth/phone-session", json={
-        "id_token":"invalid-"+"x"*90,
-        "uid":"phone-provider-uid-123","phone":"+919876543210",
-        "role":"caregiver"
-    }, headers={"X-CSRF-Token":csrf})
-    assert rejected.status_code == 401
-    ok = client.post("/auth/phone-session", json={
-        "id_token":"verified-firebase-id-token-"+"x"*90,
-        "uid":"spoofed-uid","role":"caregiver"
-    }, headers={"X-CSRF-Token":csrf})
-    assert ok.status_code == 200 and ok.json["next_url"] == "/auth/complete"
-    from app import ExternalIdentity, PendingIdentity
+    assert client.post("/auth/phone-session", json={"id_token": "fake" * 70},
+                       headers={"X-CSRF-Token": csrf}).status_code == 404
+    assert client.post("/auth/complete", data={
+        "csrf_token": csrf, "role": "caregiver", "name": "Attacker"
+    }).status_code == 302
     with app.app_context():
+        from app import ExternalIdentity, PendingIdentity
         assert User.query.count() == 0
         assert ExternalIdentity.query.count() == 0
-        assert PendingIdentity.query.count() == 1
-    # Must still choose patient or caregiver; no role can be forced in token JSON.
-    page = client.get("/auth/complete")
-    assert b"auth-onboard" in page.data and b"phone number" in page.data
-    created = client.post("/auth/complete", data={
-        "csrf_token":csrf, "name":"Helper Sana", "role":"caregiver"
-    }, follow_redirects=True)
-    assert created.status_code == 200
-    assert b"caregiver-v2" in created.data
-    with app.app_context():
-        user = User.query.one()
-        assert user.role == "caregiver"
-        assert user.email.endswith("@internal.mindcare.invalid")
-        identity = ExternalIdentity.query.one()
-        assert identity.subject == "phone-provider-uid-123"
-        assert identity.label == "+919876543210"
-        assert identity.user_id == user.id
         assert PendingIdentity.query.count() == 0
-    logout(client)
-    again = client.post("/auth/phone-session", json={
-        "id_token":"verified-firebase-id-token-"+"x"*90
-    }, headers={"X-CSRF-Token":token(client,"/login")})
-    assert again.status_code == 200
-    assert again.json["next_url"] == "/dashboard"
-    with app.app_context():
-        assert User.query.count() == 1
 
 
 def test_google_verified_profile_uses_subject_and_does_not_autolink_email(client,monkeypatch):

@@ -318,7 +318,7 @@ try:
         verify("mindcare-world.svg" in page.locator(".auth-v2-story").evaluate(
             "(el) => getComputedStyle(el).backgroundImage"),
             "Real login and registration story uses original illustrated MindCare artwork")
-        verify(page.locator(".auth-method-tabs").count() == 1, "Email and phone sign-in tabs visible")
+        verify(page.locator('[data-auth-tab="phone"], [data-phone-auth]').count() == 0, "Removed phone sign-in controls are absent")
         for width, height in [(320, 780), (375, 812), (768, 1024), (1280, 900)]:
             page.set_viewport_size({"width": width, "height": height})
             page.wait_for_timeout(100)
@@ -329,11 +329,7 @@ try:
         verify(page.locator(".auth-v2-form-panel").bounding_box()["x"] <
                page.locator(".auth-v2-story").bounding_box()["x"],
                "Desktop auth form appears to the left of the illustration")
-        page.locator('[data-auth-tab="phone"]').click()
-        verify(page.locator(".auth-phone-not-ready").is_visible(),
-               "SMS option explains required provider setup instead of fake sign-in")
-        page.locator("[data-auth-return-email]").click()
-        verify(page.locator(".auth-v2-email-form").is_visible(), "Returning to email sign-in works")
+        verify(page.locator(".auth-v2-email-form").is_visible(), "Email sign-in remains available")
         page.locator(".auth-password-visibility").click()
         verify(page.locator('input[name="password"]').get_attribute("type") == "text",
                "Show password toggles visibility")
