@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             browser = p.chromium.launch(args=["--enable-webgl","--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"])
             page = browser.new_page(viewport={"width":1024,"height":700}, reduced_motion="no-preference")
             page.add_init_script("""(() => {
-                window.gravityTrace={phases:[],textures:[],draws:{},colors:{}};
+                window.gravityTrace={phases:[],textures:[],draws:{},colors:{},fallbacks:[]};
                 const proto=WebGLRenderingContext.prototype;
                 const originalTexture=proto.texImage2D;
                 proto.texImage2D=function(...args){
@@ -63,6 +63,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     }
                     return result;
                 };
+                document.addEventListener('mindcare:gravity-fallback',event=>window.gravityTrace.fallbacks.push(event.detail));
                 document.addEventListener('mindcare:gravity-phase',event=>window.gravityTrace.phases.push(event.detail));
             })()""")
             page.goto(base + "/")
