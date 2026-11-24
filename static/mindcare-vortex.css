@@ -59,3 +59,10 @@ html.mc-vortex-departing,html.mc-vortex-departing body{overflow:hidden;backgroun
 .mc-vortex-arriving body.mindcare-auth-route .auth-v2::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2::after,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::before,.mc-vortex-arriving body.mindcare-auth-route .auth-v2-form-panel::after{animation-play-state:paused!important;filter:none!important}
 @media(max-width:650px){.mc-vortex-space{width:min(88vw,66vh)}.mc-vortex-particle:nth-child(even){display:none}.mc-vortex-ring-4{animation:none}}
 @media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active){.mc-vortex{display:none!important}}
+
+/* Paint only the visible viewport; the remaining document never enters the GPU layer. */
+.mc-vacuum-scene{contain:strict}
+.mc-vacuum-scene[data-scene="landing"] [data-mc-vacuum-offscreen]{display:none!important}
+.mc-vacuum-scene[data-scene="landing"] :is(.mc-hero-art,.mc-hero-light-ring,.mc-hero-light-flare){filter:none!important}
+.mc-vacuum-scene[data-scene="landing"] .mc-hero-orb{box-shadow:0 0 24px #83aab455!important}
+.mc-vacuum-scene[data-scene="landing"] .mc-cinematic-orbit{box-shadow:none!important}
