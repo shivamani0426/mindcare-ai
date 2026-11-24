@@ -195,11 +195,13 @@ try:
               const b = space.getAnimations()[0];
               window.__syncTrace.push({phase:event.detail.phase,at:performance.now(),
                 start:a.startTime,portalStart:b.startTime,duration:a.effect.getTiming().duration,
-                portalDuration:b.effect.getTiming().duration});
+                portalDuration:b.effect.getTiming().duration,
+                path:a.effect.getKeyframes().map(k=>({transform:k.transform,offset:k.computedOffset,opacity:Number(k.opacity)}))});
               const probe = () => {
                 if (!scene.isConnected || a.playState !== 'running') return;
-                const scale = Math.hypot(...(() => {const m = new DOMMatrixReadOnly(getComputedStyle(scene).transform);return [m.m11,m.m12,m.m13]})());
-                window.__syncTrace.push({phase:event.detail.phase+'-frame',scale,opacity:Number(getComputedStyle(scene).opacity)});
+                const m = new DOMMatrixReadOnly(getComputedStyle(scene).transform);
+                const scale = Math.hypot(m.m11,m.m12,m.m13);
+                window.__syncTrace.push({phase:event.detail.phase+'-frame',scale,turn:Math.abs(m.m12)/Math.max(scale,.001),orbit:Math.hypot(m.m41,m.m42),opacity:Number(getComputedStyle(scene).opacity)});
                 requestAnimationFrame(probe);
               };
               requestAnimationFrame(probe);
@@ -229,8 +231,16 @@ try:
                    for event in (absorb, emit)), "Scene and vortex share exact timeline start and duration in both directions")
         verify(terminal["landingOpacity"] <= .01 and abs(terminal["portalScale"] - 1) <= .01 and emit["at"] >= terminal["at"],
                "Login begins only after absorption is complete")
+        verify(len(absorb["path"]) == 33 and len(emit["path"]) == 33 and
+               all(a["transform"] == b["transform"] and abs(a["offset"] + b["offset"] - 1) < .00001
+                   and a["opacity"] == b["opacity"]
+                   for a, b in zip(absorb["path"], reversed(emit["path"]))),
+               "Login unwinds the exact 33-pose spiral in reverse")
         for name, direction in (("absorbing-frame", -1), ("emitting-frame", 1)):
-            scales = [event["scale"] for event in trace if event["phase"] == name]
+            frames = [event for event in trace if event["phase"] == name]
+            scales = [event["scale"] for event in frames]
+            verify(any(f["turn"] > .4 and f["orbit"] > 12 and .1 < f["scale"] < .95 for f in frames),
+                   "Visible spiral rotates and orbits before reaching the core: " + name)
             verify(len([v for v in scales if .1 < v < .9]) >= 3 and
                    len(scales) >= 5 and (scales[-1] - scales[0]) * direction > .45,
                    "Actual intermediate rendered poses progress smoothly instead of jumping: " + name)
