@@ -193,6 +193,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
+            # Release the previous live page and its software graphics contexts
+            # before testing the separate DOM fallback on the same CI runner.
+            page.close()
             fallback=browser.new_page(viewport={"width":1024,"height":700}, reduced_motion="no-preference")
             fallback.goto(base+"/")
             fallback.locator("#mc-carpet-skip").click()

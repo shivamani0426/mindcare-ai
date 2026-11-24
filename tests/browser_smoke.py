@@ -112,28 +112,41 @@ try:
         carpet_tab.emulate_media(reduced_motion="no-preference")
         carpet_tab.goto(base + "/")
         portal = carpet_tab.locator("#mc-carpet-intro")
-        verify(portal.is_visible(), "First visit displays woven carpet")
-        verify(carpet_tab.locator(".mc-carpet-fabric").count() == 2,
-               "Portal has two independent woven fabric panels")
-        verify(carpet_tab.locator("#mc-carpet-enter").inner_text().strip().endswith("Slide to enter MindCare"),
-               "Portal offers the requested slide-to-enter instruction")
+        verify(portal.is_visible(), "First visit displays the cinematic Z entrance")
+        verify(carpet_tab.locator(".mc-carpet-fabric").count() == 0 and carpet_tab.locator(".mc-z-panel").count() == 2,
+               "Two cut panels replace the old woven fabric")
+        verify(carpet_tab.locator(".mc-z-slash").count() == 3,
+               "Exactly three sequential sword-light cuts form the Z")
+        verify(carpet_tab.locator("#mc-carpet-enter").inner_text().strip().startswith("Enter MindCare"),
+               "Portal offers explicit entry")
         verify(carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
                "Underlying controls cannot receive focus before entry")
+        carpet_tab.evaluate("""() => {
+            window.__cuts = [];
+            document.addEventListener('mindcare:entrance-cut', e => {
+                window.__cuts.push({cut:e.detail.cut,reveal:e.detail.reveal,
+                    visible:[...document.querySelectorAll('.mc-z-slash')].map(g=>g.getAttribute('opacity')),
+                    offsets:[...document.querySelectorAll('.mc-z-core')].map(p=>Number(p.getAttribute('stroke-dashoffset')))});
+            });
+        }""")
         carpet_tab.mouse.move(640, 300)
         carpet_tab.mouse.wheel(0, 180)
         carpet_tab.wait_for_function(
             "() => +document.querySelector('#mc-carpet-intro').dataset.progress > .15")
-        verify(portal.is_visible() and float(portal.get_attribute("data-progress")) < 1,
-               "Partial scroll progressively parts the carpets without dismissing them")
-        verify(carpet_tab.locator(".mc-carpet-left").evaluate(
-               "(el) => getComputedStyle(el).transform !== 'none'"),
-               "Woven panel transforms with scroll progress")
-        verify(carpet_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the closed carpet")
-        carpet_tab.mouse.wheel(0, 1000)
+        verify(portal.is_visible() and float(portal.get_attribute("data-reveal")) == 0,
+               "The landing stays covered during the first cut")
+        verify(carpet_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the entrance")
         carpet_tab.wait_for_function(
             "() => document.getElementById('mc-carpet-intro').hidden", timeout=6000)
+        cuts = carpet_tab.evaluate("window.__cuts")
+        verify([c["cut"] for c in cuts] == [1,2,3] and all(c["reveal"] == 0 for c in cuts),
+               "All three cuts complete in order before the landing reveal")
+        verify(all(c["offsets"][c["cut"]-1] == 0 for c in cuts),
+               "Each cut reaches its endpoint before the completion event")
+        verify(all(c["visible"][i] == "0" for c in cuts for i in range(c["cut"],3)),
+               "Later cuts remain invisible until their turn")
         verify(not carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "The real homepage becomes interactive after the carpet parts")
+               "The real homepage becomes interactive after the completed Z opens")
         verify(carpet_tab.locator(".mc-hero-enter").is_visible(),
                "Sign-in action survives cinematic entrance")
         verify(carpet_tab.locator(".mc-hero-orb").count() == 1,
@@ -153,9 +166,11 @@ try:
                "(el) => parseFloat(el.style.getPropertyValue('--mc-tilt-y')) > 0"),
                "Fine pointer interaction tilts the constellation in 3D")
         carpet_tab.locator("#mc-hero-replay").click()
-        verify(portal.is_visible(), "Replay opens the carpet experience again")
+        verify(portal.is_visible(), "Replay opens the Z-cut experience again")
+        carpet_tab.locator("#mc-carpet-enter").click()
+        carpet_tab.wait_for_function("() => +document.querySelector('#mc-carpet-intro').dataset.progress > .1")
         carpet_tab.keyboard.press("Escape")
-        verify(portal.is_hidden(), "Escape immediately bypasses the introduction")
+        verify(portal.is_hidden(), "Escape immediately bypasses the running introduction")
         carpet_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
         carpet_tab.wait_for_function(
             "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'", timeout=6000)

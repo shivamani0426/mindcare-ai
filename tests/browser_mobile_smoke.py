@@ -35,8 +35,10 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 portal = page.locator("#mc-carpet-intro")
                 assert portal.is_visible()
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 3")
-                # Synthetic touch events exercise swipe handling in both engines.
+                # One upward swipe starts the complete Z choreography.
                 portal.evaluate("""el => {
+                  window.__introCuts=[];
+                  document.addEventListener('mindcare:entrance-cut',e=>window.__introCuts.push(e.detail));
                   function touch(name, y) {
                     const event = new Event(name, {bubbles:true,cancelable:true});
                     Object.defineProperty(event, 'touches', {value:[{clientY:y}]});
@@ -44,16 +46,11 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                   }
                   touch('touchstart', 600);
                   touch('touchmove', 500);
-                }""")
-                page.wait_for_function("() => +document.querySelector('#mc-carpet-intro').dataset.progress > .08")
-                assert portal.is_visible()
-                portal.evaluate("""el => {
-                  const event = new Event('touchmove', {bubbles:true,cancelable:true});
-                  Object.defineProperty(event, 'touches', {value:[{clientY:80}]});
-                  el.dispatchEvent(event);
                   el.dispatchEvent(new Event('touchend'));
                 }""")
-                portal.wait_for(state="hidden", timeout=6000)
+                portal.wait_for(state="hidden", timeout=12000)
+                cuts = page.evaluate("window.__introCuts")
+                assert [c["cut"] for c in cuts] == [1,2,3] and all(c["reveal"] == 0 for c in cuts), (engine,cuts)
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
                 page.evaluate("window.MindcareGravity=undefined")

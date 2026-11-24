@@ -2,161 +2,135 @@
   'use strict';
   if (!document.body.classList.contains('mc-world-page')) return;
 
-  // First-visit portal. The real hero is already mounted behind the textile panels.
+  // First-visit cinematic entrance. Keep the existing dialog/focus hooks
+  // and replace only the entrance choreography, never the landing or login.
   const carpet = document.getElementById('mc-carpet-intro');
   const enter = document.getElementById('mc-carpet-enter');
   const skip = document.getElementById('mc-carpet-skip');
   const replay = document.getElementById('mc-hero-replay');
   const world = document.querySelector('.mc-world-root');
   const skipLink = document.querySelector('.skip');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  const contrast = matchMedia('(prefers-contrast: more)');
-  const forced = matchMedia('(forced-colors: active)');
-  const storageKey = 'mindcare-carpet-entered-v4';
-  const motionAllowed = () => !reduce.matches && !contrast.matches && !forced.matches &&
-    !document.body.classList.contains('reduced-motion');
+  const prefs = ['(prefers-reduced-motion: reduce)','(prefers-contrast: more)','(forced-colors: active)'].map(s=>matchMedia(s));
+  const motionAllowed = () => !prefs.some(p=>p.matches) && !document.body.classList.contains('reduced-motion');
+  const storageKey = 'mindcare-z-entrance-v1';
   let seen = false;
   try { seen = sessionStorage.getItem(storageKey) === '1'; } catch (_) {}
-  let phase = 'ready', target = 0, progress = 0, frame = 0, heroTimer = 0;
-  let lastFrame = 0;
-  let touchY = null, focusAfter = false;
-  const clamp = value => Math.max(0, Math.min(1, value));
-  const remember = () => { try { sessionStorage.setItem(storageKey, '1'); } catch (_) {} };
-  window.addEventListener('mindcare:landing-dispose', stopAfterLanding, {once:true});
-  function stopAfterLanding() { stop(); phase = 'disposed'; }
-  const paint = () => {
-    const set = (key,value) => carpet.style.setProperty(key,value);
-    set('--carpet-progress', progress.toFixed(4));
-    set('--carpet-left', (-112 * progress).toFixed(2) + '%');
-    set('--carpet-right', (112 * progress).toFixed(2) + '%');
-    set('--carpet-fold', (1 - progress * .36).toFixed(3));
-    set('--carpet-lift', (-progress * 22).toFixed(2) + '%');
-    set('--carpet-turn', (progress * 13).toFixed(2) + 'deg');
-    set('--carpet-negative-turn', (-progress * 13).toFixed(2) + 'deg');
-    set('--carpet-runway', (progress * 155).toFixed(2) + '%');
-    set('--carpet-title-opacity', Math.max(0,1 - progress * 2.5).toFixed(3));
-    carpet.dataset.progress = progress.toFixed(3);
-  };
-  const stop = () => {
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
-    lastFrame = 0;
-    clearTimeout(heroTimer);
-    touchY = null;
-  };
-  const release = () => {
-    carpet.hidden = true;
-    world.inert = false;
-    if (skipLink) skipLink.inert = false;
-    document.body.classList.remove('mc-carpet-active');
-    remember();
-    if (focusAfter) {
-      world.querySelector('.mc-hero-enter')?.focus({preventScroll:true});
-      focusAfter = false;
+  let phase = 'ready', frame = 0, started = null, touchY = null, focusAfter = false;
+  let completed = 0, elapsed = 0;
+  const clamp = v => Math.max(0,Math.min(1,v));
+  const smooth = v => {const t=clamp(v);return t*t*(3-2*t);};
+  const remember = () => {try{sessionStorage.setItem(storageKey,'1');}catch(_){}};
+  const strokes = [...(carpet?.querySelectorAll('.mc-z-slash')||[])].map((group,index)=>({
+    group, paths:[...group.querySelectorAll('path')], tip:group.querySelector('circle'),
+    coords:[[180,300,820,300],[820,300,180,700],[180,700,820,700]][index]
+  }));
+  const starts=[180,535,890], cutTime=260, revealAt=1390, total=2080;
+  const paint = elapsed => {
+    const set=(k,v)=>carpet.style.setProperty(k,String(v));
+    set('--z-title',1-smooth(elapsed/160));
+    const reveal=smooth((elapsed-revealAt)/(total-revealAt));
+    set('--z-reveal',reveal);
+    set('--z-glow',1-smooth((elapsed-revealAt)/(total-revealAt)*1.4));
+    carpet.dataset.progress=clamp(elapsed/total).toFixed(3);
+    carpet.dataset.reveal=reveal.toFixed(3);
+    strokes.forEach((stroke,i)=>{
+      const p=clamp((elapsed-starts[i])/cutTime);
+      const t=1-Math.pow(1-p,1.6);
+      stroke.group.setAttribute('opacity',p>0?'1':'0');
+      stroke.paths.forEach(path=>path.setAttribute('stroke-dashoffset',(1-t).toFixed(4)));
+      const [x1,y1,x2,y2]=stroke.coords;
+      stroke.tip.setAttribute('cx',x1+(x2-x1)*t);
+      stroke.tip.setAttribute('cy',y1+(y2-y1)*t);
+      stroke.tip.setAttribute('opacity',p>0&&p<1?'1':'0');
+    });
+    const count=starts.filter(start=>elapsed>=start+cutTime).length;
+    if(count>completed){
+      while(completed<count){
+        completed++;
+        carpet.dataset.cuts=String(completed);
+        document.dispatchEvent(new CustomEvent('mindcare:entrance-cut',{detail:{cut:completed,reveal}}));
+      }
     }
+    carpet.dataset.cuts=String(completed);
   };
-  const finishImmediately = () => {
-    const hadCarpet = phase === 'carpet';
-    stop();
-    phase = 'ready';
-    if (hadCarpet) focusAfter = true;
-    release();
-    document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
+  const stop=()=>{if(frame)cancelAnimationFrame(frame);frame=0;started=null;elapsed=0;touchY=null;};
+  const release=()=>{
+    carpet.hidden=true;
+    world.inert=false;
+    if(skipLink)skipLink.inert=false;
+    document.body.classList.remove('mc-carpet-active','mc-carpet-arrival','mc-hero-assembling');
     document.body.classList.add('mc-hero-resting');
-    if (replay) replay.hidden = !motionAllowed();
+    enter.disabled=false;
+    remember();
+    if(focusAfter){world.querySelector('.mc-hero-enter')?.focus({preventScroll:true});focusAfter=false;}
+    if(replay)replay.hidden=!motionAllowed();
   };
-  const reveal = () => {
-    stop();
-    // The hero is already visible behind the parting textile. Do not hide
-    // and rebuild it again once the fabric clears.
-    phase = 'ready';
-    progress = target = 1;
-    paint();
-    document.body.classList.remove('mc-carpet-arrival','mc-hero-assembling');
-    document.body.classList.add('mc-hero-resting');
-    release();
-    if (replay) replay.hidden = !motionAllowed();
+  const finishImmediately=()=>{stop();phase='ready';release();};
+  const animate=now=>{
+    frame=0;
+    if(phase!=='cutting')return;
+    if(!motionAllowed()){finishImmediately();return;}
+    if(started===null)started=now;
+    // Bound frame steps so a stalled device cannot jump across an entire cut.
+    elapsed=Math.min(total,elapsed+Math.min(64,Math.max(0,now-started)));
+    started=now;
+    paint(elapsed);
+    if(elapsed>=total){finishImmediately();return;}
+    frame=requestAnimationFrame(animate);
   };
-  const animate = now => {
-    frame = 0;
-    if (phase !== 'carpet') return;
-    if (!motionAllowed()) { finishImmediately(); return; }
-    // Elapsed-time easing: a slow browser must not stretch the opening to many seconds.
-    const elapsed = lastFrame ? Math.max(1, now - lastFrame) : 16.7;
-    lastFrame = now;
-    const gap = target - progress;
-    const next = progress + gap * (1 - Math.exp(-elapsed / 95));
-    progress = Math.abs(target - next) < .004 ? target : next;
-    paint();
-    if (progress === 1) { reveal(); return; }
-    if (progress !== target) frame = requestAnimationFrame(animate);
-    else lastFrame = 0;
+  const begin=()=>{
+    if(phase!=='waiting')return;
+    phase='cutting';
+    carpet.dataset.running='true';
+    // The always-visible Skip remains the only focusable dialog control.
+    skip.focus({preventScroll:true});
+    enter.disabled=true;
+    frame=requestAnimationFrame(animate);
   };
-  const advance = amount => {
-    if (phase !== 'carpet') return;
-    target = clamp(target + amount);
-    if (!frame) frame = requestAnimationFrame(animate);
-  };
-  const showCarpet = () => {
-    if (!motionAllowed()) { finishImmediately(); return; }
-    stop();
-    phase = 'carpet';
-    focusAfter = true;
-    progress = target = 0;
-    paint();
+  const showCarpet=()=>{
+    if(!motionAllowed()){finishImmediately();return;}
+    stop();phase='waiting';focusAfter=true;completed=0;
+    carpet.dataset.running='false';
+    paint(0);
     document.body.classList.remove('mc-hero-assembling','mc-hero-resting','mc-carpet-arrival');
     document.body.classList.add('mc-carpet-active');
-    carpet.hidden = false;
-    world.inert = true;
-    if (skipLink) skipLink.inert = true;
-    if (replay) replay.hidden = true;
+    carpet.hidden=false;world.inert=true;
+    if(skipLink)skipLink.inert=true;
+    if(replay)replay.hidden=true;
+    enter.disabled=false;
     window.scrollTo(0,0);
     enter.focus({preventScroll:true});
   };
-  if (carpet && enter && skip && world) {
-    carpet.addEventListener('wheel', event => {
-      if (phase !== 'carpet' || event.ctrlKey) return;
-      event.preventDefault();
-      const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-      advance(pixels / Math.max(360, innerHeight * .65));
-    }, {passive:false});
-    carpet.addEventListener('touchstart', event => {
-      touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
-    }, {passive:true});
-    carpet.addEventListener('touchmove', event => {
-      if (phase !== 'carpet' || touchY === null || event.touches.length !== 1) return;
-      const y = event.touches[0].clientY;
-      const delta = touchY - y;
-      if (Math.abs(delta) > 1) {
-        event.preventDefault();
-        advance(delta / Math.max(180, Math.min(carpet.clientHeight, window.visualViewport?.height || innerHeight) * .38));
-        touchY = y;
-      }
-    }, {passive:false});
-    ['touchend','touchcancel'].forEach(name => carpet.addEventListener(name, () => {touchY = null;}));
-    enter.addEventListener('click', () => advance(1));
-    skip.addEventListener('click', finishImmediately);
-    carpet.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); finishImmediately(); }
-      else if (['ArrowDown','PageDown','End','ArrowUp','PageUp','Home'].includes(event.key)) {
-        event.preventDefault();
-        const step = {ArrowDown:.2,PageDown:.6,End:1,ArrowUp:-.2,PageUp:-.6,Home:-1}[event.key];
-        advance(step);
-      } else if (event.key === 'Tab') {
-        event.preventDefault();
-        (document.activeElement === enter ? skip : enter).focus();
-      }
+  window.addEventListener('mindcare:landing-dispose',()=>{stop();phase='disposed';},{once:true});
+  if(carpet&&enter&&skip&&world&&strokes.length===3){
+    carpet.addEventListener('wheel',event=>{
+      if((phase!=='waiting'&&phase!=='cutting')||event.ctrlKey)return;
+      event.preventDefault();if(event.deltaY>0)begin();
+    },{passive:false});
+    carpet.addEventListener('touchstart',event=>{touchY=event.touches.length===1?event.touches[0].clientY:null;},{passive:true});
+    carpet.addEventListener('touchmove',event=>{
+      if((phase!=='waiting'&&phase!=='cutting')||touchY===null||event.touches.length!==1)return;
+      const delta=touchY-event.touches[0].clientY;
+      if(Math.abs(delta)>12){event.preventDefault();if(delta>0)begin();}
+    },{passive:false});
+    ['touchend','touchcancel'].forEach(name=>carpet.addEventListener(name,()=>{touchY=null;}));
+    enter.addEventListener('click',begin);
+    skip.addEventListener('click',finishImmediately);
+    carpet.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();finishImmediately();}
+      else if(['ArrowDown','PageDown','End'].includes(event.key)){event.preventDefault();begin();}
+      else if(event.key==='Tab'){event.preventDefault();(phase==='cutting'?skip:document.activeElement===enter?skip:enter).focus();}
     });
-    replay?.addEventListener('click', showCarpet);
-    [reduce,contrast,forced].forEach(pref => pref.addEventListener?.('change', () => {
-      if (phase === 'disposed') return;
-      if (!motionAllowed() && phase !== 'ready') finishImmediately();
-      else if (phase === 'ready' && replay) replay.hidden = !motionAllowed();
+    replay?.addEventListener('click',showCarpet);
+    prefs.forEach(pref=>pref.addEventListener?.('change',()=>{
+      if(phase==='disposed')return;
+      if(!motionAllowed()&&phase!=='ready')finishImmediately();
+      else if(phase==='ready'&&replay)replay.hidden=!motionAllowed();
     }));
-    if (motionAllowed() && !seen && !location.hash) showCarpet();
+    if(motionAllowed()&&!seen&&!location.hash)showCarpet();
     else finishImmediately();
   }
-
+  
   // Three fully accessible, keyboard-operable capability tabs.
   const tabs = [...document.querySelectorAll('.mc-cap-tab[role="tab"]')];
   const activateTab = (selected, focus = false) => {
