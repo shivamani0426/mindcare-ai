@@ -51,10 +51,13 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     const pull=Number(this.canvas.dataset.pull);
                     if(pull>.35&&pull<.65&&!trace.colors[phase]){
                         const colors=new Set();
-                        const pixel=new Uint8Array(4);
+                        const w=this.drawingBufferWidth,h=this.drawingBufferHeight;
+                        const pixels=new Uint8Array(w*h*4);
+                        // One readback, not sixteen synchronous GPU stalls.
+                        this.readPixels(0,0,w,h,this.RGBA,this.UNSIGNED_BYTE,pixels);
                         for(let y=1;y<5;y++)for(let x=1;x<5;x++){
-                            this.readPixels(Math.floor(this.drawingBufferWidth*x/5),Math.floor(this.drawingBufferHeight*y/5),1,1,this.RGBA,this.UNSIGNED_BYTE,pixel);
-                            colors.add(Array.from(pixel).join(','));
+                            const i=(Math.floor(h*y/5)*w+Math.floor(w*x/5))*4;
+                            colors.add(Array.from(pixels.subarray(i,i+4)).join(','));
                         }
                         trace.colors[phase]=colors.size;
                     }
