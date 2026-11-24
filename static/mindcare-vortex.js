@@ -106,25 +106,34 @@
     const rendered = gravity?.run(animations,phase,duration);
     if (rendered) await rendered;
     else {
-      // Retain compositor-driven motion on ordinary frames. If a slow
-      // renderer skips a large span, resynchronize all effects to a
-      // bounded step, then let the compositor run again.
-      const begun = performance.now();
-      let previous = 0;
-      while (token === generation) {
-        const now = await frame();
-        if (token !== generation) return false;
-        const current = Number(animations[0].currentTime);
-        if (now - begun > duration * 3) break;
-        if (current - previous > 100) {
-          const next = Math.min(duration, previous + 100);
-          animations.forEach(a => { a.currentTime = next; });
-          previous = next;
-        } else {
-          previous = Math.max(previous, current);
-        }
-        if (previous >= duration) break;
-      }
+      // Preserve normal compositor playback, but bound gaps between poses
+      // on slow renderers. A real timer (not RAF) guarantees that a
+      // throttled/background tab cannot delay navigation indefinitely.
+      let raf = 0, deadline = 0, previous = 0;
+      await new Promise(resolve => {
+        let done = false;
+        const complete = () => {
+          if (done) return;
+          done = true;
+          cancelAnimationFrame(raf);
+          clearTimeout(deadline);
+          resolve();
+        };
+        const tick = () => {
+          if (token !== generation) { complete(); return; }
+          const current = Number(animations[0].currentTime);
+          if (current - previous > 100) {
+            previous = Math.min(duration, previous + 100);
+            animations.forEach(a => { a.currentTime = previous; });
+          } else {
+            previous = Math.max(previous, current);
+          }
+          if (previous >= duration) complete();
+          else raf = requestAnimationFrame(tick);
+        };
+        deadline = setTimeout(complete, duration * 2.6);
+        raf = requestAnimationFrame(tick);
+      });
     }
     if (token !== generation) return false;
     gravity?.settle(phase);
