@@ -99,6 +99,13 @@ try:
                "Original immersive world artwork loads correctly")
         verify(page.locator("#mc-paper-intro").is_hidden(),
                "Reduced-motion visitors skip the paper animation and see the homepage")
+        verify(page.locator(".mc-cinematic-orbit").count() == 3,
+               "Cinematic scene has three independently angled 3D orbit layers")
+        verify(page.locator(".mc-cinematic-scene").get_attribute("aria-hidden") == "true",
+               "Decorative constellation stays out of the accessibility tree")
+        verify(page.locator(".mc-cinematic-depth").evaluate(
+               "(el) => getComputedStyle(el).transform === 'none'"),
+               "Reduced-motion visitors receive static 3D artwork")
         paper_tab = ctx.new_page()
         paper_tab.emulate_media(reduced_motion="no-preference")
         paper_tab.goto(base + "/")
@@ -162,6 +169,12 @@ try:
             timeout=6000)
         verify(paper_tab.locator("#mc-hero-replay").is_visible(),
                "Finished hero offers a visible replay button")
+        paper_tab.mouse.move(1100, 240)
+        paper_tab.wait_for_function(
+            "() => !!document.querySelector('.mc-cinematic-depth').style.getPropertyValue('--mc-tilt-y')")
+        verify(paper_tab.locator(".mc-cinematic-depth").evaluate(
+               "(el) => parseFloat(el.style.getPropertyValue('--mc-tilt-y')) > 0"),
+               "Fine pointer interaction tilts the constellation in 3D")
         paper_tab.locator("#mc-hero-replay").click()
         verify(paper_tab.locator("#mc-paper-touch").is_visible(),
                "Replay shows paper again without a new tab")
@@ -232,6 +245,14 @@ try:
             verify(page.locator(".mc-hero-enter").is_visible() and
                    page.locator(".mc-world-nav-links").is_visible(),
                    f"CTA and section links remain visible at {width}px")
+            verify(page.locator(".mc-cinematic-scene").count() == 1,
+                   f"Decorative scene remains available at {width}px")
+            if width <= 700:
+                verify(page.locator(".mc-cinematic-satellite").first.is_hidden(),
+                       f"Decorative satellites do not obstruct small-screen controls at {width}px")
+                verify(page.locator(".mc-demo-card p").first.evaluate(
+                       "(el) => parseFloat(getComputedStyle(el).fontSize) >= 12"),
+                       f"Illustrative preview text remains legible at {width}px")
             verify(page.locator("#mc-capabilities-heading").count() == 1,
                    f"Capabilities heading remains present at {width}px")
         page.set_viewport_size({"width": 1280, "height": 860})
