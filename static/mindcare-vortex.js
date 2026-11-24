@@ -11,7 +11,7 @@
     clearTimeout(timer);
     controller?.abort();
     controller = null;
-    root.classList.remove('mc-vortex-departing','mc-vortex-arriving');
+    root.classList.remove('mc-vortex-departing','mc-vortex-arriving','mc-vortex-open');
     root.style.removeProperty('--mc-vortex-scroll-offset');
     stage.hidden = true;
     stage.dataset.phase = 'idle';
@@ -40,33 +40,41 @@
     const space = stage.querySelector('.mc-vortex-space');
     const expected = new Map([[outgoing,'mc-vortex-landing-infall'],[space,'mc-vortex-grow']]);
     const remaining = new Set(expected.keys());
-    let done = false;
+    let done = false, watchdog, raf;
     const complete = () => {
       if (done) return;
       done = true;
       clearTimeout(watchdog);
+      cancelAnimationFrame(raf);
       expected.forEach((name,element) => element.removeEventListener('animationend',onEnd));
+      // Explicit terminal styles also cover Safari throttling or missing events.
+      root.classList.add('mc-vortex-open');
+      const landing = getComputedStyle(outgoing);
+      const portal = getComputedStyle(space);
+      const matrix = new DOMMatrixReadOnly(portal.transform);
+      document.dispatchEvent(new CustomEvent('mindcare:vortex-opened', {detail:{
+        landingOpacity:Number(landing.opacity),
+        portalScale:Math.hypot(matrix.m11,matrix.m12,matrix.m13)
+      }}));
       resolve();
     };
-    const onEnd = event => {
-      const element = event.currentTarget;
-      if (event.target !== element || event.animationName !== expected.get(element)) return;
+    const ended = element => {
       remaining.delete(element);
       if (!remaining.size) complete();
     };
-    const watchdog = setTimeout(() => {
-      // Bounded fallback for throttled tabs: finish the same animations,
-      // rather than starting the incoming sequence while they are midway.
-      expected.forEach((name,element) => {
-        for (const animation of element.getAnimations?.() || []) {
-          if (animation.animationName === name) {
-            try { animation.finish(); } catch (_) {}
-          }
-        }
-      });
-      complete();
-    }, 2200);
+    const onEnd = event => {
+      const element = event.currentTarget;
+      if (event.target === element && event.animationName === expected.get(element)) ended(element);
+    };
     expected.forEach((name,element) => element.addEventListener('animationend',onEnd));
+    // Observe finished promises as well as DOM events; WebKit can delay events.
+    raf = requestAnimationFrame(() => {
+      expected.forEach((name,element) => {
+        const animation = element.getAnimations?.().find(a => a.animationName === name);
+        animation?.finished.then(() => ended(element), () => {});
+      });
+    });
+    watchdog = setTimeout(complete, 2200);
   });
   const fetchLogin = async url => {
     const response = await fetch(url, {
