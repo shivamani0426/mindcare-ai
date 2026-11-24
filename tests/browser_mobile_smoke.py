@@ -31,29 +31,29 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.emulate_media(reduced_motion="no-preference")
+                page.add_init_script("""() => {
+                    window.__mobileComet={starts:[],ends:[]};
+                    document.addEventListener('mindcare:comet-started',e=>{
+                        const el=document.getElementById('mc-carpet-intro');
+                        window.__mobileComet.starts.push({...e.detail,
+                            particles:el.querySelectorAll('.mc-comet-spark').length,
+                            filter:getComputedStyle(el.querySelector('.mc-comet-blade')).filter,
+                            covered:document.querySelector('.mc-world-root').inert});
+                    });
+                    document.addEventListener('mindcare:comet-finished',e=>window.__mobileComet.ends.push(e.detail));
+                }""")
                 page.goto(base + "/")
                 portal = page.locator("#mc-carpet-intro")
-                assert portal.is_visible()
-                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 3")
-                # Synthetic touch events exercise swipe handling in both engines.
-                portal.evaluate("""el => {
-                  function touch(name, y) {
-                    const event = new Event(name, {bubbles:true,cancelable:true});
-                    Object.defineProperty(event, 'touches', {value:[{clientY:y}]});
-                    el.dispatchEvent(event);
-                  }
-                  touch('touchstart', 600);
-                  touch('touchmove', 500);
-                }""")
-                page.wait_for_function("() => +document.querySelector('#mc-carpet-intro').dataset.progress > .08")
-                assert portal.is_visible()
-                portal.evaluate("""el => {
-                  const event = new Event('touchmove', {bubbles:true,cancelable:true});
-                  Object.defineProperty(event, 'touches', {value:[{clientY:80}]});
-                  el.dispatchEvent(event);
-                  el.dispatchEvent(new Event('touchend'));
-                }""")
                 portal.wait_for(state="hidden", timeout=6000)
+                trace = page.evaluate("window.__mobileComet")
+                assert len(trace["starts"]) == 1 and len(trace["ends"]) == 1, (engine, trace)
+                start = trace["starts"][0]
+                assert start["covered"] and start["particles"] == 14 and start["filter"] == "none", (engine, trace)
+                assert start["x0"] > 0 > start["x1"] and start["y0"] < 0 < start["y1"] and start["travel"] <= 500, (engine, trace)
+                assert trace["ends"][0]["reason"] in ("complete","deadline") and trace["ends"][0]["elapsed"] < 4000, (engine, trace)
+                assert page.locator("#mc-carpet-enter,#mc-carpet-skip,.mc-comet-spark").count() == 0
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 3")
+                print(engine, device, "automatic comet:", trace, flush=True)
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
                 page.evaluate("window.MindcareGravity=undefined")
