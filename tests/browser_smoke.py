@@ -88,8 +88,8 @@ try:
                "Public page has its own complete footer")
         verify(page.locator(".mc-gallery-card").count() == 6,
                "Two rows of six original feature illustrations render")
-        verify(page.locator('.mc-hero-enter[href="/register"]').count() == 1,
-               "Hero CTA opens real existing account registration")
+        verify(page.locator('.mc-hero-enter[href="/login"]').count() == 1,
+               "Hero CTA opens the real login route")
         verify(page.locator('.mc-hero-signin[href="/login"]').count() == 1,
                "Existing account login remains available")
         page.wait_for_function(
@@ -97,7 +97,7 @@ try:
         )
         verify(page.locator('.mc-hero-art').count() == 1,
                "Original immersive world artwork loads correctly")
-        verify(page.locator("#mc-door-intro").is_hidden(),
+        verify(page.locator("#mc-carpet-intro").is_hidden(),
                "Reduced-motion visitors bypass the cinematic entrance")
         verify(page.locator(".mc-cinematic-orbit").count() == 3,
                "Cinematic scene has three independently angled 3D orbit layers")
@@ -108,75 +108,111 @@ try:
                "Reduced-motion visitors receive static 3D artwork")
         verify(page.locator("#mc-paper-intro").count() == 0,
                "Old paper entrance is removed from the public page")
-        door_tab = ctx.new_page()
-        door_tab.emulate_media(reduced_motion="no-preference")
-        door_tab.goto(base + "/")
-        portal = door_tab.locator("#mc-door-intro")
-        verify(portal.is_visible(), "First visit displays cinematic door")
-        verify(door_tab.locator(".mc-door-leaf").count() == 2,
-               "Portal has two separately hinged leaves")
-        verify(door_tab.locator("#mc-door-enter").inner_text().strip().endswith("Slide to enter MindCare"),
+        carpet_tab = ctx.new_page()
+        carpet_tab.emulate_media(reduced_motion="no-preference")
+        carpet_tab.goto(base + "/")
+        portal = carpet_tab.locator("#mc-carpet-intro")
+        verify(portal.is_visible(), "First visit displays woven carpet")
+        verify(carpet_tab.locator(".mc-carpet-fabric").count() == 2,
+               "Portal has two independent woven fabric panels")
+        verify(carpet_tab.locator("#mc-carpet-enter").inner_text().strip().endswith("Slide to enter MindCare"),
                "Portal offers the requested slide-to-enter instruction")
-        verify(door_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+        verify(carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
                "Underlying controls cannot receive focus before entry")
-        door_tab.mouse.move(640, 300)
-        door_tab.mouse.wheel(0, 180)
-        door_tab.wait_for_function(
-            "() => +document.querySelector('#mc-door-intro').dataset.progress > .15")
+        carpet_tab.mouse.move(640, 300)
+        carpet_tab.mouse.wheel(0, 180)
+        carpet_tab.wait_for_function(
+            "() => +document.querySelector('#mc-carpet-intro').dataset.progress > .15")
         verify(portal.is_visible() and float(portal.get_attribute("data-progress")) < 1,
-               "Partial scroll progressively opens the doors without dismissing them")
-        verify(door_tab.locator(".mc-door-left").evaluate(
+               "Partial scroll progressively parts the carpets without dismissing them")
+        verify(carpet_tab.locator(".mc-carpet-left").evaluate(
                "(el) => getComputedStyle(el).transform !== 'none'"),
-               "Door leaf has a real CSS perspective rotation")
-        verify(door_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the closed portal")
-        door_tab.mouse.wheel(0, 1000)
-        door_tab.wait_for_function(
-            "() => document.getElementById('mc-door-intro').hidden", timeout=6000)
-        verify(not door_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "The real homepage becomes interactive after the door opens")
-        verify(door_tab.locator(".mc-hero-enter").is_visible(),
-               "Registration action survives cinematic entrance")
-        verify(door_tab.locator(".mc-hero-orb").count() == 1,
+               "Woven panel transforms with scroll progress")
+        verify(carpet_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the closed carpet")
+        carpet_tab.mouse.wheel(0, 1000)
+        carpet_tab.wait_for_function(
+            "() => document.getElementById('mc-carpet-intro').hidden", timeout=6000)
+        verify(not carpet_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+               "The real homepage becomes interactive after the carpet parts")
+        verify(carpet_tab.locator(".mc-hero-enter").is_visible(),
+               "Sign-in action survives cinematic entrance")
+        verify(carpet_tab.locator(".mc-hero-orb").count() == 1,
                "Original hero keeps the animated central orb")
-        verify(door_tab.locator(".mc-hero-light-ring").count() == 2,
+        verify(carpet_tab.locator(".mc-hero-light-ring").count() == 2,
                "Hero retains two luminous rings")
-        verify(door_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
+        verify(carpet_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
                "Original hero artwork is preserved")
-        door_tab.wait_for_function(
+        carpet_tab.wait_for_function(
             "() => document.body.classList.contains('mc-hero-resting')", timeout=6000)
-        verify(door_tab.locator("#mc-hero-replay").is_visible(),
+        verify(carpet_tab.locator("#mc-hero-replay").is_visible(),
                "Replay is available after the cinematic reveal")
-        door_tab.mouse.move(1100, 240)
-        door_tab.wait_for_function(
+        carpet_tab.mouse.move(1100, 240)
+        carpet_tab.wait_for_function(
             "() => !!document.querySelector('.mc-cinematic-depth').style.getPropertyValue('--mc-tilt-y')")
-        verify(door_tab.locator(".mc-cinematic-depth").evaluate(
+        verify(carpet_tab.locator(".mc-cinematic-depth").evaluate(
                "(el) => parseFloat(el.style.getPropertyValue('--mc-tilt-y')) > 0"),
                "Fine pointer interaction tilts the constellation in 3D")
-        door_tab.locator("#mc-hero-replay").click()
-        verify(portal.is_visible(), "Replay opens the door experience again")
-        door_tab.keyboard.press("Escape")
+        carpet_tab.locator("#mc-hero-replay").click()
+        verify(portal.is_visible(), "Replay opens the carpet experience again")
+        carpet_tab.keyboard.press("Escape")
         verify(portal.is_hidden(), "Escape immediately bypasses the introduction")
-        door_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
-        door_tab.wait_for_function(
+        carpet_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
+        carpet_tab.wait_for_function(
             "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'", timeout=6000)
-        verify(door_tab.locator(".mc-world-manifesto h2").evaluate(
+        verify(carpet_tab.locator(".mc-world-manifesto h2").evaluate(
                "(el) => el.getAnimations().some(a => a.playState === 'running')"),
                "Below-fold headings retain their fly-in motion")
-        door_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
-        door_tab.wait_for_function(
+        carpet_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
+        carpet_tab.wait_for_function(
             "() => document.body.classList.contains('mc-hero-out-of-view')", timeout=6000)
-        verify(door_tab.locator(".mc-hero-art").evaluate(
+        verify(carpet_tab.locator(".mc-hero-art").evaluate(
                "(el) => getComputedStyle(el).animationPlayState === 'paused'"),
                "Offscreen hero animation pauses to reduce GPU work")
-        door_tab.reload()
+        carpet_tab.reload()
         verify(portal.is_hidden(), "Entrance does not repeat on refresh")
-        door_tab.close()
+        carpet_tab.close()
         skip_tab = ctx.new_page()
         skip_tab.emulate_media(reduced_motion="no-preference")
         skip_tab.goto(base + "/")
-        skip_tab.locator("#mc-door-skip").click()
-        verify(skip_tab.locator("#mc-door-intro").is_hidden(), "Skip reveals the homepage immediately")
+        skip_tab.locator("#mc-carpet-skip").click()
+        verify(skip_tab.locator("#mc-carpet-intro").is_hidden(), "Skip reveals the homepage immediately")
         skip_tab.close()
+
+        vortex_tab = ctx.new_page()
+        vortex_tab.emulate_media(reduced_motion="no-preference")
+        vortex_tab.goto(base + "/")
+        vortex_tab.locator("#mc-carpet-skip").click()
+        vortex_tab.locator(".mc-hero-enter").click()
+        verify(vortex_tab.locator("#mc-vortex").is_visible(),
+               "Clicking Enter MindCare generates the vortex before navigation")
+        verify(vortex_tab.locator(".mc-vortex-ring").count() == 9,
+               "Vortex has nine independent depth layers")
+        verify(vortex_tab.locator(".mc-vortex-volume").evaluate(
+               "(el) => getComputedStyle(el).transformStyle === 'preserve-3d'"),
+               "Black hole uses a spatial 3D tunnel")
+        vortex_tab.wait_for_url("**/login", timeout=10000)
+        verify(vortex_tab.locator("html").evaluate(
+               "(el) => el.classList.contains('mc-vortex-arriving')"),
+               "The real sign-in page emerges from the shared portal")
+        vortex_tab.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
+        verify(vortex_tab.locator("#mc-vortex").is_hidden(),
+               "Portal cleans up when authentication becomes interactive")
+        verify(vortex_tab.locator("#auth-email").is_visible() and
+               vortex_tab.locator('a[href="/register"]').count() >= 1,
+               "Real login and account creation remain available")
+        vortex_tab.reload()
+        verify(vortex_tab.locator("#mc-vortex").is_hidden(),
+               "Reload does not replay the consumed transition")
+        vortex_tab.close()
+
+        reduced_tab = ctx.new_page()
+        reduced_tab.goto(base + "/")
+        reduced_tab.locator(".mc-hero-enter").click()
+        reduced_tab.wait_for_url("**/login")
+        verify(reduced_tab.locator("#mc-vortex").is_hidden() and
+               reduced_tab.locator("#auth-email").is_visible(),
+               "Reduced motion uses the direct working login route")
+        reduced_tab.close()
 
         page.locator("#mc-tab-routine").click()
         verify(page.locator("#mc-panel-routine").is_visible() and

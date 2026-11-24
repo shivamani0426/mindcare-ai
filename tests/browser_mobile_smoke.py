@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.emulate_media(reduced_motion="no-preference")
                 page.goto(base + "/")
-                portal = page.locator("#mc-door-intro")
+                portal = page.locator("#mc-carpet-intro")
                 assert portal.is_visible()
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 3")
                 # Synthetic touch events exercise swipe handling in both engines.
@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                   touch('touchstart', 600);
                   touch('touchmove', 500);
                 }""")
-                page.wait_for_function("() => +document.querySelector('#mc-door-intro').dataset.progress > .08")
+                page.wait_for_function("() => +document.querySelector('#mc-carpet-intro').dataset.progress > .08")
                 assert portal.is_visible()
                 portal.evaluate("""el => {
                   const event = new Event('touchmove', {bubbles:true,cancelable:true});
@@ -56,6 +56,12 @@ with tempfile.TemporaryDirectory(prefix="mindcare-mobile-") as tmp:
                 portal.wait_for(state="hidden", timeout=6000)
                 assert page.locator(".mc-hero-enter").is_visible()
                 assert not page.locator(".mc-world-root").evaluate("el => el.inert")
+                page.locator(".mc-hero-enter").click()
+                assert page.locator("#mc-vortex").is_visible()
+                page.wait_for_url("**/login", timeout=10000)
+                page.wait_for_function("() => !document.documentElement.classList.contains('mc-vortex-arriving')", timeout=10000)
+                assert page.locator("#auth-email").is_visible()
+                assert page.locator("#mc-vortex").is_hidden()
                 page.emulate_media(reduced_motion="reduce")
                 page.goto(base + "/register")
                 assert page.locator("#main").get_attribute("tabindex") == "-1"

@@ -1,0 +1,14 @@
+<div class="mc-vortex" id="mc-vortex" aria-hidden="true" hidden>
+  <div class="mc-vortex-space">
+    <div class="mc-vortex-halo"></div>
+    <div class="mc-vortex-volume">
+      {% for layer in range(9) %}<i class="mc-vortex-ring mc-vortex-ring-{{ layer }}"></i>{% endfor %}
+      <div class="mc-vortex-core"></div>
+      <div class="mc-vortex-accretion mc-vortex-accretion-a"></div>
+      <div class="mc-vortex-accretion mc-vortex-accretion-b"></div>
+      <div class="mc-vortex-particles">
+        {% for particle in range(16) %}<i class="mc-vortex-particle mc-vortex-particle-{{ particle }}"></i>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

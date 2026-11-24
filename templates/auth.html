@@ -2,6 +2,11 @@
 {% block title %}{{ 'Create your account' if mode == 'register' else 'Sign in' }}{% endblock %}
 {% block body_class %}mindcare-auth-route{% endblock %}
 {% block head %}
+  {% if mode == 'login' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='mindcare-vortex.css') }}">
+  <script src="{{ url_for('static', filename='mindcare-vortex-arrival.js') }}"></script>
+  <script src="{{ url_for('static', filename='mindcare-vortex.js') }}" defer></script>
+  {% endif %}
   <script src="{{ url_for('static',filename='auth-ui.js') }}" defer></script>
 {% endblock %}
 {% block content %}
@@ -62,3 +67,5 @@
   </div>
 </section>
 {% endblock %}
+
+{% block scripts %}{% if mode == 'login' %}{% include 'partials/mindcare_vortex.html' %}{% endif %}{% endblock %}
