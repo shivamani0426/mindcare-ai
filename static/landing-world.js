@@ -16,7 +16,7 @@
   let seen = false;
   try { seen = sessionStorage.getItem(storageKey) === '1'; } catch (_) {}
   let phase = 'ready', frame = 0, started = null, touchY = null, focusAfter = false;
-  let completed = 0;
+  let completed = 0, elapsed = 0;
   const clamp = v => Math.max(0,Math.min(1,v));
   const smooth = v => {const t=clamp(v);return t*t*(3-2*t);};
   const remember = () => {try{sessionStorage.setItem(storageKey,'1');}catch(_){}};
@@ -53,7 +53,7 @@
     }
     carpet.dataset.cuts=String(completed);
   };
-  const stop=()=>{if(frame)cancelAnimationFrame(frame);frame=0;started=null;touchY=null;};
+  const stop=()=>{if(frame)cancelAnimationFrame(frame);frame=0;started=null;elapsed=0;touchY=null;};
   const release=()=>{
     carpet.hidden=true;
     world.inert=false;
@@ -71,7 +71,9 @@
     if(phase!=='cutting')return;
     if(!motionAllowed()){finishImmediately();return;}
     if(started===null)started=now;
-    const elapsed=Math.min(total,now-started);
+    // Bound frame steps so a stalled device cannot jump across an entire cut.
+    elapsed=Math.min(total,elapsed+Math.min(64,Math.max(0,now-started)));
+    started=now;
     paint(elapsed);
     if(elapsed>=total){finishImmediately();return;}
     frame=requestAnimationFrame(animate);
