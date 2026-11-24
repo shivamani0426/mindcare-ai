@@ -242,6 +242,12 @@
         peer = null;
         stream?.getTracks().forEach(t => t.stop());
         stream = null;
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+        localPlaceholder.hidden = false;
+        remotePlaceholder.hidden = false;
+        micButton.disabled = true;
+        cameraButton.disabled = true;
       }
     } finally {starting = false;}
   }
