@@ -34,6 +34,8 @@ jobs:
           node --check static/milo.js
           node --check static/landing-world.js
           node --check static/landing-cinematic.js
+          node --check static/mindcare-vortex.js
+          node --check static/mindcare-vortex-arrival.js
 
   browser:
     runs-on: ubuntu-latest
