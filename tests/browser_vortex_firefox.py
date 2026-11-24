@@ -62,6 +62,7 @@ with tempfile.TemporaryDirectory(prefix="mindcare-vacuum-") as tmp:
             with page.expect_response(lambda r: r.url == base + "/login" and r.request.method == "POST") as response:
                 page.locator("#auth-email-form button[type=submit]").click()
             assert response.value.status < 500
+            page.locator("#auth-email").wait_for(state="visible", timeout=10000)
             assert page.locator("#auth-email").is_visible()
             assert not errors, errors
             browser.close()
