@@ -18,6 +18,7 @@
   let seen = false;
   try { seen = sessionStorage.getItem(storageKey) === '1'; } catch (_) {}
   let phase = 'ready', target = 0, progress = 0, frame = 0, heroTimer = 0;
+  let lastFrame = 0;
   let touchY = null, focusAfter = false;
   const clamp = value => Math.max(0, Math.min(1, value));
   const remember = () => { try { sessionStorage.setItem(storageKey, '1'); } catch (_) {} };
@@ -30,6 +31,7 @@
   const stop = () => {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
+    lastFrame = 0;
     clearTimeout(heroTimer);
     touchY = null;
   };
@@ -70,15 +72,20 @@
       if (replay) replay.hidden = !motionAllowed();
     }, 2480);
   };
-  const animate = () => {
+  const animate = now => {
     frame = 0;
     if (phase !== 'door') return;
     if (!motionAllowed()) { finishImmediately(); return; }
+    // Elapsed-time easing: a slow browser must not stretch the opening to many seconds.
+    const elapsed = lastFrame ? Math.max(1, now - lastFrame) : 16.7;
+    lastFrame = now;
     const gap = target - progress;
-    progress = Math.abs(gap) < .004 ? target : progress + gap * .16;
+    const next = progress + gap * (1 - Math.exp(-elapsed / 95));
+    progress = Math.abs(target - next) < .004 ? target : next;
     paint();
     if (progress === 1) { reveal(); return; }
     if (progress !== target) frame = requestAnimationFrame(animate);
+    else lastFrame = 0;
   };
   const advance = amount => {
     if (phase !== 'door') return;
@@ -117,7 +124,7 @@
       const delta = touchY - y;
       if (Math.abs(delta) > 1) {
         event.preventDefault();
-        advance(delta / Math.max(180, innerHeight * .38));
+        advance(delta / Math.max(180, Math.min(door.clientHeight, window.visualViewport?.height || innerHeight) * .38));
         touchY = y;
       }
     }, {passive:false});
