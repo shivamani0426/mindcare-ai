@@ -147,15 +147,18 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                 const view=gl.getUniformLocation(program,'u_view');
                 if(view===null)throw Error('3D camera inclination uniform missing');
                 gl.uniform1f(view,0);
+                const orbit=gl.getUniformLocation(program,'u_orbit');
+                if(orbit===null)throw Error('orbital clock uniform missing');
+                gl.uniform1f(orbit,0);
                 const sample=draw(window.gravitySnapshots[0],1);
-                let upper=0,wing=0,warm=0;
+                let upper=0,wing=0,blue=0;
                 for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
                     const nx=(x-c.width/2)/(c.height*.205),ny=(y-c.height/2)/(c.height*.205);
                     const dx=nx*.985+ny*.172,dy=-nx*.172+ny*.985;
                     const rr=Math.hypot(dx,dy),dr=Math.hypot(dx,dy/.245);
                     const [r,g,b]=sample(x,y);
-                    if(r>150&&g>65&&r>b+35){
-                        warm++;
+                    if(b>150&&g>65&&b>r+35){
+                        blue++;
                         if(dy>.35&&rr>.77&&rr<1.45)upper++;
                         if(Math.abs(dx)>1.3&&Math.abs(dy)<.65&&dr<2.95)wing++;
                     }
@@ -169,7 +172,23 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     const a=sample(x,y),b=tilted(x,y);
                     if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>45)viewChanges++;
                 }
-                trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,warm,viewChanges,tiltedCenter:tilted(c.width/2,c.height/2)};
+                // Freeze camera, page warp, stars and all other shader clocks.
+                // Only the orbital coordinate moves. Verify a substantial
+                // spatial change in the blue disk, with the center still black.
+                gl.uniform1f(view,0);
+                gl.uniform1f(orbit,.8);
+                const rotated=draw(window.gravitySnapshots[0],1);
+                let orbitChanges=0,blueToDim=0,dimToBlue=0;
+                for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+                    const nx=(x-c.width/2)/(c.height*.205),ny=(y-c.height/2)/(c.height*.205);
+                    const dx=nx*.985+ny*.172,dy=-nx*.172+ny*.985;
+                    if(Math.abs(dx)<1.0||Math.abs(dx)>2.8||Math.abs(dy)>.65)continue;
+                    const a=sample(x,y),b=rotated(x,y);
+                    if(Math.abs(a[2]-b[2])+Math.abs(a[1]-b[1])>45)orbitChanges++;
+                    if(a[2]>b[2]+35&&a[2]>120)blueToDim++;
+                    if(b[2]>a[2]+35&&b[2]>120)dimToBlue++;
+                }
+                trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,blue,viewChanges,tiltedCenter:tilted(c.width/2,c.height/2),orbitChanges,blueToDim,dimToBlue,rotatedCenter:rotated(c.width/2,c.height/2)};
                 gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
                 window.gravitySnapshots=[];
             }""")
@@ -187,6 +206,9 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert trace["lensing"]["upper"] >= 15 and trace["lensing"]["wing"] >= 15, trace["lensing"]
             assert trace["lensing"]["viewChanges"] >= 100, trace["lensing"]
             assert max(trace["lensing"]["tiltedCenter"]) <= 20, trace["lensing"]
+            assert trace["lensing"]["orbitChanges"] >= 100, trace["lensing"]
+            assert min(trace["lensing"]["blueToDim"],trace["lensing"]["dimToBlue"]) >= 20, trace["lensing"]
+            assert max(trace["lensing"]["rotatedCenter"]) <= 20, trace["lensing"]
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
             # No WebGL/capture: the already tested stable DOM spiral must remain usable.
