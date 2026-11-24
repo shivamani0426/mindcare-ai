@@ -108,6 +108,11 @@ void main(){
     const gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,stencil:false,
       premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'});
     if(!gl){report('webgl unavailable');return null;}
+    // Software WebGL executes the fragment shader on the CPU. Keep the
+    // full existing quality budget for hardware GPUs (including Brave).
+    const debugRenderer=gl.getExtension('WEBGL_debug_renderer_info');
+    const rendererName=debugRenderer?String(gl.getParameter(debugRenderer.UNMASKED_RENDERER_WEBGL)):'';
+    const software=/swiftshader|llvmpipe|softpipe|software rasterizer/i.test(rendererName);
     let destroyed=false, valid=false, raf=0, program, buffer, texture, vs, fs;
     let quality=0,resolveRun=null,epoch=performance.now();
     const stopRun=()=>{cancelAnimationFrame(raf);if(resolveRun){const done=resolveRun;resolveRun=null;done();}};
@@ -140,7 +145,7 @@ void main(){
     const uSize=gl.getUniformLocation(program,'u_size'),uPull=gl.getUniformLocation(program,'u_pull'),uTime=gl.getUniformLocation(program,'u_time');
     const resize=()=>{
       const w=window.innerWidth,h=window.innerHeight;
-      const budget=quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
+      const budget=software?Math.min(85000,quality===2?50000:quality===1?65000:85000):quality===2?85000:quality===1?140000:matchMedia('(max-width:650px)').matches?160000:240000;
       const s=Math.min(1,Math.sqrt(budget/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       canvas.width=Math.max(1,Math.round(w*s));canvas.height=Math.max(1,Math.round(h*s));
       gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(uSize,canvas.width,canvas.height);
@@ -160,7 +165,7 @@ void main(){
       if(destroyed||gl.isContextLost()){report('context unavailable before capture');return false;}
       const w=scene.clientWidth,h=scene.clientHeight;
       if(w<1||h<1){report('empty capture dimensions');return false;}
-      const scale=Math.min(1,Math.sqrt(300000/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
+      const scale=Math.min(1,Math.sqrt((software?160000:300000)/(w*h)),gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(w,h));
       // Clone only the visible public scene plus its style/ancestor chain.
       // Avoid expensive hidden entrance, below-fold content and live overlays.
       const captureIgnore=el=>{
@@ -187,7 +192,7 @@ void main(){
             }
             target.querySelectorAll('input[type=password],input[type=email]').forEach(input=>{input.value='';});
           }
-        }),4800);
+        }),software?7000:4800);
         if(destroyed||gl.isContextLost()){report('context unavailable after capture');return false;}
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,shot);
         if(gl.getError()!==gl.NO_ERROR)throw Error('texture upload failed');
@@ -224,6 +229,7 @@ void main(){
           if(!valid||now-started>duration*3){
             // Retain the exact DOM pose and let the compositor finish
             // independently if this graphics device cannot sustain motion.
+            if(valid)report('render deadline: '+phase);
             fail();
             for(const animation of animations)animation.play();
             Promise.all(animations.map(animation=>animation.finished)).then(stopRun,stopRun);
