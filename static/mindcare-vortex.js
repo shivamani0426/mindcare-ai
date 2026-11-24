@@ -30,6 +30,7 @@
     group.forEach(a => a.cancel());
     group = [];
     if (scene?.isConnected) {
+      scene.querySelectorAll('[data-mc-vacuum-offscreen]').forEach(el => el.removeAttribute('data-mc-vacuum-offscreen'));
       const shell = scene.querySelector('.site-shell');
       if (shell) scene.replaceWith(shell);
       else scene.remove();
@@ -111,6 +112,10 @@
     const outgoing = document.querySelector('.site-shell');
     const skip = document.querySelector('.skip');
     const scroll = window.scrollY;
+    // Cull the long landing's below-fold sections before promoting its viewport.
+    // Their layout below the visible slice is not part of the vacuum effect.
+    const below = [...outgoing.querySelectorAll('.mc-world-root > *')].filter(el => el.getBoundingClientRect().top >= window.innerHeight);
+    below.forEach(el => el.setAttribute('data-mc-vacuum-offscreen',''));
     scene = document.createElement('div');
     scene.className = 'mc-vacuum-scene';
     scene.dataset.scene = 'landing';
@@ -198,5 +203,5 @@
     if (event.key === 'Escape' && busy) { if (mounted) finish(); else fallback(); }
   });
   window.addEventListener('popstate',() => { if (mounted || busy) location.reload(); });
-  window.addEventListener('pageshow',event => { if (event.persisted) reset(); });
+  window.addEventListener('pageshow',event => { if (event.persisted) { ++generation; reset(); } });
 })();
