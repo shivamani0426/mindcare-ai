@@ -33,6 +33,7 @@ jobs:
           node --check static/auth-ui.js
           node --check static/milo.js
           node --check static/landing-world.js
+          node --check static/landing-cinematic.js
 
   browser:
     runs-on: ubuntu-latest

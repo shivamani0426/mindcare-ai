@@ -97,111 +97,86 @@ try:
         )
         verify(page.locator('.mc-hero-art').count() == 1,
                "Original immersive world artwork loads correctly")
-        verify(page.locator("#mc-paper-intro").is_hidden(),
-               "Reduced-motion visitors skip the paper animation and see the homepage")
-        paper_tab = ctx.new_page()
-        paper_tab.emulate_media(reduced_motion="no-preference")
-        paper_tab.goto(base + "/")
-        verify(paper_tab.locator("#mc-paper-touch").is_visible(),
-               "First desktop visit starts with the accessible crumpled paper")
-        verify(paper_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "Interactive homepage controls stay protected while paper is closed")
-        verify(paper_tab.locator(".mc-paper-crease").count() == 3,
-               "Crumpled sheet has multiple visible fold accents")
-        paper_tab.locator("#mc-paper-touch").click()
-        paper_tab.wait_for_function(
-            "() => document.body.classList.contains('mc-paper-revealing')")
-        verify(not paper_tab.locator("body").evaluate(
-               "(el) => el.classList.contains('mc-hero-assembling')"),
-               "Hero assembly must NOT run invisibly underneath the paper")
-        paper_tab.wait_for_function(
-            "() => document.body.classList.contains('mc-hero-assembling')",
-            timeout=6000)
-        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
-               "Paper is hidden before orb and text animation starts")
-        verify(paper_tab.locator("#mc-hero-replay").is_hidden(),
-               "Replay is hidden while the hero assembles")
-
-        verify(paper_tab.locator(".mc-hero-orb").count() == 1,
-               "Original hero keeps the animated central bubble")
-        verify(paper_tab.locator(".mc-hero-light-ring").count() == 2,
-               "Two animated luminous rings develop around the bubble")
-        verify("mc-phase-sphere" in paper_tab.locator(".mc-hero-orb").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "Central bubble forms from small glow and settles into its final size")
-        verify("mc-phase-ring-one" in paper_tab.locator(".mc-ring-one").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "First orbit ring draws itself during paper reveal")
-        verify("mc-phase-ring-two" in paper_tab.locator(".mc-ring-two").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "Second orbit ring assembles after the first")
-        verify("mc-phase-veil" in paper_tab.locator(".mc-world-hero").evaluate(
-               "(el) => getComputedStyle(el, '::after').animationName"),
-               "Screen breathes from dark to bright while content assembles")
-        verify(paper_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
-               "Existing illustrated landing hero is preserved exactly")
-
-        verify("mc-phase-left" in paper_tab.locator(".mc-hero-wordmark").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "Landing title flies in from the left instead of zooming at visitors")
-        verify("mc-phase-right" in paper_tab.locator(".mc-hero-center > p").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "Landing description flies in from the right")
-        verify("mc-phase-bottom" in paper_tab.locator(".mc-hero-enter").evaluate(
-               "(el) => getComputedStyle(el).animationName"),
-               "Landing registration action rises from below")
-        paper_tab.wait_for_function(
-            "() => document.getElementById('mc-paper-intro').hidden",
-            timeout=6000)
-        verify(not paper_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
-               "Original homepage becomes fully interactive after the reveal")
-        verify(paper_tab.locator(".mc-hero-enter").is_visible(),
-               "Registration call to action survives paper animation")
-        paper_tab.wait_for_function(
-            "() => document.body.classList.contains('mc-hero-resting')",
-            timeout=6000)
-        verify(paper_tab.locator("#mc-hero-replay").is_visible(),
-               "Finished hero offers a visible replay button")
-        paper_tab.locator("#mc-hero-replay").click()
-        verify(paper_tab.locator("#mc-paper-touch").is_visible(),
-               "Replay shows paper again without a new tab")
-        paper_tab.locator("#mc-paper-skip").click()
-        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
-               "Replay paper can be skipped immediately")
-        paper_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
-        paper_tab.wait_for_function(
-            "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'",
-            timeout=6000)
-        verify(paper_tab.locator(".mc-world-manifesto h2").evaluate(
+        verify(page.locator("#mc-door-intro").is_hidden(),
+               "Reduced-motion visitors bypass the cinematic entrance")
+        verify(page.locator(".mc-cinematic-orbit").count() == 3,
+               "Cinematic scene has three independently angled 3D orbit layers")
+        verify(page.locator(".mc-cinematic-scene").get_attribute("aria-hidden") == "true",
+               "Decorative constellation stays out of the accessibility tree")
+        verify(page.locator(".mc-cinematic-depth").evaluate(
+               "(el) => getComputedStyle(el).transform === 'none'"),
+               "Reduced-motion visitors receive static 3D artwork")
+        verify(page.locator("#mc-paper-intro").count() == 0,
+               "Old paper entrance is removed from the public page")
+        door_tab = ctx.new_page()
+        door_tab.emulate_media(reduced_motion="no-preference")
+        door_tab.goto(base + "/")
+        portal = door_tab.locator("#mc-door-intro")
+        verify(portal.is_visible(), "First visit displays cinematic door")
+        verify(door_tab.locator(".mc-door-leaf").count() == 2,
+               "Portal has two separately hinged leaves")
+        verify(door_tab.locator("#mc-door-enter").inner_text().strip().endswith("Slide to enter MindCare"),
+               "Portal offers the requested slide-to-enter instruction")
+        verify(door_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+               "Underlying controls cannot receive focus before entry")
+        door_tab.mouse.move(640, 300)
+        door_tab.mouse.wheel(0, 180)
+        door_tab.wait_for_function(
+            "() => +document.querySelector('#mc-door-intro').dataset.progress > .15")
+        verify(portal.is_visible() and float(portal.get_attribute("data-progress")) < 1,
+               "Partial scroll progressively opens the doors without dismissing them")
+        verify(door_tab.locator(".mc-door-left").evaluate(
+               "(el) => getComputedStyle(el).transform !== 'none'"),
+               "Door leaf has a real CSS perspective rotation")
+        verify(door_tab.evaluate("scrollY === 0"), "The page does not scroll beneath the closed portal")
+        door_tab.mouse.wheel(0, 1000)
+        door_tab.wait_for_function(
+            "() => document.getElementById('mc-door-intro').hidden", timeout=6000)
+        verify(not door_tab.locator(".mc-world-root").evaluate("(el) => el.inert"),
+               "The real homepage becomes interactive after the door opens")
+        verify(door_tab.locator(".mc-hero-enter").is_visible(),
+               "Registration action survives cinematic entrance")
+        verify(door_tab.locator(".mc-hero-orb").count() == 1,
+               "Original hero keeps the animated central orb")
+        verify(door_tab.locator(".mc-hero-light-ring").count() == 2,
+               "Hero retains two luminous rings")
+        verify(door_tab.locator(".mc-hero-art").get_attribute("src").endswith("mindcare-world.svg"),
+               "Original hero artwork is preserved")
+        door_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-hero-resting')", timeout=6000)
+        verify(door_tab.locator("#mc-hero-replay").is_visible(),
+               "Replay is available after the cinematic reveal")
+        door_tab.mouse.move(1100, 240)
+        door_tab.wait_for_function(
+            "() => !!document.querySelector('.mc-cinematic-depth').style.getPropertyValue('--mc-tilt-y')")
+        verify(door_tab.locator(".mc-cinematic-depth").evaluate(
+               "(el) => parseFloat(el.style.getPropertyValue('--mc-tilt-y')) > 0"),
+               "Fine pointer interaction tilts the constellation in 3D")
+        door_tab.locator("#mc-hero-replay").click()
+        verify(portal.is_visible(), "Replay opens the door experience again")
+        door_tab.keyboard.press("Escape")
+        verify(portal.is_hidden(), "Escape immediately bypasses the introduction")
+        door_tab.locator(".mc-world-manifesto").scroll_into_view_if_needed()
+        door_tab.wait_for_function(
+            "() => document.querySelector('.mc-world-manifesto')?.dataset.mcSectionFlight === 'ready'", timeout=6000)
+        verify(door_tab.locator(".mc-world-manifesto h2").evaluate(
                "(el) => el.getAnimations().some(a => a.playState === 'running')"),
-               "Below-fold landing headings fly in when their section enters view")
-        verify(paper_tab.locator(".mc-hero-enter").get_attribute("href") == "/register",
-               "Existing landing registration route remains unchanged")
-        paper_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
-        paper_tab.wait_for_function(
-            "() => document.body.classList.contains('mc-hero-out-of-view')",
-            timeout=6000)
-        verify(paper_tab.locator(".mc-hero-art").evaluate(
+               "Below-fold headings retain their fly-in motion")
+        door_tab.locator(".mc-world-capabilities").scroll_into_view_if_needed()
+        door_tab.wait_for_function(
+            "() => document.body.classList.contains('mc-hero-out-of-view')", timeout=6000)
+        verify(door_tab.locator(".mc-hero-art").evaluate(
                "(el) => getComputedStyle(el).animationPlayState === 'paused'"),
-               "Decorative hero animation pauses offscreen to reduce GPU work")
-
-
-        verify(paper_tab.locator(".mc-hero-light-ring").first.evaluate(
-               "(el) => getComputedStyle(el).animationName.includes('mc-ring-glow')"),
-               "Luminous rings continue their gentle animation after the reveal")
-
-        paper_tab.reload()
-        verify(paper_tab.locator("#mc-paper-intro").is_hidden(),
-               "Paper introduction does not repeat on every refresh in the same tab")
-        paper_tab.close()
-        paper_skip = ctx.new_page()
-        paper_skip.emulate_media(reduced_motion="no-preference")
-        paper_skip.goto(base + "/")
-        paper_skip.locator("#mc-paper-skip").click()
-        verify(paper_skip.locator("#mc-paper-intro").is_hidden(),
-               "Skip introduction immediately reveals homepage")
-        paper_skip.close()
-
+               "Offscreen hero animation pauses to reduce GPU work")
+        door_tab.reload()
+        verify(portal.is_hidden(), "Entrance does not repeat on refresh")
+        door_tab.close()
+        skip_tab = ctx.new_page()
+        skip_tab.emulate_media(reduced_motion="no-preference")
+        skip_tab.goto(base + "/")
+        skip_tab.locator("#mc-door-skip").click()
+        verify(skip_tab.locator("#mc-door-intro").is_hidden(), "Skip reveals the homepage immediately")
+        skip_tab.close()
 
         page.locator("#mc-tab-routine").click()
         verify(page.locator("#mc-panel-routine").is_visible() and
@@ -232,6 +207,14 @@ try:
             verify(page.locator(".mc-hero-enter").is_visible() and
                    page.locator(".mc-world-nav-links").is_visible(),
                    f"CTA and section links remain visible at {width}px")
+            verify(page.locator(".mc-cinematic-scene").count() == 1,
+                   f"Decorative scene remains available at {width}px")
+            if width <= 700:
+                verify(page.locator(".mc-cinematic-satellite").first.is_hidden(),
+                       f"Decorative satellites do not obstruct small-screen controls at {width}px")
+                verify(page.locator(".mc-demo-card p").first.evaluate(
+                       "(el) => parseFloat(getComputedStyle(el).fontSize) >= 12"),
+                       f"Illustrative preview text remains legible at {width}px")
             verify(page.locator("#mc-capabilities-heading").count() == 1,
                    f"Capabilities heading remains present at {width}px")
         page.set_viewport_size({"width": 1280, "height": 860})

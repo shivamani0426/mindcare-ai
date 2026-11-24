@@ -1,6 +1,6 @@
 /* MindCare 2-phase landing motion rebuild.
-   Phase 1: existing crumpled paper unfolds unmodified.
-   Phase 2: AFTER paper is hidden, this class builds the original hero visibly.
+   Phase 1: the scroll-driven double doors open.
+   Phase 2: AFTER the portal is hidden, this class builds the original hero visibly.
    No new fonts, no replacement artwork, no changes to landing content/routes. */
 .mc-world-hero { isolation:isolate }
 .mc-hero-orb { transform:translate(-50%,-50%);transform-origin:center center; }
@@ -47,7 +47,7 @@ body.mc-hero-resting .mc-hero-art {animation:mc-art-float 17s ease-in-out infini
  from{transform:scale(1.055) translate3d(-.5%,.35%,0)}
  to{transform:scale(1.078) translate3d(.5%,-.4%,0)}
 }
-/* Post-paper visibility: no overlays covering the animation.
+/* Post-portal visibility: no overlays covering the animation.
    A dark veil breathes away as the elements arrive, without intercepting clicks. */
 body.mc-hero-assembling .mc-world-hero::after {
  content:"";pointer-events:none;position:absolute;inset:0;z-index:3;
@@ -88,7 +88,7 @@ body.mc-hero-assembling .mc-hero-light-flare{animation:mc-phase-flare 1300ms 1s 
  100%{opacity:.75;transform:rotate(-27deg) scale(1)}
 }
 /* The original header, headline, description, CTA and footer arrive
-   individually from window boundaries after the paper has cleared. */
+   individually from window boundaries after the entrance has cleared. */
 body.mc-hero-assembling .mc-hero-header {animation:mc-phase-top 1050ms .1s cubic-bezier(.16,1,.3,1) both}
 body.mc-hero-assembling .mc-hero-kicker {animation:mc-phase-top 1080ms .3s cubic-bezier(.16,1,.3,1) both}
 body.mc-hero-assembling .mc-hero-wordmark {animation:mc-phase-left 1340ms .42s cubic-bezier(.16,1,.3,1) both}

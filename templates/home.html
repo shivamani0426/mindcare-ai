@@ -4,39 +4,61 @@
 {% block head %}
   <link rel="preload" as="image" href="{{ url_for('static', filename='mindcare-world.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-world.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='landing-paper.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-door.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='landing-motion.css', v='rebuild2') }}">
-  <script src="{{ url_for('static', filename='landing-world.js', v='rebuild2') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing-cinematic.css') }}">
+  <script src="{{ url_for('static', filename='landing-cinematic.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='landing-world.js', v='door3') }}" defer></script>
   <script src="{{ url_for('static', filename='landing-section-flight.js', v='polish1') }}" defer></script>
 {% endblock %}
 {% block content %}
-<!-- An optional, dismissible one-time paper-unfold introduction. The site remains
-     accessible without JavaScript; interactive links are not removed or replaced. -->
-<div class="mc-paper-intro" id="mc-paper-intro" hidden>
-  <button type="button" class="mc-paper-touch" id="mc-paper-touch" aria-label="Unfold the paper to enter MindCare">
-    <span class="mc-paper-sheet" aria-hidden="true">
-      <span class="mc-paper-crease mc-paper-crease-a"></span>
-      <span class="mc-paper-crease mc-paper-crease-b"></span>
-      <span class="mc-paper-crease mc-paper-crease-c"></span>
-      <span class="mc-paper-flap mc-paper-flap-a"></span>
-      <span class="mc-paper-flap mc-paper-flap-b"></span>
-      <span class="mc-paper-stamp">✦</span>
-      <span class="mc-paper-title">MINDCARE<span>AI</span></span>
-      <span class="mc-paper-subtitle">A LITTLE WORLD, WAITING TO UNFOLD.</span>
-      <span class="mc-paper-tap">✳ TAP TO UNFOLD</span>
-    </span>
-  </button>
-  <button type="button" class="mc-paper-skip" id="mc-paper-skip">Skip introduction</button>
+<!-- Optional first-visit gateway. Hidden without JS; the actual landing page is behind it. -->
+<div class="mc-door-intro" id="mc-door-intro" role="dialog" aria-modal="true" aria-labelledby="mc-door-title" hidden>
+  <div class="mc-door-stage" aria-hidden="true">
+    <div class="mc-door-leaf mc-door-left">
+      <div class="mc-door-inlay"></div><div class="mc-door-handle"></div>
+      <span class="mc-door-etch">01 / A LITTLE WORLD</span>
+    </div>
+    <div class="mc-door-leaf mc-door-right">
+      <div class="mc-door-inlay"></div><div class="mc-door-handle"></div>
+      <span class="mc-door-etch">02 / OPEN TO CARE</span>
+    </div>
+    <div class="mc-door-seam"></div>
+  </div>
+  <div class="mc-door-heading">
+    <span class="mc-door-emblem" aria-hidden="true">✦</span>
+    <h2 id="mc-door-title">MINDCARE<span>AI</span></h2>
+    <p>A little world of care awaits.</p>
+  </div>
+  <div class="mc-door-controls">
+    <button class="mc-door-enter" id="mc-door-enter" type="button" aria-describedby="mc-door-instructions">
+      <span class="mc-door-arrow" aria-hidden="true">↑</span>
+      <span>Slide to enter MindCare</span>
+    </button>
+    <span id="mc-door-instructions">Scroll down or swipe up to open the doors. You can also select Enter.</span>
+    <div class="mc-door-track" aria-hidden="true"><span></span></div>
+  </div>
+  <button type="button" class="mc-door-skip" id="mc-door-skip">Skip introduction</button>
 </div>
 <div class="mc-world-root" id="top">
   <section class="mc-world-hero" aria-labelledby="mc-hero-heading">
     <img class="mc-hero-art" src="{{ url_for('static', filename='mindcare-world.svg') }}" alt="" fetchpriority="high" decoding="async">
     <div class="mc-hero-vignette" aria-hidden="true"></div>
     <div class="mc-hero-orb" aria-hidden="true"><span class="mc-hero-orb-core"></span><span class="mc-hero-light-ring mc-ring-one"></span><span class="mc-hero-light-ring mc-ring-two"></span><span class="mc-hero-light-flare"></span></div>
+    <div class="mc-cinematic-scene" aria-hidden="true">
+      <div class="mc-cinematic-depth">
+        <div class="mc-cinematic-orbit mc-orbit-a"></div>
+        <div class="mc-cinematic-orbit mc-orbit-b"></div>
+        <div class="mc-cinematic-orbit mc-orbit-c"></div>
+        <div class="mc-cinematic-satellite mc-satellite-memory"><span class="mc-satellite-icon">✳</span><span><small>01 / MEMORY</small><strong>Little victories</strong></span></div>
+        <div class="mc-cinematic-satellite mc-satellite-care"><span class="mc-satellite-icon">♡</span><span><small>02 / CONNECTION</small><strong>Closer together</strong></span></div>
+        <div class="mc-cinematic-satellite mc-satellite-rhythm"><span class="mc-satellite-icon">◷</span><span><small>03 / ROUTINE</small><strong>One step at a time</strong></span></div>
+      </div>
+    </div>
     <header class="mc-hero-header">
       <a class="mc-hero-back" href="#overview" aria-label="Explore MindCare overview">←</a>
       <a class="mc-hero-brand" href="#top" aria-label="MindCare AI, back to top"><span class="mc-brand-glyph" aria-hidden="true">✦</span><span>MINDCARE</span></a>
-      <div class="mc-hero-header-right"><span>EVERYDAY CARE, REIMAGINED</span><span class="mc-outline-badge">EARLY ACCESS</span></div>
+      <div class="mc-hero-header-right"><span>EVERYDAY CARE, REIMAGINED</span><span class="mc-outline-badge">A WORLD OF CARE</span></div>
     </header>
     <div class="mc-hero-center">
       <span class="mc-hero-kicker">A PLACE FOR SMALL WINS &amp; BIG HEARTS</span>
@@ -45,7 +67,7 @@
       <a class="mc-pill mc-pill-light mc-pixel mc-hero-enter" href="{{ url_for('register') }}">ENTER MINDCARE <span aria-hidden="true">↗</span></a>
       <a class="mc-hero-signin" href="{{ url_for('login') }}">Already part of MindCare? Sign in</a>
     </div>
-    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the landing-page paper and animation">↻ Replay introduction</button>
+    <button type="button" id="mc-hero-replay" class="mc-hero-replay" hidden aria-label="Replay the cinematic door introduction">↻ Replay introduction</button>
     <a class="mc-hero-scroll" href="#overview"><span>EXPLORE THE WORLD</span><span aria-hidden="true">↓</span></a>
     <span class="mc-hero-corner mc-hero-corner-left" aria-hidden="true">01 — A WORLD OF CARE</span>
     <span class="mc-hero-corner mc-hero-corner-right" aria-hidden="true">✳ BUILT WITH FAMILIES IN MIND</span>
@@ -63,7 +85,7 @@
   </nav>
 
   <section class="mc-world-manifesto mc-scanlines" id="overview" aria-labelledby="mc-manifesto-heading">
-    <span class="mc-mini-pill mc-pixel">THE IDEA</span>
+    <span class="mc-mini-pill mc-pixel">01 / THE IDEA</span>
     <h2 class="mc-pixel" id="mc-manifesto-heading">GENTLE DAYS.<br>BRIGHTER MOMENTS.</h2>
     <p>MindCare brings little moments of play, familiar faces, and everyday routines into one welcoming space. Made for older adults and the caregivers they choose to trust.</p>
   </section>
@@ -78,7 +100,7 @@
   </section>
 
   <section class="mc-world-capabilities mc-scanlines" id="capabilities" aria-labelledby="mc-capabilities-heading">
-    <span class="mc-mini-pill mc-pixel">WHAT'S INSIDE</span>
+    <span class="mc-mini-pill mc-pixel">02 / WHAT'S INSIDE</span>
     <h2 class="mc-pixel mc-section-title" id="mc-capabilities-heading">POSSIBILITIES,<br>AT YOUR PACE.</h2>
     <p class="mc-section-lead">Three ways to make everyday moments feel a little easier.</p>
     <div class="mc-cap-tabs" role="tablist" aria-label="MindCare capabilities">
@@ -106,7 +128,7 @@
   </section>
 
   <section class="mc-world-product" aria-labelledby="mc-product-heading">
-    <span class="mc-mini-pill mc-pixel">A LOOK INSIDE</span>
+    <span class="mc-mini-pill mc-pixel">03 / A LOOK INSIDE</span>
     <h2 class="mc-pixel mc-section-title" id="mc-product-heading">A WORLD THAT<br>FEELS LIKE YOURS.</h2>
     <p class="mc-section-lead">The right tools, made clearer for the people using them.</p>
     <div class="mc-product-frame" aria-roledescription="carousel" aria-label="Simulated MindCare interface previews">
@@ -164,7 +186,7 @@
 
   <section class="mc-world-discover mc-scanlines" id="discover" aria-labelledby="mc-discover-heading">
     <a href="{{ url_for('register') }}" class="mc-pill mc-pill-light mc-pixel">DISCOVER MINDCARE <span aria-hidden="true">↗</span></a>
-    <span class="mc-discover-kicker mc-pixel">AN UNIVERSE OF LITTLE WINS</span>
+    <span class="mc-discover-kicker mc-pixel">04 / AN UNIVERSE OF LITTLE WINS</span>
     <h2 class="mc-pixel mc-section-title" id="mc-discover-heading">EVERY MOMENT<br>HAS A STORY.</h2>
     <p class="mc-section-lead">A peek at the thoughtful experiences inside MindCare, brought to life as imaginative example scenes.</p>
     <div class="mc-gallery-rail" aria-label="A gallery of illustrative MindCare features" tabindex="0">
@@ -207,7 +229,7 @@
   </section>
 
   <section class="mc-world-access mc-scanlines" id="access" aria-labelledby="mc-access-heading">
-    <span class="mc-mini-pill mc-pixel">YOUR WORLD AWAITS</span>
+    <span class="mc-mini-pill mc-pixel">05 / YOUR WORLD AWAITS</span>
     <h2 class="mc-pixel mc-section-title" id="mc-access-heading">READY FOR YOUR<br>NEXT LITTLE WIN?</h2>
     <p>Whether you're here to play, remember or care for someone you love, there's room for you in MindCare.</p>
     <a href="{{ url_for('register') }}" class="mc-pill mc-pill-light mc-pixel mc-access-enter">GET STARTED <span aria-hidden="true">↗</span></a>

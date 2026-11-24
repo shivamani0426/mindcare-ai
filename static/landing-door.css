@@ -1,0 +1,90 @@
+/* The real homepage is visible through the gap; no duplicate screen or video. */
+body.mc-door-active {overflow:hidden;overscroll-behavior:none}
+.mc-door-intro[hidden] {display:none!important}
+.mc-door-intro {
+  --door-angle:0deg;--door-negative-angle:0deg;--door-progress:0;
+  position:fixed;inset:0;z-index:150;isolation:isolate;
+  color:#f3f9f7;overflow:hidden;touch-action:none;overscroll-behavior:none;
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.mc-door-stage {position:absolute;inset:0;perspective:clamp(650px,95vw,1450px);pointer-events:none}
+.mc-door-leaf {
+  position:absolute;top:0;bottom:0;width:50.05%;overflow:hidden;
+  background:
+    linear-gradient(90deg,#07101c 0%,#1a2a3c 6%,#293c4b 10%,#152433 12%,#192b39 80%,#101b28 96%,#32444a),
+    #162330;
+  border:1px solid #51625e;
+  box-shadow:inset 0 0 70px #030812b5;
+  backface-visibility:hidden;
+}
+.mc-door-left {left:0;transform-origin:left center;transform:rotateY(var(--door-angle))}
+.mc-door-right {right:0;transform-origin:right center;transform:rotateY(var(--door-negative-angle))}
+.mc-door-leaf::before {
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 36px,#b4d2c207 37px 38px),radial-gradient(ellipse at 50% 20%,#92b7b229,transparent 60%);
+}
+.mc-door-inlay {
+  position:absolute;inset:7% 8% 9%;border:1px solid #8da99b70;
+  border-radius:50% 50% 5px 5px / 17% 17% 5px 5px;
+  box-shadow:inset 0 0 0 8px #0e1a2770,inset 0 0 0 9px #b7d5bf28,inset 0 0 42px #01081170;
+  background:radial-gradient(ellipse at 50% 43%,#3a586b57,transparent 65%);
+}
+.mc-door-inlay::before,.mc-door-inlay::after {
+  content:"";position:absolute;border:1px solid #d5eda633;border-radius:50%;
+  width:68%;aspect-ratio:1;left:16%;top:23%;transform:rotateX(52deg) rotateZ(-25deg);
+}
+.mc-door-inlay::after {transform:rotateX(52deg) rotateZ(25deg);border-color:#b7e4e34a}
+.mc-door-handle {position:absolute;top:54%;height:clamp(64px,11vh,112px);width:12px;border-radius:8px;background:linear-gradient(90deg,#61796d,#d9efb6 45%,#93b29b 65%,#445a50);box-shadow:2px 6px 12px #020810}
+.mc-door-left .mc-door-handle {right:clamp(13px,3vw,40px)}
+.mc-door-right .mc-door-handle {left:clamp(13px,3vw,40px)}
+.mc-door-etch {position:absolute;bottom:5%;font-size:10px;letter-spacing:.18em;color:#b5c8c1;white-space:nowrap}
+.mc-door-left .mc-door-etch {left:8%}
+.mc-door-right .mc-door-etch {right:8%}
+.mc-door-seam {
+  position:absolute;left:50%;top:0;bottom:0;width:2px;background:#d9efb6;
+  box-shadow:0 0 12px 2px #d9efb68a;opacity:calc(1 - var(--door-progress));
+  transform:translateX(-50%);
+}
+.mc-door-heading {
+  position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);
+  width:min(92%,640px);text-align:center;pointer-events:none;
+  opacity:calc(1 - var(--door-progress)*2.5);
+}
+.mc-door-emblem {display:inline-grid;place-items:center;width:70px;height:70px;border-radius:50%;background:#162737;border:1px solid #d9efb6;color:#d9efb6;font-size:36px;box-shadow:0 0 32px #a6caa137}
+.mc-door-heading h2 {font-size:clamp(36px,7vw,86px);letter-spacing:-.07em;line-height:1.03;margin:20px 0 8px;color:#f3f9f7;text-shadow:0 4px 22px #020810}
+.mc-door-heading h2 span {font-size:.36em;color:#d9efb6;vertical-align:top;margin-left:4px}
+.mc-door-heading p {color:#d5e1df;font-size:clamp(14px,1.6vw,18px);margin:0;text-shadow:0 2px 10px #020810}
+.mc-door-controls {
+  position:absolute;left:50%;bottom:max(8%,calc(env(safe-area-inset-bottom) + 24px));transform:translateX(-50%);
+  width:min(90%,390px);display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;
+}
+.mc-door-enter {
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;min-height:60px;padding:10px 20px;border-radius:99px;
+  border:1px solid #d9efb6;background:#d9efb6;color:#162a25;
+  font-size:16px;font-weight:760;box-shadow:0 10px 35px #03091380;cursor:pointer;
+}
+.mc-door-arrow {display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#19342d;color:#e9f7e0;font-size:24px}
+#mc-door-instructions {color:#eef4f2;font-size:13px;line-height:1.5;text-shadow:0 2px 8px #01060d}
+.mc-door-track {height:3px;width:110px;border-radius:10px;background:#c0d3ca60;overflow:hidden}
+.mc-door-track span {display:block;width:100%;height:100%;background:#d9efb6;transform:scaleX(var(--door-progress));transform-origin:left}
+.mc-door-skip {position:absolute;top:max(18px,env(safe-area-inset-top));right:clamp(14px,4vw,54px);min-height:44px;padding:10px 16px;border-radius:99px;border:1px solid #b8d2c77a;background:#101d2b;color:#f3f9f7;font:650 13px/1.3 system-ui;cursor:pointer}
+.mc-door-intro button:focus-visible {outline:3px solid #fff;outline-offset:4px}
+body.mc-door-arrival.mc-hero-assembling .mc-world-hero::after {display:none}
+@media(max-width:600px) {
+  .mc-door-emblem {width:58px;height:58px;font-size:29px}
+  .mc-door-heading {top:34%}
+  .mc-door-etch {font-size:8px;letter-spacing:.08em}
+  .mc-door-controls {bottom:max(9%,calc(env(safe-area-inset-bottom) + 18px))}
+  .mc-door-inlay {inset:8% 6%}
+}
+@media(max-height:480px) {
+  .mc-door-heading {top:30%}
+  .mc-door-emblem {display:none}
+  .mc-door-heading h2 {font-size:36px;margin:0 0 5px}
+  .mc-door-controls {bottom:16px;gap:5px}
+  .mc-door-enter {min-height:48px;padding:6px 15px}
+}
+@media(prefers-reduced-motion:reduce),(prefers-contrast:more),(forced-colors:active) {
+  .mc-door-intro {display:none!important}
+}
