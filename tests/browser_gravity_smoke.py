@@ -144,51 +144,40 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
                     }
                     trace.colors[phase]=colors.size;
                 }
-                const view=gl.getUniformLocation(program,'u_view');
-                if(view===null)throw Error('3D camera inclination uniform missing');
-                gl.uniform1f(view,0);
-                const orbit=gl.getUniformLocation(program,'u_orbit');
-                if(orbit===null)throw Error('orbital clock uniform missing');
-                gl.uniform1f(orbit,0);
+                // Check the restored classic ring, tilted disk and cool palette.
+                // The intentionally removed perspective and particle models
+                // are no longer requirements; all live trajectory checks stay.
+                const clock=gl.getUniformLocation(program,'u_time');
+                gl.uniform1f(clock,1.25);
                 const sample=draw(window.gravitySnapshots[0],1);
-                let upper=0,wing=0,blue=0;
+                const radius=c.height*.205;
+                const sectors=[0,0,0,0];
+                let blue=0,wing=0,warm=0;
                 for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
-                    const nx=(x-c.width/2)/(c.height*.205),ny=(y-c.height/2)/(c.height*.205);
-                    const dx=nx*.985+ny*.172,dy=-nx*.172+ny*.985;
-                    const rr=Math.hypot(dx,dy),dr=Math.hypot(dx,dy/.245);
+                    const nx=(x+.5-c.width/2)/radius,ny=(y+.5-c.height/2)/radius;
+                    const rr=Math.hypot(nx,ny);
+                    const dx=nx*.94+ny*.34,dy=-nx*.34+ny*.94;
+                    const dr=Math.hypot(dx,dy*3.1);
                     const [r,g,b]=sample(x,y);
-                    if(b>150&&g>65&&b>r+35){
-                        blue++;
-                        if(dy>.35&&rr>.77&&rr<1.45)upper++;
-                        if(Math.abs(dx)>1.3&&Math.abs(dy)<.65&&dr<2.95)wing++;
+                    if(rr>.85&&rr<1.38){
+                        if(b>145&&g>65&&b>=r+20){
+                            blue++;
+                            if(rr<1.13)sectors[(nx>=0?1:0)+(ny>=0?2:0)]++;
+                            if(Math.abs(dr-1.22)<.12&&rr>1.12)wing++;
+                        }
+                        if(r>160&&r>b+30)warm++;
                     }
                 }
-                // Inspect the same scene from a different 3D viewing angle.
-                // The projected disk must change while the central sphere stays dark.
-                gl.uniform1f(view,.30);
-                const tilted=draw(window.gravitySnapshots[0],1);
-                let viewChanges=0;
-                for(let y=0;y<c.height;y+=2)for(let x=0;x<c.width;x+=2){
-                    const a=sample(x,y),b=tilted(x,y);
-                    if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>45)viewChanges++;
-                }
-                // Freeze camera, page warp, stars and all other shader clocks.
-                // Only the orbital coordinate moves. Verify a substantial
-                // spatial change in the blue disk, with the center still black.
-                gl.uniform1f(view,0);
-                gl.uniform1f(orbit,.8);
+                gl.uniform1f(clock,2.65);
                 const rotated=draw(window.gravitySnapshots[0],1);
-                let orbitChanges=0,blueToDim=0,dimToBlue=0;
+                let moving=0;
                 for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
-                    const nx=(x-c.width/2)/(c.height*.205),ny=(y-c.height/2)/(c.height*.205);
-                    const dx=nx*.985+ny*.172,dy=-nx*.172+ny*.985;
-                    if(Math.abs(dx)<1.0||Math.abs(dx)>2.8||Math.abs(dy)>.65)continue;
+                    const rr=Math.hypot(x+.5-c.width/2,y+.5-c.height/2)/radius;
+                    if(rr<.88||rr>1.13)continue;
                     const a=sample(x,y),b=rotated(x,y);
-                    if(Math.abs(a[2]-b[2])+Math.abs(a[1]-b[1])>45)orbitChanges++;
-                    if(a[2]>b[2]+35&&a[2]>120)blueToDim++;
-                    if(b[2]>a[2]+35&&b[2]>120)dimToBlue++;
+                    if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>18)moving++;
                 }
-                trace.lensing={center:sample(c.width/2,c.height/2),upper,wing,blue,viewChanges,tiltedCenter:tilted(c.width/2,c.height/2),orbitChanges,blueToDim,dimToBlue,rotatedCenter:rotated(c.width/2,c.height/2)};
+                trace.lensing={center:sample(c.width/2,c.height/2),sectors,wing,blue,warm,moving,rotatedCenter:rotated(c.width/2,c.height/2)};
                 gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
                 window.gravitySnapshots=[];
             }""")
@@ -201,13 +190,12 @@ with tempfile.TemporaryDirectory(prefix="mindcare-gravity-") as tmp:
             assert all(any(.35 < value < .65 for value in trace["pulls"].get(phase,[])) for phase in ("absorbing","emitting")), trace
             assert max(trace["pulls"]["absorbing"]) >= .985 and min(trace["pulls"]["emitting"]) <= .015, trace
             assert not trace["fallbacks"], trace
-            assert trace["lensing"], "no near-horizon rendered sample"
+            assert trace["lensing"], "no classic portal rendered sample"
             assert max(trace["lensing"]["center"]) <= 20, trace["lensing"]
-            assert trace["lensing"]["upper"] >= 15 and trace["lensing"]["wing"] >= 15, trace["lensing"]
-            assert trace["lensing"]["viewChanges"] >= 100, trace["lensing"]
-            assert max(trace["lensing"]["tiltedCenter"]) <= 20, trace["lensing"]
-            assert trace["lensing"]["orbitChanges"] >= 100, trace["lensing"]
-            assert min(trace["lensing"]["blueToDim"],trace["lensing"]["dimToBlue"]) >= 20, trace["lensing"]
+            assert min(trace["lensing"]["sectors"]) >= 15, trace["lensing"]
+            assert trace["lensing"]["wing"] >= 10, trace["lensing"]
+            assert trace["lensing"]["warm"] == 0, trace["lensing"]
+            assert trace["lensing"]["moving"] >= 30, trace["lensing"]
             assert max(trace["lensing"]["rotatedCenter"]) <= 20, trace["lensing"]
             assert page.locator(".mc-gravity-canvas").count() == 0
             assert page.locator("#auth-email").is_visible()
