@@ -1,0 +1,43 @@
+/* Preserve visual design while addressing keyboard and touch usability. */
+.skip:focus-visible {
+  position: fixed;
+  z-index: 2147483647;
+  top: 12px;
+  left: 12px;
+  background: #fff;
+  color: #111;
+  outline: 3px solid #111;
+  outline-offset: 3px;
+}
+#main:focus { outline: none; }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  scroll-margin-block: 7rem 2rem;
+}
+@media (pointer: coarse) {
+  .auth-password-visibility, .nav-logout, .font-toggle,
+  .call-actions button, .flash-close {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .auth-form-field input, .auth-form-field select,
+  .input-label input, .input-label select, .input-label textarea {
+    font-size: max(16px, 1em);
+  }
+  .auth-password-visibility, .call-actions button { touch-action: manipulation; }
+}
+@media (max-width: 600px) {
+  .call-actions { flex-wrap: wrap; }
+  .call-actions button { max-width: 100%; white-space: normal; }
+  .call-video-grid { min-width: 0; }
+  .call-video-frame { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+}
+html:has(body.reduced-motion) { scroll-behavior: auto !important; }
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px;
+  }
+}

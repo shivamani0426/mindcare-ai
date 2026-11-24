@@ -5,6 +5,7 @@ Educational, non-diagnostic mini project. No clinical inference is made from sco
 from __future__ import annotations
 
 import io
+import base64
 import hashlib
 import hmac
 import ipaddress
@@ -25,6 +26,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from authlib.integrations.base_client.errors import OAuthError
+from requests.exceptions import RequestException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import UniqueConstraint, func, or_, and_
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -357,6 +359,7 @@ LOGIN_LIMIT_PER_IP = 50
 LOGIN_LIMIT_PER_IP_ACCOUNT = 8
 REGISTER_WINDOW_SECONDS = 60 * 60
 REGISTER_LIMIT_PER_IP = 12
+OAUTH_LIMIT_PER_IP = 40
 
 
 def _auth_client_ip():
@@ -558,6 +561,8 @@ def reminders_for(patient_id):
 
 @app.before_request
 def load_user_and_csrf():
+    if request.endpoint == "health":
+        return
     g.user = db.session.get(User, session["uid"]) if isinstance(session.get("uid"), int) else None
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_urlsafe(32)
@@ -590,9 +595,11 @@ def security_headers(response):
     response.headers["Content-Security-Policy"] = content_policy
     if current_user():
         response.headers["Cache-Control"] = "private, no-store"
-    elif request.endpoint in ("login", "register", "auth_complete"):
+    elif request.endpoint in ("login", "register", "auth_complete", "google_auth_start", "google_auth_callback", "health"):
         response.headers["Cache-Control"] = "no-store"
-    if request.is_secure:
+    if request.endpoint in ("google_auth_start", "google_auth_callback"):
+        response.headers["Referrer-Policy"] = "no-referrer"
+    if request.is_secure or os.getenv("RENDER_EXTERNAL_URL", "").startswith("https://"):
         response.headers["Strict-Transport-Security"] = "max-age=15552000"
     return response
 
@@ -690,6 +697,7 @@ def complete_verified_external_identity(provider, subject, name="", email="", la
         name=name[:90], label=label[:180],
         expires_at=now_utc() + timedelta(seconds=AUTH_PENDING_SECONDS)
     )
+    PendingIdentity.query.filter(PendingIdentity.expires_at < now_utc()).delete(synchronize_session=False)
     db.session.add(pending)
     db.session.commit()
     session.pop("pending_identity_token", None)
@@ -702,6 +710,11 @@ def google_auth_start():
     if not GOOGLE_OAUTH_READY:
         flash("Google sign-in is not configured yet. Please use your email and password.", "info")
         return redirect(url_for("login"))
+    buckets = ((_auth_bucket("oauth-ip", _auth_client_ip()), OAUTH_LIMIT_PER_IP),)
+    retry_after = _auth_retry_after(buckets, LOGIN_WINDOW_SECONDS)
+    if retry_after:
+        return _auth_rate_limited(retry_after)
+    _record_auth_attempts(buckets, LOGIN_WINDOW_SECONDS)
     if current_user():
         # Linking is a distinct user-initiated action, never an accidental login.
         if request.args.get("mode") != "link":
@@ -709,7 +722,12 @@ def google_auth_start():
         session["google_link_user"] = current_user().id
     else:
         session.pop("google_link_user", None)
-    return oauth.google.authorize_redirect(os.environ["GOOGLE_REDIRECT_URI"])
+    try:
+        return oauth.google.authorize_redirect(os.environ["GOOGLE_REDIRECT_URI"])
+    except (OAuthError, RequestException, ValueError):
+        session.pop("google_link_user", None)
+        flash("Google sign-in is temporarily unavailable. Please try again.", "error")
+        return redirect(url_for("login"))
 
 
 @app.route("/auth/google/callback")
@@ -719,10 +737,15 @@ def google_auth_callback():
     try:
         token = oauth.google.authorize_access_token()
         profile = token.get("userinfo") or {}
-    except (OAuthError, ValueError, KeyError):
+    except (OAuthError, RequestException, ValueError, KeyError):
+        session.pop("google_link_user", None)
         flash("Google could not verify this sign-in. Please try again.", "error")
         return redirect(url_for("login"))
     subject = profile.get("sub")
+    if not isinstance(subject, str) or not 1 <= len(subject) <= 180:
+        session.pop("google_link_user", None)
+        flash("Google could not verify this sign-in. Please try again.", "error")
+        return redirect(url_for("login"))
     email = profile.get("email") or ""
     verified = profile.get("email_verified") is True or profile.get("email_verified") == "true"
     if not verified or not isinstance(email, str) or len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
@@ -812,7 +835,7 @@ def register():
         password = request.form.get("password", "")
         role = request.form.get("role", "")
         age_raw = request.form.get("age", "").strip()
-        if not (2 <= len(name) <= 90) or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        if not (2 <= len(name) <= 90) or len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
             flash("Please enter a valid name and email.", "error")
         elif len(password) < 10 or len(password) > 128:
             flash("Please use a password with at least 10 characters.", "error")
@@ -829,8 +852,13 @@ def register():
             user = User(name=name, email=email, role=role, age=int(age_raw) if role == "patient" and age_raw else None,
                         region=request.form.get("region", "").strip()[:80] if role == "patient" else None,
                         invite_code=invite, password_hash=generate_password_hash(password))
-            db.session.add(user)
-            db.session.commit()
+            try:
+                db.session.add(user)
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash("Could not create this account. Please try again or sign in.", "error")
+                return render_template("auth.html", mode="register")
             session.clear()
             session["uid"] = user.id
             session.permanent = True
@@ -1520,15 +1548,30 @@ def start_video_call():
     return redirect(url_for("video_call_page", token=call.id))
 
 
+def turn_credentials(user_id):
+    """Optional coturn REST credentials; shared secret never reaches the client."""
+    url = os.getenv("TURN_URL", "").strip()
+    if not url.startswith(("turn:", "turns:")):
+        return "", "", ""
+    secret = os.getenv("TURN_SHARED_SECRET", "")
+    if secret:
+        expires = int(time.time()) + (CALL_MAX_MINUTES + 15) * 60
+        username = f"{expires}:{user_id}"
+        password = base64.b64encode(hmac.new(
+            secret.encode(), username.encode(), hashlib.sha1).digest()).decode("ascii")
+        return url, username, password
+    username, password = os.getenv("TURN_USERNAME", ""), os.getenv("TURN_PASSWORD", "")
+    return (url, username, password) if username and password else ("", "", "")
+
+
 @app.route("/video-call/<token>")
 @require_login()
 def video_call_page(token):
     call = call_or_404(token)
+    turn_url, turn_user, turn_password = turn_credentials(current_user().id)
     return render_template("video_call.html", call=call, peer_name=peer_name(call),
                            caller=call.initiator_id == current_user().id,
-                           turn_url=os.getenv("TURN_URL", ""),
-                           turn_user=os.getenv("TURN_USERNAME", ""),
-                           turn_password=os.getenv("TURN_PASSWORD", ""))
+                           turn_url=turn_url, turn_user=turn_user, turn_password=turn_password)
 
 
 @app.route("/api/calls/incoming")

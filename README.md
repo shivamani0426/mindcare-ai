@@ -176,9 +176,9 @@ Caregivers see only patient accounts **that explicitly approved their connection
 The project runs Python permission/unit tests and two disposable Chromium journeys through GitHub Actions: \`tests/browser_smoke.py\` for patients and \`tests/browser_caregiver_smoke.py\` for caregivers. Both use isolated local databases and do not alter production accounts.
 
 
-## Secure sign-in: Google, email and mobile OTP
+## Secure sign-in: Google and email
 
-MindCare's refreshed sign-in and registration pages retain working email/password login. Google and Firebase phone login activate only when administrator credentials exist. A disabled provider never claims an SMS was sent or an external identity verified.
+MindCare's refreshed sign-in and registration pages retain working email/password login. Google login activates only when administrator credentials exist. Phone OTP authentication was removed in milestone 1; trusted contact phone numbers and WhatsApp remain supported.
 
 ### Enable Google OAuth
 
@@ -191,23 +191,7 @@ MindCare's refreshed sign-in and registration pages retain working email/passwor
 4. Redeploy the service. The **Continue with Google** button will become enabled. MindCare never sees a user's Google password.
 5. New users select Patient or Caregiver only after Google verifies them. Existing email/password users should sign in first, click their name, and choose **Account security > Connect Google**. To protect existing records, the Google verified email must match the original account's email. Never automatically link solely by email.
 
-### Enable phone OTP with Firebase
-
-Firebase phone sign-in needs an active Firebase Auth project and can incur charges for real SMS delivery. [Official setup documentation](https://firebase.google.com/docs/auth/web/phone-auth).
-
-1. Create a Firebase project and Web app; enable Authentication > Sign-in method > Phone.
-2. Add mindcare-ai-ner.onrender.com to authorized authentication domains. Set an SMS region policy allowing intended countries such as India. Configure billing, budget alerts, fraud controls and quota limits as Firebase requires.
-3. Configure these variables privately in the Render service:
-   - FIREBASE_API_KEY (public web configuration)
-   - FIREBASE_AUTH_DOMAIN (your-project.firebaseapp.com)
-   - FIREBASE_PROJECT_ID (Google/Firebase project ID)
-   - FIREBASE_APP_ID (Firebase web application ID)
-   - FIREBASE_SERVICE_ACCOUNT_JSON (private full JSON credential, NEVER expose in GitHub or HTML)
-4. Redeploy. Users can tap Phone OTP, complete Firebase reCAPTCHA, enter their E.164 number (for example +919876543210) and confirm the SMS. Firebase Admin validates the ID token's signature, project, phone provider and revocation before Flask starts a session.
-5. Verified new users choose Patient or Caregiver. A previously registered user can connect a verified phone from **Account security** without recreating their patient records. For cost-free QA, Firebase supports fictional test numbers that never send real SMS.
-
-**Security and operational cautions:** Firebase charges for eligible real SMS; a phone number may be reassigned or SIM-swapped, making phone-only sign-in weaker than password+MFA. Configure spend controls, throttling, account recovery, log audit and professional security/privacy review before real clinical use. No password-reset email or automatic SMS alert is implemented. The existing WhatsApp trusted-contact feature, patient/caregiver roles, consent checks and emergency 112 dialer are unchanged. Account linking is deliberate and never based on phone/email similarity alone.
-
+**Security and operational cautions:** No password-reset email or automatic SMS alert is implemented. Account linking remains deliberate. Obtain appropriate privacy and security review before real clinical use.
 
 ## Milo 1.0 — roaming companion
 
@@ -244,7 +228,7 @@ The public homepage, authenticated dashboards and existing authentication screen
 - Patient full and simple dashboards and caregiver overview show the original illustrated world (static/mindcare-world.svg) inside rich, dark full-width hero regions. Milo, patient Need Support, caregivers, consent and emergency controls are unchanged.
 - Games catalogue uses vivid gradient covers and the existing working game URLs; active game instructions, reminders, family photos, WhatsApp help, settings, account security and caregiver detail screens share the new dark application chrome.
 - The simplified patient view deliberately retains large, visually distinct pastel feature cards and at least 58–64px primary actions; support and emergency actions remain clearly recognizable.
-- The login, registration and social onboarding screens have matching visual direction through static/auth-world.css. All verified Google/Firebase provider behavior remains gated by actual service credentials, not merely UI buttons.
+- The login, registration and social onboarding screens have matching visual direction through static/auth-world.css. All verified Google provider behavior remains gated by actual service credentials, not merely UI buttons.
 - Color contrast, reduced motion, larger text, patient's language settings, and per-patient Simplified View remain available. Animated Milo remains controlled entirely by the patient's existing pause/hide and reduced-motion settings.
 - No backend routes, models, data, caregiver approvals, forms, CSRF tokens, login sessions, provider credentials, WebRTC, WhatsApp linking or contact addresses were changed by this visual release.
 
@@ -281,5 +265,5 @@ required before a production-ready claim.
 
 Remaining release blockers: verified off-device backup/restore, durable DB
 plan, live mobile-device review, password-recovery email provider configuration,
-and live third-party Google/phone auth credentials if those sign-in methods
-are to be offered.
+cross-network TURN testing, accessibility review, and a final end-to-end release audit.
+Google OAuth was configured and the public login interface verified; repeat authenticated smoke testing after deployment.

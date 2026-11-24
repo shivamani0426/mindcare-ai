@@ -18,7 +18,7 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - run: python -m compileall -q app.py patient_labels.py
       - run: python -m pytest -q
-      - run: bash -n scripts/backup_postgres.sh
+      - run: bash -n scripts/backup_postgres.sh && bash -n scripts/verify_postgres_backup.sh && bash -n scripts/rehearse_postgres_restore.sh && bash -n tests/backup_restore_smoke.sh
       - run: |
           node --check static/app.js
           node --check static/games.js
@@ -46,3 +46,23 @@ jobs:
       - run: python -m playwright install --with-deps chromium
       - run: python tests/browser_smoke.py
       - run: python tests/browser_caregiver_smoke.py
+
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y age
+      - run: bash tests/backup_restore_smoke.sh
+
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt playwright
+      - run: python -m playwright install --with-deps chromium webkit
+      - run: python tests/browser_mobile_smoke.py

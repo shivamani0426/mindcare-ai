@@ -163,7 +163,7 @@
     }
   }
   async function tick() {
-    if (stopped || pollBusy || document.hidden) return;
+    if (stopped || pollBusy) return;
     pollBusy = true;
     try {
       const result = await api(`${base}/events?after=${lastEventId}`);
@@ -217,8 +217,8 @@
       peer.addEventListener('connectionstatechange', () => {
         if (stopped) return;
         if (peer.connectionState === 'connected') status(`You are connected with ${peerName}. Enjoy your chat!`);
-        else if (peer.connectionState === 'failed') status('The direct connection failed. This network may need a TURN relay. Please try another network.');
-        else if (peer.connectionState === 'disconnected') status('Connection interrupted. Attempting to reconnect…');
+        else if (peer.connectionState === 'failed') status(room.dataset.turnUrl ? 'The call connection failed. End the call and try again on a stable network.' : 'The direct connection failed. This network may need a TURN relay. Please try another network.');
+        else if (peer.connectionState === 'disconnected') status('Connection interrupted. Waiting for the network…');
       });
       ready = true;
       if (caller) {
@@ -242,6 +242,12 @@
         peer = null;
         stream?.getTracks().forEach(t => t.stop());
         stream = null;
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+        localPlaceholder.hidden = false;
+        remotePlaceholder.hidden = false;
+        micButton.disabled = true;
+        cameraButton.disabled = true;
       }
     } finally {starting = false;}
   }
@@ -251,6 +257,7 @@
   } else {
     pollBusy = false;
     polling = setInterval(tick, 1800);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
     begin();
   }
 })();
